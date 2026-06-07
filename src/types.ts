@@ -38,8 +38,8 @@ export type SessionInfo = {
 };
 
 /**
- * A session's lifecycle state: `running` (a live tmux session backs it), `stopped` (recorded but
- * not live), or `deleted` (recorded, but its worktree has been removed).
+ * A session's lifecycle state: `deleted` when its worktree has been removed (even if tmux is still
+ * running it), otherwise `running` when a live tmux session backs it, or `stopped` when not.
  */
 export type SessionStatus = "running" | "stopped" | "deleted";
 

@@ -1,8 +1,17 @@
 import { listTmuxPanes, listTmuxSessions } from "../commands/tmux.ts";
 import { IDLE_AGENT_STATUS } from "../constants.ts";
-import type { Agent, Session, SessionInfo, TmuxPane, TmuxSession } from "../types.ts";
+import type {
+  Agent,
+  Session,
+  SessionInfo,
+  SessionStatus,
+  TmuxPane,
+  TmuxSession,
+} from "../types.ts";
+import { exists } from "../utilities/exists.ts";
 import { isAgentPane } from "./agents.ts";
 import { MAIN_SESSION_NAME } from "./main-worktree.ts";
+import { worktreePath } from "./paths.ts";
 import { listSessionFiles } from "./session-file.ts";
 import { readStateFile } from "./state.ts";
 
@@ -26,6 +35,30 @@ async function buildAgent(project: string, session: string, pane: TmuxPane): Pro
   }
 
   return { paneId: pane.paneId, status: state.status, updatedAt: new Date(state.timestamp) };
+}
+
+/**
+ * Determines a session's {@link SessionStatus}. A non-main session whose worktree directory is gone
+ * is `deleted` even when tmux is still running it, since the worktree it depended on no longer
+ * exists. Otherwise it is `running` when a live tmux session backs it, and `stopped` when not. The
+ * main session has no dedicated worktree, so it is never `deleted`.
+ *
+ * @param sessionInfo The session's persisted info.
+ * @param tmuxSession The live tmux session backing it, or `undefined` when not live.
+ * @returns The session's status.
+ */
+async function sessionStatus(
+  sessionInfo: SessionInfo,
+  tmuxSession: TmuxSession | undefined,
+): Promise<SessionStatus> {
+  if (
+    sessionInfo.session !== MAIN_SESSION_NAME &&
+    !(await exists(worktreePath(sessionInfo.project, sessionInfo.session)))
+  ) {
+    return "deleted";
+  }
+
+  return tmuxSession !== undefined ? "running" : "stopped";
 }
 
 /**
@@ -53,7 +86,7 @@ async function buildSession(
 
   return {
     ...sessionInfo,
-    status: tmuxSession !== undefined ? "running" : "stopped",
+    status: await sessionStatus(sessionInfo, tmuxSession),
     worktree: sessionInfo.session === MAIN_SESSION_NAME ? "main" : "linked",
     agents,
   };

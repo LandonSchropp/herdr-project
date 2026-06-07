@@ -9,6 +9,7 @@ const listSessionFilesMock = mock((): Promise<SessionInfo[]> => Promise.resolve(
 const listTmuxSessionsMock = mock((): Promise<TmuxSession[]> => Promise.resolve([]));
 const listTmuxPanesMock = mock((): Promise<TmuxPane[]> => Promise.resolve([]));
 const readStateFileMock = mock((): Promise<AgentState | null> => Promise.resolve(null));
+const existsMock = mock((): Promise<boolean> => Promise.resolve(true));
 
 await mock.module("../commands/tmux.ts", () => ({
   listTmuxSessions: listTmuxSessionsMock,
@@ -23,11 +24,16 @@ await mock.module("./state.ts", () => ({
   readStateFile: readStateFileMock,
 }));
 
+await mock.module("../utilities/exists.ts", () => ({
+  exists: existsMock,
+}));
+
 beforeEach(() => {
   listSessionFilesMock.mockResolvedValue([]);
   listTmuxSessionsMock.mockResolvedValue([]);
   listTmuxPanesMock.mockResolvedValue([]);
   readStateFileMock.mockResolvedValue(null);
+  existsMock.mockResolvedValue(true);
 });
 
 describe("listSessions", () => {
@@ -81,6 +87,56 @@ describe("listSessions", () => {
 
       expect(session.status).toBe("stopped");
       expect(session.agents).toEqual([]);
+    });
+  });
+
+  describe("when a stopped session's worktree has been deleted", () => {
+    beforeEach(() => {
+      listSessionFilesMock.mockResolvedValue([
+        sessionInfoFactory.build({ project: "orc", session: "feature-a" }),
+      ]);
+      listTmuxSessionsMock.mockResolvedValue([]);
+      existsMock.mockResolvedValue(false);
+    });
+
+    it("marks the session deleted", async () => {
+      const [session] = await listSessions();
+
+      expect(session.status).toBe("deleted");
+    });
+  });
+
+  describe("when a running session's worktree has been deleted", () => {
+    beforeEach(() => {
+      listSessionFilesMock.mockResolvedValue([
+        sessionInfoFactory.build({ project: "orc", session: "feature-a" }),
+      ]);
+      listTmuxSessionsMock.mockResolvedValue([
+        tmuxSessionFactory.build({ project: "orc", session: "feature-a" }),
+      ]);
+      existsMock.mockResolvedValue(false);
+    });
+
+    it("marks the session deleted even though tmux is still running it", async () => {
+      const [session] = await listSessions();
+
+      expect(session.status).toBe("deleted");
+    });
+  });
+
+  describe("when the stopped session is the main session", () => {
+    beforeEach(() => {
+      listSessionFilesMock.mockResolvedValue([
+        sessionInfoFactory.build({ project: "orc", session: "main" }),
+      ]);
+      listTmuxSessionsMock.mockResolvedValue([]);
+      existsMock.mockResolvedValue(false);
+    });
+
+    it("stays stopped without checking a worktree", async () => {
+      const [session] = await listSessions();
+
+      expect(session.status).toBe("stopped");
     });
   });
 
