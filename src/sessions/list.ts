@@ -93,10 +93,24 @@ async function buildSession(
 }
 
 /**
- * Lists every recorded orc session by joining its session file with live tmux state. Sessions are
- * sourced from their files, so they survive a restart even though their tmux sessions do not.
+ * The state of an Orc session is spread across several places:
  *
- * @returns The orc sessions, each with its live state and agents populated.
+ * - Cache: Orc writes a state file for every session it creates. These files are the source of record
+ *   — a session exists if and only if it has one.
+ * - Tmux: A running session is backed by a live tmux session (one-to-one). A stopped session has
+ *   none.
+ * - Git worktrees: Every session other than `main` owns a Git worktree on disk.
+ *
+ * Ideally these sources would all _agree_ on which sessions are active, but they don't always.
+ * Depending on how Orc was closed, how tmux was closed, whether a worktree was deleted, whether the
+ * system restarted, and so on, they can disagree, and that disagreement is what the session's
+ * `status` captures.
+ *
+ * This function lists every recorded session (one per state file) and reconciles each against tmux
+ * and the worktrees to determine its status. The state files drive membership; tmux and the
+ * worktrees only set status, so they never add or remove a session from the list.
+ *
+ * @returns The Orc sessions.
  */
 export async function listSessions(): Promise<Session[]> {
   const [infos, tmuxSessions, panes] = await Promise.all([
@@ -104,6 +118,9 @@ export async function listSessions(): Promise<Session[]> {
     listTmuxSessions(),
     listTmuxPanes(),
   ]);
+
+  // TODO: Should we group all of these sources together in advance, and then pass them into a
+  // function that builds the session object?
 
   const liveSessionsById = new Map(tmuxSessions.map((session) => [session.id, session]));
 
