@@ -3,10 +3,10 @@ import type { Session } from "../types.ts";
 import { findSession } from "./find.ts";
 import { describe, expect, it, mock } from "bun:test";
 
-const listTmuxSessionsMock = mock((): Promise<Session[]> => Promise.resolve([]));
+const listSessionsMock = mock((): Promise<Session[]> => Promise.resolve([]));
 
-await mock.module("../commands/tmux.ts", () => ({
-  listTmuxSessions: listTmuxSessionsMock,
+await mock.module("./list.ts", () => ({
+  listSessions: listSessionsMock,
 }));
 
 describe("findSession", () => {
@@ -14,7 +14,8 @@ describe("findSession", () => {
     it("returns it", async () => {
       const a = sessionFactory.build({ project: "p1", session: "a" });
       const b = sessionFactory.build({ project: "p2", session: "a" });
-      listTmuxSessionsMock.mockResolvedValue([a, b]);
+      listSessionsMock.mockResolvedValue([a, b]);
+
       expect(await findSession("p2", "a")).toBe(b);
     });
   });
@@ -22,7 +23,8 @@ describe("findSession", () => {
   describe("when no session matches", () => {
     it("returns null", async () => {
       const a = sessionFactory.build({ project: "p1", session: "a" });
-      listTmuxSessionsMock.mockResolvedValue([a]);
+      listSessionsMock.mockResolvedValue([a]);
+
       expect(await findSession("p1", "missing")).toBeNull();
     });
   });
