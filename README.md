@@ -2,16 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+![Orc TUI](docs/tui.png)
+
 Orc is an _opinionated_ personal CLI orchestrator for running parallel Claude Code sessions. It's
 built tightly around Git worktrees, tmux, and Tmuxinator.
-
-## Demo
-
-<!-- TODO: Add a TUI screen recording here. A short GIF of `orc` browsing and switching
-sessions is the highest-impact thing for showing what Orc does. Drop the file in the repo
-(e.g. `docs/demo.gif`) and reference it below. -->
-
-_A screen recording of the TUI is coming soon._
 
 ## Why
 
