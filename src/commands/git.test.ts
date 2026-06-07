@@ -3,11 +3,10 @@ import {
   branchExists,
   defaultBranch,
   isGitInstalled,
-  mainWorktreeRoot,
   removeWorktree,
   worktreeExists,
 } from "./git.ts";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 
 const runCommandMock = mock(() => Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }));
 
@@ -229,43 +228,6 @@ describe("removeWorktree", () => {
       });
 
       expect(removeWorktree("/repo", "/worktree")).rejects.toThrowError(/not a working tree/);
-    });
-  });
-});
-
-describe("mainWorktreeRoot", () => {
-  describe("when git resolves the common directory", () => {
-    beforeEach(() => {
-      runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "/repos/orc/.git\n", stderr: "" });
-    });
-
-    it("returns the parent of the common git directory", async () => {
-      expect(await mainWorktreeRoot("/cache/worktrees/orc/feature-a")).toBe("/repos/orc");
-    });
-
-    it("resolves the absolute common git directory from the worktree", async () => {
-      await mainWorktreeRoot("/cache/worktrees/orc/feature-a");
-
-      expect(runCommandMock).toHaveBeenCalledWith([
-        "git",
-        "-C",
-        "/cache/worktrees/orc/feature-a",
-        "rev-parse",
-        "--path-format=absolute",
-        "--git-common-dir",
-      ]);
-    });
-  });
-
-  describe("when git fails", () => {
-    it("throws an error with the stderr message", () => {
-      runCommandMock.mockResolvedValue({
-        exitCode: 128,
-        stdout: "",
-        stderr: "fatal: not a git repository\n",
-      });
-
-      expect(mainWorktreeRoot("/worktree")).rejects.toThrowError(/not a git repository/);
     });
   });
 });

@@ -1,5 +1,4 @@
 import { runCommand } from "./shell.ts";
-import { dirname } from "node:path";
 
 /**
  * Checks if git is installed and available on PATH.
@@ -65,32 +64,6 @@ export async function branchExists(repositoryRoot: string, branch: string): Prom
   ]);
 
   return exitCode === 0;
-}
-
-/**
- * Returns the root of the repository's main worktree for the worktree at `worktreePath`. Resolves
- * the common git directory and returns its parent, so any linked worktree maps back to the
- * repository it belongs to without needing a project config.
- *
- * @param worktreePath The path to any worktree of the repository.
- * @returns The absolute path to the repository's main worktree root.
- * @throws If git cannot resolve the common directory (e.g. the path is not a worktree).
- */
-export async function mainWorktreeRoot(worktreePath: string): Promise<string> {
-  const { exitCode, stdout, stderr } = await runCommand([
-    "git",
-    "-C",
-    worktreePath,
-    "rev-parse",
-    "--path-format=absolute",
-    "--git-common-dir",
-  ]);
-
-  if (exitCode !== 0) {
-    throw new Error(`git rev-parse failed: ${stderr.trim()}`);
-  }
-
-  return dirname(stdout.trim());
 }
 
 /**
