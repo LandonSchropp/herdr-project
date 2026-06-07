@@ -2,6 +2,7 @@ import { DEFAULT_PROJECT } from "../constants.ts";
 import { sessionId } from "../sessions/id.ts";
 import type { TmuxinatorProject, YamlObject } from "../types.ts";
 import { expandHome } from "../utilities/directory.ts";
+import { exists } from "../utilities/exists.ts";
 import { xdgConfigHome } from "../utilities/xdg.ts";
 import { runCommand } from "./shell.ts";
 import { ORC_SOCKET } from "./tmux.ts";
@@ -19,6 +20,17 @@ import { join } from "node:path";
  */
 export function tmuxinatorConfigPath(project: string): string {
   return join(xdgConfigHome(), "tmuxinator", `${project}.yml`);
+}
+
+/**
+ * Checks whether a tmuxinator project config exists for the given project name. Honors
+ * `$XDG_CONFIG_HOME`, falling back to `~/.config` when unset.
+ *
+ * @param project The tmuxinator project name.
+ * @returns `true` when the project's YAML config file exists, otherwise `false`.
+ */
+export async function tmuxinatorProjectExists(project: string): Promise<boolean> {
+  return exists(tmuxinatorConfigPath(project));
 }
 
 /**

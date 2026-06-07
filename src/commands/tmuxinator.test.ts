@@ -6,6 +6,7 @@ import {
   readTmuxinatorProject,
   startTmuxinatorProject,
   tmuxinatorConfigPath,
+  tmuxinatorProjectExists,
 } from "./tmuxinator.ts";
 import { YAML } from "bun";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
@@ -103,6 +104,34 @@ describe("tmuxinatorConfigPath", () => {
       expect(tmuxinatorConfigPath("agent-toolkit")).toBe(
         `${homedir()}/.config/tmuxinator/agent-toolkit.yml`,
       );
+    });
+  });
+});
+
+describe("tmuxinatorProjectExists", () => {
+  const configPath = `${configHome}/tmuxinator/agent-toolkit.yml`;
+
+  beforeEach(() => {
+    stubEnv("XDG_CONFIG_HOME", configHome);
+  });
+
+  afterEach(async () => {
+    await rm(configHome, { recursive: true, force: true });
+  });
+
+  describe("when the project config exists", () => {
+    beforeEach(async () => {
+      await Bun.write(configPath, "name: agent-toolkit\nroot: ~/Development/agent-toolkit\n");
+    });
+
+    it("returns true", async () => {
+      expect(await tmuxinatorProjectExists("agent-toolkit")).toBe(true);
+    });
+  });
+
+  describe("when the project config does not exist", () => {
+    it("returns false", async () => {
+      expect(await tmuxinatorProjectExists("agent-toolkit")).toBe(false);
     });
   });
 });
