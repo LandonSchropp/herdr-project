@@ -5,16 +5,16 @@ import { listCommand } from "./list.ts";
 import { describe, expect, it, mock } from "bun:test";
 import { runCommand } from "citty";
 
-const listTmuxSessionsMock = mock((): Promise<Session[]> => Promise.resolve([]));
+const listSessionsMock = mock((): Promise<Session[]> => Promise.resolve([]));
 
-await mock.module("../commands/tmux.ts", () => ({
-  listTmuxSessions: listTmuxSessionsMock,
+await mock.module("../sessions/list.ts", () => ({
+  listSessions: listSessionsMock,
 }));
 
 describe("listCommand", () => {
   describe("when there are no sessions", () => {
     it("prints nothing", async () => {
-      listTmuxSessionsMock.mockResolvedValue([]);
+      listSessionsMock.mockResolvedValue([]);
 
       await runCommand(listCommand, { rawArgs: [] });
 
@@ -22,17 +22,41 @@ describe("listCommand", () => {
     });
   });
 
-  describe("when there are sessions", () => {
-    it("prints each session", async () => {
-      listTmuxSessionsMock.mockResolvedValue([
-        sessionFactory.build({ session: "feature-a" }),
-        sessionFactory.build({ session: "feature-b" }),
+  describe("when there are running sessions", () => {
+    it("prints each one", async () => {
+      listSessionsMock.mockResolvedValue([
+        sessionFactory.build({ session: "feature-a", status: "running" }),
+        sessionFactory.build({ session: "feature-b", status: "running" }),
       ]);
 
       await runCommand(listCommand, { rawArgs: [] });
 
       expect(stdoutSpy).toHaveBeenCalledWith("orc/feature-a\n");
       expect(stdoutSpy).toHaveBeenCalledWith("orc/feature-b\n");
+    });
+  });
+
+  describe("when a session is stopped", () => {
+    it("annotates it as stopped", async () => {
+      listSessionsMock.mockResolvedValue([
+        sessionFactory.build({ session: "feature-a", status: "stopped" }),
+      ]);
+
+      await runCommand(listCommand, { rawArgs: [] });
+
+      expect(stdoutSpy).toHaveBeenCalledWith("orc/feature-a (stopped)\n");
+    });
+  });
+
+  describe("when a session's worktree is deleted", () => {
+    it("annotates it as deleted", async () => {
+      listSessionsMock.mockResolvedValue([
+        sessionFactory.build({ session: "feature-a", status: "deleted" }),
+      ]);
+
+      await runCommand(listCommand, { rawArgs: [] });
+
+      expect(stdoutSpy).toHaveBeenCalledWith("orc/feature-a (deleted)\n");
     });
   });
 });

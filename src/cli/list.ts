@@ -1,4 +1,4 @@
-import { listTmuxSessions } from "../commands/tmux.ts";
+import { listSessions } from "../sessions/list.ts";
 import { defineCommand } from "citty";
 
 export const listCommand = defineCommand({
@@ -7,10 +7,11 @@ export const listCommand = defineCommand({
     description: "List Orc sessions",
   },
   async run() {
-    const sessions = await listTmuxSessions();
+    const sessions = await listSessions();
 
-    for (const { id } of sessions) {
-      process.stdout.write(`${id}\n`);
+    for (const { id, status } of sessions) {
+      const annotation = status === "running" ? "" : ` (${status})`;
+      process.stdout.write(`${id}${annotation}\n`);
     }
   },
 });
