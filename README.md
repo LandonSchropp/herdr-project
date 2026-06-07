@@ -4,31 +4,25 @@
 
 ![Orc TUI](docs/tui.png)
 
-Orc is an _opinionated_ personal CLI orchestrator for running parallel Claude Code sessions. It's
-built tightly around Git worktrees, tmux, and Tmuxinator.
+Orc is a personal CLI orchestrator for running parallel Claude Code sessions. It's designed to allow
+you to quickly spin up multiple parallel tasks in the same project, each isolated in their own
+worktree with their own dedicated development environment.
 
-## Why
+Rather than reinventing the wheel, Orc combines several great tools together into a simplified
+workflow:
 
-Many of the existing tools build around orchestrating agents/worktrees are great, but they weren't
-quite what I was looking for with _my_ workflow.
+- **[Git Worktrees](https://git-scm.com/docs/git-worktree):** Check out multiple branches of a
+  repository at once, each in its own working directory.
+- **[Tmux](https://github.com/tmux/tmux):** Run multiple terminal sessions inside one window, and
+  keep them alive in the background.
+- **[Tmuxinator](https://github.com/tmuxinator/tmuxinator):** Define and launch tmux window and pane
+  layouts from a YAML config.
 
-- **Existing TUI managers** ([Agent Deck](https://github.com/asheshgoplani/agent-deck),
-  [Agent-of-Empires](https://github.com/njbrake/agent-of-empires), [Claude
-  Squad](https://github.com/smtg-ai/claude-squad)) are great but use single-pane sessions. This leaves
-  no room for a separate shell, editor, or dev server window.
-- **Desktop GUI tools** ([Conductor](https://conductor.build) and similar) replace your editor and
-  pull you out of the terminal. You lose terminal access, Git history, and any custom tmux setup.
-- **CLI worktree utilities** ([Worktrunk](https://github.com/max-sixty/worktrunk),
-  [agent-worktree](https://github.com/nekocode/agent-worktree), and friends) handle worktrees and
-  custom commands well, but don't provide a session switcher or per-session status view.
-- **Composing tools** ([Tmuxinator](https://github.com/tmuxinator/tmuxinator) +
-  [Worktrunk](https://github.com/max-sixty/worktrunk) + [fzf](https://github.com/junegunn/fzf) or
-  [sesh](https://github.com/joshmedeski/sesh)) gets you most of the way, but misses the unified
-  per-session status view across all features.
+If you already use these tools, then Orc is for you!
 
 ## Installation
 
-Orc is not published to a package registry. Install it from a clone of this repo:
+Orc is not published to a package registry (yet). Install it from a clone of this repo:
 
 1. Install [Bun](https://bun.sh) (the runtime Orc executes against), plus [tmux](https://github.com/tmux/tmux), [Tmuxinator](https://github.com/tmuxinator/tmuxinator), and [Git](https://git-scm.com).
 2. Clone this repo and install dependencies:
@@ -66,21 +60,7 @@ Orc is not published to a package registry. Install it from a clone of this repo
    }
    ```
 
-   A future release may package this as a Claude Code plugin so the manual step goes away.
-
-The symlink points at your local checkout, so edits to the source are picked up on the next invocation — no rebuild step.
-
-## How It Works
-
-Orc operates at two levels:
-
-- **Project**: An Orc project groups related sessions. It comes from either a Tmuxinator project or
-  a local Git repository discovered under your configured [project paths](#configuration). One
-  project per repo.
-- **Session**: A tmux session spawned from a Tmuxinator project, paired with a Git worktree. The
-  session named `main` runs directly on the project's main worktree, on its current branch. Every
-  other session runs in its own linked worktree, isolated in a separate working directory on a
-  branch named after the session.
+   (A future release may package this as a Claude Code plugin so the manual step goes away.)
 
 ## Configuration
 
@@ -103,17 +83,23 @@ Orc reads optional settings from `$XDG_CONFIG_HOME/orc/settings.json` (defaultin
   Tmuxinator project at the same path is offered as that Tmuxinator project rather than duplicated,
   and paths that don't exist are ignored.
 
-## Interfaces
+## How to Use
 
-Orc has two main interfaces:
+### Projects and Sessions
 
-- **CLI**: Run individual commands for one-off tasks and automation. Every subcommand is
-  non-interactive, so Orc fits cleanly into shell aliases, scripts, and AI agents.
-- **TUI**: Browse and juggle sessions interactively. Run `orc` with no subcommand to drop into a
-  full-screen manager where you can switch between sessions, see their status, and create new ones
-  without leaving the keyboard.
+Orc operates at two levels:
 
-## Commands
+- **Project**: An Orc project groups related sessions. It comes from either a Tmuxinator project or
+  a local Git repository discovered under your configured [project paths](#configuration).
+- **Session**: A tmux session spawned from a Tmuxinator project, paired with a Git worktree. The
+  session named `main` runs directly on the project's main worktree, on its current branch. Every
+  other session runs in its own linked worktree, isolated in a separate working directory on a
+  branch named after the session.
+
+### CLI
+
+Orc can be driven _entirely_ from the CLI, which makes it easy for agents to control. Every
+subcommand is non-interactive, so Orc also fits cleanly into shell aliases and scripts.
 
 - `orc new <project> <session>`: Spawn the project's Tmuxinator template as a new session and
   attach. Name the session `main` to run on the project's main worktree; any other name gets a
@@ -124,11 +110,13 @@ Orc has two main interfaces:
 - `orc detach`: Detach from the current Orc session.
 - `orc delete <project> <session>`: Permanently delete the tmux session and worktree.
 
-## TUI
+For details on commands and their options, run `orc <command> --help`.
 
-Run `orc` (no args) to open a full-screen session manager, modeled on [Subtask's
-UI](https://github.com/zippoxer/subtask). It's where you live when juggling several features in
-flight at once.
+### TUI
+
+Orc features a fully interactive TUI that lets you browse and juggle sessions interactively. Run
+`orc` with no subcommand to drop into a full-screen manager where you can switch between sessions,
+see their statuses, and create and delete sessions.
 
 - **Unified view across projects**: All Orc sessions in one scrollable list, grouped by Tmuxinator
   project, with session counts in the header.
@@ -139,9 +127,10 @@ flight at once.
 
 ## Contributing
 
-Orc is an opinionated personal tool, but issues and pull requests are welcome. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for setup, the checks to run, and the project's
-architecture and conventions.
+Orc is a tool built to solve a specific problem, but issues and pull requests are welcome. Please
+open an issue before a pull request if you have an idea for an improvement. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for setup, the checks to run, and the project's architecture and
+conventions.
 
 ## License
 
