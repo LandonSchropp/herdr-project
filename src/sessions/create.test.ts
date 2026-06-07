@@ -12,9 +12,11 @@ const switchSessionMock = mock((): Promise<void> => Promise.resolve());
 const mkdirSpy = mock((): Promise<string | undefined> => Promise.resolve(undefined));
 const writeSessionFileMock = mock((): Promise<void> => Promise.resolve());
 const sessionFileExistsMock = mock((): Promise<boolean> => Promise.resolve(false));
+const tmuxinatorProjectExistsMock = mock((): Promise<boolean> => Promise.resolve(true));
 
 await mock.module("../commands/tmuxinator.ts", () => ({
   startTmuxinatorProject: startTmuxinatorProjectMock,
+  tmuxinatorProjectExists: tmuxinatorProjectExistsMock,
 }));
 
 await mock.module("../commands/git.ts", () => ({
@@ -43,6 +45,10 @@ const worktreePath = `${worktreeParent}/feature-a`;
 const source = projectSourceFactory.build({ name: "test-project", repositoryRoot });
 
 describe("createSession", () => {
+  beforeEach(() => {
+    tmuxinatorProjectExistsMock.mockResolvedValue(true);
+  });
+
   describe('when the session is named "main"', () => {
     beforeEach(async () => {
       await createSession(source, "main");
@@ -89,6 +95,22 @@ describe("createSession", () => {
 
     it("does not overwrite the existing session file", () => {
       expect(writeSessionFileMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("when the tmuxinator project's config no longer exists", () => {
+    beforeEach(async () => {
+      tmuxinatorProjectExistsMock.mockResolvedValue(false);
+      await createSession(source, "main");
+    });
+
+    it("starts the project using the default template", () => {
+      expect(startTmuxinatorProjectMock).toHaveBeenCalledWith(
+        "test-project",
+        "main",
+        repositoryRoot,
+        "default",
+      );
     });
   });
 

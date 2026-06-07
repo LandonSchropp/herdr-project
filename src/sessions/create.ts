@@ -1,5 +1,5 @@
 import { addWorktree, branchExists, defaultBranch, worktreeExists } from "../commands/git.ts";
-import { startTmuxinatorProject } from "../commands/tmuxinator.ts";
+import { startTmuxinatorProject, tmuxinatorProjectExists } from "../commands/tmuxinator.ts";
 import { DEFAULT_PROJECT } from "../constants.ts";
 import type { ProjectSource } from "../types.ts";
 import { sessionId } from "./id.ts";
@@ -16,8 +16,9 @@ import { dirname } from "node:path";
  * out the session's branch when it already exists, or branching from the project's default branch
  * when it does not. Records the session in a state file when it is first created — leaving any
  * existing file untouched — so it can be listed and resumed after a restart. Starts tmuxinator
- * against the chosen directory — a tmuxinator source uses its own template, a directory source uses
- * the `default` template — then switches to the new session.
+ * against the chosen directory — a tmuxinator source uses its own template, falling back to the
+ * `default` template when its config has been deleted, and a directory source always uses the
+ * `default` template — then switches to the new session.
  *
  * @param source The project to create the session in.
  * @param session The session name within the project.
@@ -40,10 +41,13 @@ export async function createSession(source: ProjectSource, session: string): Pro
     });
   }
 
-  if (source.kind === "directory") {
-    await startTmuxinatorProject(source.name, session, sessionDirectory, DEFAULT_PROJECT);
-  } else {
+  // A tmuxinator project supplies its own window layout. Fall back to the default template for
+  // directory projects, which have no config of their own, and for tmuxinator projects whose config
+  // has since been deleted — so a stopped session can still be recreated.
+  if (source.kind === "tmuxinator" && (await tmuxinatorProjectExists(source.name))) {
     await startTmuxinatorProject(source.name, session, sessionDirectory);
+  } else {
+    await startTmuxinatorProject(source.name, session, sessionDirectory, DEFAULT_PROJECT);
   }
 
   await switchSession(source.name, session);
