@@ -1,6 +1,6 @@
+import { createOrSwitchSession } from "../sessions/create-or-switch-session.ts";
 import { findSession } from "../sessions/find.ts";
 import { sessionId } from "../sessions/id.ts";
-import { switchSession } from "../sessions/switch.ts";
 import { defineCommand } from "citty";
 
 export const switchCommand = defineCommand({
@@ -29,6 +29,6 @@ export const switchCommand = defineCommand({
       return process.exit(1);
     }
 
-    await switchSession(session.project, session.session);
+    await createOrSwitchSession(session);
   },
 });

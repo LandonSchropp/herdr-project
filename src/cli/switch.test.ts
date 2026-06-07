@@ -6,26 +6,26 @@ import { describe, expect, it, mock } from "bun:test";
 import { runCommand } from "citty";
 
 const findSessionMock = mock((): Promise<Session | null> => Promise.resolve(null));
-const switchSessionMock = mock((): Promise<void> => Promise.resolve());
+const createOrSwitchSessionMock = mock((): Promise<void> => Promise.resolve());
 
 await mock.module("../sessions/find.ts", () => ({
   findSession: findSessionMock,
 }));
 
-await mock.module("../sessions/switch.ts", () => ({
-  switchSession: switchSessionMock,
+await mock.module("../sessions/create-or-switch-session.ts", () => ({
+  createOrSwitchSession: createOrSwitchSessionMock,
 }));
 
 describe("switchCommand", () => {
   describe("when a matching session is found", () => {
-    it("switches to it", async () => {
+    it("creates or switches to it", async () => {
       const session = sessionFactory.build({ project: "orc", session: "feature-a" });
       findSessionMock.mockResolvedValue(session);
 
       await runCommand(switchCommand, { rawArgs: ["orc", "feature-a"] });
 
       expect(findSessionMock).toHaveBeenCalledWith("orc", "feature-a");
-      expect(switchSessionMock).toHaveBeenCalledWith("orc", "feature-a");
+      expect(createOrSwitchSessionMock).toHaveBeenCalledWith(session);
     });
   });
 
