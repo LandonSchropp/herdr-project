@@ -95,6 +95,28 @@ describe("listTmuxSessions", () => {
     });
   });
 
+  describe("when the orc tmux server is shutting down", () => {
+    it("returns an empty array", async () => {
+      runCommandMock.mockResolvedValue({
+        exitCode: 1,
+        stdout: "",
+        stderr: "server exited unexpectedly\n",
+      });
+      expect(await listTmuxSessions()).toEqual([]);
+    });
+  });
+
+  describe("when the connection to the orc tmux server is lost", () => {
+    it("returns an empty array", async () => {
+      runCommandMock.mockResolvedValue({
+        exitCode: 1,
+        stdout: "",
+        stderr: "lost server\n",
+      });
+      expect(await listTmuxSessions()).toEqual([]);
+    });
+  });
+
   describe("when there are no sessions", () => {
     it("returns an empty array", async () => {
       runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });

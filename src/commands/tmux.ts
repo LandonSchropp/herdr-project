@@ -187,8 +187,9 @@ export async function attachTmuxSession(name: string): Promise<void> {
 
 /**
  * Lists the tmux sessions running on orc's isolated server. Returns an empty array when no server
- * is running. Sessions whose names do not follow orc's `project/session` convention are skipped so
- * foreign sessions on the orc socket do not break orc commands.
+ * is running or while one is shutting down. Sessions whose names do not follow orc's
+ * `project/session` convention are skipped so foreign sessions on the orc socket do not break orc
+ * commands.
  *
  * @returns The parsed tmux sessions.
  * @throws If tmux exits with an unexpected error.
@@ -197,7 +198,14 @@ export async function listTmuxSessions(): Promise<TmuxSession[]> {
   const { exitCode, stdout, stderr } = await tmux(["list-sessions", "-F", SESSION_FORMAT]);
 
   if (exitCode !== 0) {
-    if (stderr.includes("no server running") || stderr.includes("error connecting")) return [];
+    if (
+      stderr.includes("no server running") ||
+      stderr.includes("error connecting") ||
+      stderr.includes("server exited unexpectedly") ||
+      stderr.includes("lost server")
+    ) {
+      return [];
+    }
     throw new Error(`tmux list-sessions failed: ${stderr.trim()}`);
   }
 
