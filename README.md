@@ -4,12 +4,33 @@
 
 ![Orc TUI](docs/tui.png)
 
-Orc is a personal CLI orchestrator for running parallel Claude Code sessions. It's designed to allow
-you to quickly spin up multiple parallel tasks in the same project, each isolated in their own
-worktree with their own dedicated development environment.
+Orc is a TUI/CLI agent *orc*hestrator for running Claude Code agents in parallel without losing track
+of them. Each session gets its own Git worktree and tmux session, so your agents work in isolation,
+and you can see what every agent is doing right now from a convenient dashboard.
 
-Rather than reinventing the wheel, Orc combines several great tools together into a simplified
-workflow:
+## Why Orc?
+
+Running one AI coding agent in a project is easy. Running five is a mess. Without isolation they
+overwrite each other's work. Without their own sessions they pile up in a tangle of terminal tabs.
+And either way you lose track of which agent is working, which is waiting on you, and which is done.
+
+Orc handles all of that. Spin up a new isolated session with a single command, jump between sessions
+from one view, and see each agent's live status at a glance.
+
+## Features
+
+- 🖥️ **TUI:** Orc's interactive TUI lists every session across every project, with statuses,
+  branches, and time since last activity. Switch, create, and delete sessions without leaving it.
+- 🌳 **Isolated sessions:** Every session runs in its own Git worktree on its own branch with its own
+  development environment. Agents never step on each other's files.
+- 🚦 **Live agent status:** Orc reads Claude Code's hooks to show whether each session is working,
+  waiting on you, or idle, so you know exactly which agent needs attention.
+- ⌨️ **Scriptable CLI:** Every command is non-interactive, so the same operations the TUI exposes are
+  available to shell aliases, scripts, and the agents themselves.
+
+## Already Use These Tools?
+
+Rather than reinventing the wheel, Orc combines several great tools into a simplified workflow:
 
 - **[Git Worktrees](https://git-scm.com/docs/git-worktree):** Check out multiple branches of a
   repository at once, each in its own working directory.
@@ -18,13 +39,15 @@ workflow:
 - **[Tmuxinator](https://github.com/tmuxinator/tmuxinator):** Define and launch tmux window and pane
   layouts from a YAML config.
 
-If you already use these tools, then Orc is for you!
+If you already use these tools, then Orc is for you—it ties them into a single workflow.
 
 ## Installation
 
 Orc is not published to a package registry (yet). Install it from a clone of this repo:
 
-1. Install [Bun](https://bun.sh) (the runtime Orc executes against), plus [tmux](https://github.com/tmux/tmux), [Tmuxinator](https://github.com/tmuxinator/tmuxinator), and [Git](https://git-scm.com).
+1. Install [Bun](https://bun.sh), [tmux](https://github.com/tmux/tmux),
+   [Tmuxinator](https://github.com/tmuxinator/tmuxinator), and [Git](https://git-scm.com).
+
 2. Clone this repo and install dependencies:
 
    ```sh
@@ -134,4 +157,4 @@ conventions.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE).
