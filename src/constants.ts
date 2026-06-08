@@ -14,6 +14,22 @@ export const AGENT_STATUSES = [
   IDLE_AGENT_STATUS,
 ] as const;
 
+/** The session status when a live tmux session backs it. */
+export const RUNNING_SESSION_STATUS = "running";
+
+/** The session status when no live tmux session backs it. */
+export const STOPPED_SESSION_STATUS = "stopped";
+
+/** The session status when its worktree has been removed. */
+export const DELETED_SESSION_STATUS = "deleted";
+
+/** All valid session statuses. Source of truth for the type. */
+export const SESSION_STATUSES = [
+  RUNNING_SESSION_STATUS,
+  STOPPED_SESSION_STATUS,
+  DELETED_SESSION_STATUS,
+] as const;
+
 /** All valid project kinds. Source of truth for both the type and runtime validation. */
 export const PROJECT_KINDS = ["tmuxinator", "directory"] as const;
 

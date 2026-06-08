@@ -1,3 +1,4 @@
+import { RUNNING_SESSION_STATUS } from "../../src/constants.ts";
 import type { Session } from "../../src/types.ts";
 import { Factory } from "fishery";
 
@@ -12,7 +13,7 @@ export const sessionFactory = Factory.define<Session>(({ sequence, afterBuild })
     kind: "tmuxinator",
     repositoryRoot: "/repos/orc",
     createdAt: new Date(),
-    status: "running",
+    status: RUNNING_SESSION_STATUS,
     worktree: "main",
     agents: [],
   };

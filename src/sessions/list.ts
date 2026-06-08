@@ -1,5 +1,10 @@
 import { listTmuxPanes, listTmuxSessions } from "../commands/tmux.ts";
-import { IDLE_AGENT_STATUS } from "../constants.ts";
+import {
+  DELETED_SESSION_STATUS,
+  IDLE_AGENT_STATUS,
+  RUNNING_SESSION_STATUS,
+  STOPPED_SESSION_STATUS,
+} from "../constants.ts";
 import type {
   Agent,
   Session,
@@ -16,8 +21,8 @@ import { listSessionFiles } from "./session-file.ts";
 import { readStateFile } from "./state.ts";
 
 /**
- * Reads the agent state for a single pane and returns the corresponding {@link Agent}, defaulting
- * to {@link IDLE_AGENT_STATUS} when no state has been recorded for the pane yet.
+ * Reads the agent state for a single pane and returns the corresponding {@link Agent}, defaulting to
+ * {@link IDLE_AGENT_STATUS} when no state has been recorded for the pane yet.
  *
  * @param project The project name owning the pane.
  * @param session The session name within the project.
@@ -54,10 +59,10 @@ async function sessionStatus(
     sessionInfo.session !== MAIN_SESSION_NAME &&
     !(await exists(worktreePath(sessionInfo.project, sessionInfo.session)))
   ) {
-    return "deleted";
+    return DELETED_SESSION_STATUS;
   }
 
-  return tmuxSession !== undefined ? "running" : "stopped";
+  return tmuxSession !== undefined ? RUNNING_SESSION_STATUS : STOPPED_SESSION_STATUS;
 }
 
 /**

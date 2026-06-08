@@ -3,6 +3,7 @@ import {
   NOTIFICATION_HOOK_EVENT,
   POST_TOOL_USE_HOOK_EVENT,
   PROJECT_KINDS,
+  SESSION_STATUSES,
   STOP_HOOK_EVENT,
   USER_PROMPT_SUBMIT_HOOK_EVENT,
 } from "./constants.ts";
@@ -41,7 +42,7 @@ export type SessionInfo = {
  * A session's lifecycle state: `deleted` when its worktree has been removed (even if tmux is still
  * running it), otherwise `running` when a live tmux session backs it, or `stopped` when not.
  */
-export type SessionStatus = "running" | "stopped" | "deleted";
+export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
 /** An Orc session: its persisted {@link SessionInfo} plus live state derived from tmux at read time. */
 export type Session = SessionInfo & {

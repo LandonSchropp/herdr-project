@@ -1,3 +1,4 @@
+import { RUNNING_SESSION_STATUS } from "../constants.ts";
 import type { Session } from "../types.ts";
 import { createSession } from "./create.ts";
 import { switchSession } from "./switch.ts";
@@ -9,7 +10,7 @@ import { switchSession } from "./switch.ts";
  * @param session The session to switch to or recreate.
  */
 export async function createOrSwitchSession(session: Session): Promise<void> {
-  if (session.status === "running") {
+  if (session.status === RUNNING_SESSION_STATUS) {
     await switchSession(session.project, session.session);
     return;
   }
