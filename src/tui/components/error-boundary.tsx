@@ -15,8 +15,7 @@ type ErrorBoundaryState = {
 
 /**
  * Catches errors thrown while rendering its children and reports them through `onError`, rendering
- * nothing in their place. Async failures never reach React, so the process-level handlers cover
- * those; this only catches render-time crashes.
+ * nothing in their place. Only catches render-time crashes, not async failures.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {

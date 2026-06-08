@@ -5,9 +5,9 @@ import { Prompt } from "./prompt.tsx";
 import { Text } from "ink";
 
 /**
- * The session-name prompt modal. Reads the picked project from `activeModal`, derives a sensible
- * default name (`"main"` when the project's main worktree is free), and on submit rejects names
- * that already exist in the project; otherwise it closes the modal and creates the session.
+ * The session-name prompt modal for the picked project. Defaults the name to `"main"` when the
+ * project's main worktree is free, and on submit rejects names that already exist in the project;
+ * otherwise it closes the modal and creates the session.
  */
 export function SessionNameModal() {
   const { activeModal, projects, cancel } = useStore();

@@ -62,7 +62,7 @@ export function Picker({ title, options, initialSelection, onSelect, onCancel }:
   const visibleOptions = filteredOptions.slice(offset, offset + MAX_VISIBLE_ROWS);
 
   /**
-   * Handles text-input changes: strips newlines, updates the query, and resets focus to the top.
+   * Updates the filter query from a text-input change.
    *
    * @param newValue The new value of the text input.
    */

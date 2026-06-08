@@ -5,7 +5,7 @@ import { SessionNameModal } from "./session-name-modal.tsx";
 
 /**
  * Routes to the modal component matching the store's `activeModal`, or renders nothing when no
- * modal is active. The host stays thin: each modal owns its own rendering and side-effect wiring.
+ * modal is active.
  */
 export function ActiveModal() {
   const { activeModal } = useStore();

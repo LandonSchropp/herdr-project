@@ -12,8 +12,8 @@ type ModalProps = {
 };
 
 /**
- * A centered, bordered overlay that floats above the rest of the TUI. Renders as a full-viewport
- * absolute box so the underlying app stays mounted and visible behind it.
+ * A centered, bordered overlay that floats above the rest of the TUI, leaving the underlying app
+ * mounted and visible behind it.
  */
 export function Modal({ title, children }: ModalProps) {
   return (

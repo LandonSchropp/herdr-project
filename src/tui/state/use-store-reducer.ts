@@ -10,7 +10,6 @@ import { useCallback, useReducer } from "react";
 
 /**
  * Rebuilds the projects, selection, remembered column, and scroll offset for a new set of sessions.
- * Shared by the poll-driven `SET_SESSIONS` update and the optimistic `REMOVE_SESSION` update.
  *
  * @param state The current store state.
  * @param sessions The sessions to display.
@@ -44,8 +43,7 @@ function withSessions(state: StoreState, sessions: Session[]): StoreState {
 /**
  * A pure reducer that applies an action to the store state. Vertical moves and session updates
  * recompute the scroll offset so the selected session's row stays in view; horizontal moves stay
- * within a row and leave it unchanged. Computing the offset in the same update that changes the
- * selection keeps the move and the scroll in a single render.
+ * within a row and leave it unchanged.
  *
  * @param state The current store state prior to the action update.
  * @param action The action to apply to the state.
@@ -165,10 +163,9 @@ function storeReducer(state: StoreState, action: StoreAction): StoreState {
 }
 
 /**
- * Wraps `storeReducer` with the React `useReducer` hook plus action-dispatching callbacks. Owns the
- * initial-state construction and exposes `setWindowSize` so the provider can keep the store's
- * layout and height in sync with resize events. Exported for direct testing; production callers
- * should use `StoreProvider` and `useStore` instead.
+ * Provides the store state along with action-dispatching callbacks that update it, including
+ * `setWindowSize` for keeping the store's layout and height in sync with resize events. Exported for
+ * direct testing; production callers should use `StoreProvider` and `useStore` instead.
  *
  * @param initialWindowWidth The initial width of the terminal window.
  * @param initialWindowHeight The initial height of the terminal window.

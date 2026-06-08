@@ -7,10 +7,9 @@ import { Picker } from "./picker.tsx";
 import { useState } from "react";
 
 /**
- * The project-picker modal. Loads the available project sources, renders a Picker for the user to
- * fuzzy-search and pick one by name, then advances the new-session flow to the session-name prompt
- * with the chosen source. Pre-selects the project of the currently selected session so the common
- * "another session in this project" path is one keystroke.
+ * The project-picker modal. Lets the user fuzzy-search the available projects and pick one by name,
+ * then advances the new-session flow to the session-name prompt. Pre-selects the project of the
+ * currently selected session.
  */
 export function ProjectPickerModal() {
   const { selectedSessionId, projects, promptForSession, cancel } = useStore();

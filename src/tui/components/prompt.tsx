@@ -32,8 +32,7 @@ type PromptProps = {
 };
 
 /**
- * A text-input modal. Typing, backspace, and cursor positioning are handled by `ink-text-input`;
- * enter submits the current value and escape cancels.
+ * A text-input modal. Enter submits the current value and escape cancels.
  */
 export function Prompt({
   title,

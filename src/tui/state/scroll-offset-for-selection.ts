@@ -10,9 +10,7 @@ import {
 } from "./constants.ts";
 
 /**
- * The top of the row holding the selected session, in rows from the top of the content. Walks the
- * blocks the ProjectList renders — a header then session rows chunked by `numberOfColumns` —
- * accumulating their fixed heights.
+ * The top of the row holding the selected session, in rows from the top of the content.
  *
  * @param projects The projects rendered in the list, in display order.
  * @param selectedSessionId The id of the selected session, or `null` when none is selected.
@@ -61,10 +59,8 @@ function contentHeight(projects: Project[], numberOfColumns: number): number {
 /**
  * Computes the scroll offset that keeps the selected session's row visible, using sticky
  * edge-triggered scrolling (see `computeScrollOffset`). The viewport is the window minus the header
- * and footer that frame the project list. Block positions are derived analytically from their fixed
- * heights, so the offset can be computed in the same state update that moves the selection — no
- * post-render measurement, so the move and the scroll land in a single render. Returns the current
- * offset unchanged when nothing is selected.
+ * and footer that frame the project list. Returns the current offset unchanged when nothing is
+ * selected.
  *
  * @param projects The projects rendered in the list, in display order.
  * @param selectedSessionId The id of the selected session, or `null` when none is selected.
