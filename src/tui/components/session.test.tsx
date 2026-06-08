@@ -40,6 +40,16 @@ describe("Session", () => {
     });
   });
 
+  describe("when the session is not running", () => {
+    it("renders the session status", () => {
+      const session = sessionFactory.build({ status: "stopped", agents: [] });
+
+      const { lastFrame } = render(<Session session={session} />);
+
+      expect(lastFrame()).toContain("stopped");
+    });
+  });
+
   describe("when the session is on the main worktree", () => {
     it("renders the home icon", () => {
       const session = sessionFactory.build({ worktree: "main" });

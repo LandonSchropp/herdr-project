@@ -2,7 +2,7 @@ import { isMainWorktree } from "../../sessions/main-worktree.ts";
 import type { Session as SessionType } from "../../types.ts";
 import { COLUMN_WIDTH } from "../state/constants.ts";
 import { useStore } from "../state/store.tsx";
-import { AgentStatus } from "./agent-status.tsx";
+import { Status } from "./status.tsx";
 import { Box, Text } from "ink";
 
 /** Font Awesome home glyph, marking a session on the project's main worktree. */
@@ -16,7 +16,7 @@ type SessionProps = {
   session: SessionType;
 };
 
-/** A single session showing its worktree marker, name, and agent status. */
+/** A single session showing its worktree marker, name, and status. */
 export function Session({ session }: SessionProps) {
   const { selectedSessionId } = useStore();
   const selected = session.id === selectedSessionId;
@@ -32,7 +32,7 @@ export function Session({ session }: SessionProps) {
         <Text bold wrap="truncate-end">
           <Text color="blue">{worktreeIcon}</Text> {session.session}
         </Text>
-        <AgentStatus agent={session.agents[0]} selected={selected} />
+        <Status session={session} selected={selected} />
       </Box>
       <Text color={color}>{"▀".repeat(COLUMN_WIDTH)}</Text>
     </Box>
