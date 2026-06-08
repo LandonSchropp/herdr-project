@@ -16,9 +16,8 @@ import { listSessionFiles } from "./session-file.ts";
 import { readStateFile } from "./state.ts";
 
 /**
- * Reads the agent state for a single pane and returns the corresponding {@link Agent}. When the
- * state file has not been written yet (e.g. Claude just started and no hook has fired), defaults to
- * {@link IDLE_AGENT_STATUS}.
+ * Reads the agent state for a single pane and returns the corresponding {@link Agent}, defaulting
+ * to {@link IDLE_AGENT_STATUS} when no state has been recorded for the pane yet.
  *
  * @param project The project name owning the pane.
  * @param session The session name within the project.

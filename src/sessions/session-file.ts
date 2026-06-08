@@ -8,8 +8,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 
 /**
- * Schema for an on-disk session state file. Parses the stored ISO `createdAt` string into a `Date`
- * and derives the session `id`, so the parsed output is a {@link SessionInfo}.
+ * Schema for an on-disk session state file, parsed into a {@link SessionInfo}.
  */
 const sessionInfoSchema = z
   .object({
@@ -22,8 +21,7 @@ const sessionInfoSchema = z
   .transform((info) => ({ ...info, id: sessionId(info.project, info.session) }));
 
 /**
- * Returns the path to a session's state file. Session files sit alongside pane files under
- * `$XDG_CACHE_HOME/orc/state/`, distinguished by having no pane segment.
+ * Returns the path to a session's state file.
  *
  * @param project The project name.
  * @param session The session name within the project.
@@ -34,8 +32,7 @@ export function sessionFilePath(project: string, session: string): string {
 }
 
 /**
- * Writes a session's state file. Serializes `createdAt` as an ISO string and drops the derived
- * `id`, creating the state directory if needed.
+ * Writes a session's state file, creating the state directory if needed.
  *
  * @param info The session info to persist.
  */
@@ -78,9 +75,8 @@ export async function sessionFileExists(project: string, session: string): Promi
 }
 
 /**
- * Lists the session info for every session recorded in the state directory. Pane files (which carry
- * a third `:`-delimited pane segment) are ignored. No-op result when the state directory is
- * missing.
+ * Lists the session info for every recorded session, excluding agent pane files. Returns an empty
+ * array when the state directory is missing.
  *
  * @returns The parsed session info for each session file.
  * @throws If any session file cannot be parsed or fails the schema.

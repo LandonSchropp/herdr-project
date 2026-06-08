@@ -3,9 +3,8 @@ import { createSession } from "./create.ts";
 import { switchSession } from "./switch.ts";
 
 /**
- * Switches to a session when it is already running, otherwise recreates its tmux session from its
- * project info — rebuilding the worktree from its branch when it was deleted — and switches to it.
- * Recreating reuses the existing session file, so the original creation time is preserved.
+ * Switches to a session when it is already running, otherwise recreates it (restoring its worktree
+ * when it was deleted) and switches to it. The session's original creation time is preserved.
  *
  * @param session The session to switch to or recreate.
  */

@@ -5,7 +5,7 @@ import { compareStrings } from "../utilities/string.ts";
 import { listDirectoryProjects } from "./directory-projects.ts";
 
 /**
- * Builds a tmuxinator {@link ProjectSource}, reading the project's root from its tmuxinator config.
+ * Builds a {@link ProjectSource} for the named tmuxinator project.
  *
  * @param name The tmuxinator project name.
  * @returns The project source, tagged `tmuxinator`.

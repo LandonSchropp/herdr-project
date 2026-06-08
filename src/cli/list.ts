@@ -29,8 +29,8 @@ function styleHeader(label: string): string {
 }
 
 /**
- * The label for a session's agent: the first agent's status lowercased, or `n/a` when the session
- * has no agents — mirroring how the TUI labels a session's agent.
+ * The label for a session's agent: its status in lowercase, or `n/a` when the session has no
+ * agents.
  *
  * @param session The session.
  * @returns The agent label.

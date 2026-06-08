@@ -3,7 +3,7 @@ import { listSessions } from "./list.ts";
 
 /**
  * Finds the orc session with the given `project` and `session`, whether running, stopped, or
- * deleted. Sourced from the session files, so it finds sessions that have no live tmux session.
+ * deleted.
  *
  * @param project The project name.
  * @param session The session name within the project.

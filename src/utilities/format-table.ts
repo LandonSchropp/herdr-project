@@ -27,8 +27,7 @@ function formatRow(row: string[], columnWidths: number[]): string {
 }
 
 /**
- * Formats a 2D array of cells as a borderless, left-aligned table. Each column is padded to the
- * visible width of its widest cell.
+ * Formats a 2D array of cells as a borderless, left-aligned table with aligned columns.
  *
  * @param rows The table rows, each an array of cell strings.
  * @returns The formatted table, one row per line.
