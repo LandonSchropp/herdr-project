@@ -9,7 +9,7 @@ const readTmuxinatorProjectMock = mock<(name: string) => Promise<{ root: string 
 const listDirectoryProjectsMock = mock<
   (projectPaths: string[], sources: ProjectSource[]) => Promise<ProjectSource[]>
 >(() => Promise.resolve([]));
-const readConfigMock = mock<() => Promise<{ projectPaths: string[] }>>(() =>
+const readSettingsMock = mock<() => Promise<{ projectPaths: string[] }>>(() =>
   Promise.resolve({ projectPaths: [] }),
 );
 
@@ -22,8 +22,8 @@ await mock.module("./directory-projects.ts", () => ({
   listDirectoryProjects: listDirectoryProjectsMock,
 }));
 
-await mock.module("../config/read.ts", () => ({
-  readConfig: readConfigMock,
+await mock.module("../settings/read.ts", () => ({
+  readSettings: readSettingsMock,
 }));
 
 describe("tmuxinatorSource", () => {
@@ -86,7 +86,7 @@ describe("listProjectSources", () => {
     });
 
     it("discovers directory sources for the configured project paths", async () => {
-      readConfigMock.mockResolvedValue({ projectPaths: ["/repos/*"] });
+      readSettingsMock.mockResolvedValue({ projectPaths: ["/repos/*"] });
       listTmuxinatorProjectsMock.mockResolvedValue(["orc"]);
       readTmuxinatorProjectMock.mockImplementation((name) =>
         Promise.resolve({ root: `/repos/${name}` }),

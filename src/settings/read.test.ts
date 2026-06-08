@@ -1,20 +1,20 @@
 import { stubEnv } from "../../test/helpers/env.ts";
-import { configPath, readConfig } from "./read.ts";
+import { readSettings, settingsPath } from "./read.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 
 const configHome = "/tmp/orc-test-settings";
-const settingsPath = `${configHome}/orc/settings.json`;
+const settingsFilePath = `${configHome}/orc/settings.json`;
 
-describe("configPath", () => {
+describe("settingsPath", () => {
   describe("when $XDG_CONFIG_HOME is set", () => {
     beforeEach(() => {
       stubEnv("XDG_CONFIG_HOME", configHome);
     });
 
     it("returns settings.json under $XDG_CONFIG_HOME/orc", () => {
-      expect(configPath()).toBe(`${configHome}/orc/settings.json`);
+      expect(settingsPath()).toBe(`${configHome}/orc/settings.json`);
     });
   });
 
@@ -24,12 +24,12 @@ describe("configPath", () => {
     });
 
     it("returns settings.json under ~/.config/orc", () => {
-      expect(configPath()).toBe(`${homedir()}/.config/orc/settings.json`);
+      expect(settingsPath()).toBe(`${homedir()}/.config/orc/settings.json`);
     });
   });
 });
 
-describe("readConfig", () => {
+describe("readSettings", () => {
   beforeEach(() => {
     stubEnv("XDG_CONFIG_HOME", configHome);
   });
@@ -39,21 +39,21 @@ describe("readConfig", () => {
   });
 
   describe("when the settings file does not exist", () => {
-    it("returns the default config", async () => {
-      expect(await readConfig()).toEqual({ projectPaths: [] });
+    it("returns the default settings", async () => {
+      expect(await readSettings()).toEqual({ projectPaths: [] });
     });
   });
 
   describe("when the settings file lists project paths", () => {
     beforeEach(async () => {
       await Bun.write(
-        settingsPath,
+        settingsFilePath,
         JSON.stringify({ projectPaths: ["/repos/*", "~/Development/*"] }),
       );
     });
 
     it("returns the paths with a leading ~/ expanded", async () => {
-      expect(await readConfig()).toEqual({
+      expect(await readSettings()).toEqual({
         projectPaths: ["/repos/*", `${homedir()}/Development/*`],
       });
     });
@@ -61,21 +61,21 @@ describe("readConfig", () => {
 
   describe("when the settings file omits project paths", () => {
     beforeEach(async () => {
-      await Bun.write(settingsPath, "{}");
+      await Bun.write(settingsFilePath, "{}");
     });
 
     it("falls back to an empty list", async () => {
-      expect(await readConfig()).toEqual({ projectPaths: [] });
+      expect(await readSettings()).toEqual({ projectPaths: [] });
     });
   });
 
   describe("when the settings file fails validation", () => {
     beforeEach(async () => {
-      await Bun.write(settingsPath, JSON.stringify({ projectPaths: "not-an-array" }));
+      await Bun.write(settingsFilePath, JSON.stringify({ projectPaths: "not-an-array" }));
     });
 
     it("throws", () => {
-      expect(readConfig()).rejects.toThrow();
+      expect(readSettings()).rejects.toThrow();
     });
   });
 });

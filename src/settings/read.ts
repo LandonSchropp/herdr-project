@@ -1,6 +1,6 @@
 import { xdgConfigHome } from "../utilities/xdg.ts";
-import { configSchema } from "./schema.ts";
-import type { Config } from "./types.ts";
+import { settingsSchema } from "./schema.ts";
+import type { Settings } from "./types.ts";
 import { join } from "node:path";
 
 /**
@@ -9,23 +9,23 @@ import { join } from "node:path";
  *
  * @returns The absolute path to `settings.json`.
  */
-export function configPath(): string {
+export function settingsPath(): string {
   return join(xdgConfigHome(), "orc", "settings.json");
 }
 
 /**
- * Reads and validates orc's configuration. Falls back to the default config when the settings file
+ * Reads and validates orc's settings. Falls back to the default settings when the settings file
  * does not exist; throws when the file is present but malformed or fails validation.
  *
- * @returns The validated configuration.
+ * @returns The validated settings.
  * @throws If the settings file is present but contains invalid JSON or fails the schema.
  */
-export async function readConfig(): Promise<Config> {
-  const file = Bun.file(configPath());
+export async function readSettings(): Promise<Settings> {
+  const file = Bun.file(settingsPath());
 
   if (!(await file.exists())) {
-    return configSchema.parse({});
+    return settingsSchema.parse({});
   }
 
-  return configSchema.parse(await file.json());
+  return settingsSchema.parse(await file.json());
 }

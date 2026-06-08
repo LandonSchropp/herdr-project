@@ -1,5 +1,5 @@
 import { listTmuxinatorProjects, readTmuxinatorProject } from "../commands/tmuxinator.ts";
-import { readConfig } from "../config/read.ts";
+import { readSettings } from "../settings/read.ts";
 import type { ProjectSource } from "../types.ts";
 import { compareStrings } from "../utilities/string.ts";
 import { listDirectoryProjects } from "./directory-projects.ts";
@@ -22,7 +22,7 @@ export async function tmuxinatorSource(name: string): Promise<ProjectSource> {
  * @returns The available project sources.
  */
 export async function listProjectSources(): Promise<ProjectSource[]> {
-  const { projectPaths } = await readConfig();
+  const { projectPaths } = await readSettings();
   const names = await listTmuxinatorProjects();
   const tmuxinatorSources = await Promise.all(names.map(tmuxinatorSource));
 
