@@ -29,6 +29,35 @@ describe("Header", () => {
     });
   });
 
+  describe("when there is a single project with a single session", () => {
+    beforeEach(() => {
+      spyOn(storeModule, "useStore").mockReturnValue(
+        storeFactory.build({
+          projects: [
+            {
+              project: "orc",
+              sessions: [sessionFactory.build({ project: "orc", session: "a" })],
+            },
+          ],
+        }),
+      );
+    });
+
+    it("renders the project count in the singular", () => {
+      const { lastFrame } = render(<Header />);
+
+      expect(lastFrame()).toContain("1 project");
+      expect(lastFrame()).not.toContain("1 projects");
+    });
+
+    it("renders the session count in the singular", () => {
+      const { lastFrame } = render(<Header />);
+
+      expect(lastFrame()).toContain("1 session");
+      expect(lastFrame()).not.toContain("1 sessions");
+    });
+  });
+
   describe("when there are sessions across multiple projects", () => {
     beforeEach(() => {
       spyOn(storeModule, "useStore").mockReturnValue(

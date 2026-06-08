@@ -1,4 +1,5 @@
 import { IDLE_AGENT_STATUS, WAITING_AGENT_STATUS, WORKING_AGENT_STATUS } from "../../constants.ts";
+import { pluralize } from "../../utilities/string.ts";
 import { sessionStatus } from "../state/session-status.ts";
 import { useStore } from "../state/store.tsx";
 import { Box, Text } from "ink";
@@ -31,9 +32,13 @@ export function Header() {
         orc
       </Text>
       <Text italic>
-        <Text color="blue">{projects.length} projects</Text>
+        <Text color="blue">
+          {projects.length} {pluralize(projects.length, "project")}
+        </Text>
         <Text color="gray"> · </Text>
-        <Text color="white">{sessions.length} sessions</Text>
+        <Text color="white">
+          {sessions.length} {pluralize(sessions.length, "session")}
+        </Text>
         <Text color="gray"> · </Text>
         <Text color="green">{workingCount} working</Text>
         <Text color="gray"> · </Text>
