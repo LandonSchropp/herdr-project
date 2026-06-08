@@ -12,10 +12,9 @@ export function hookLogPath(): string {
 }
 
 /**
- * Appends a hook event entry to the hook log as a single JSON line. The entry records the
- * timestamp, the firing pane, and the full raw payload so a later run can be reconstructed from the
- * file. Best-effort: any failure to write is swallowed so logging never blocks or breaks the hook
- * handler.
+ * Appends an entry for a hook event to the hook log, recording the time, the firing pane, and the
+ * raw payload. Best-effort: any failure to write is swallowed so logging never blocks or breaks the
+ * hook handler.
  *
  * @param paneId The tmux pane id where the hook fired.
  * @param payload The raw hook payload received from stdin.

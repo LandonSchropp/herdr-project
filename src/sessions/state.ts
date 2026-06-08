@@ -6,9 +6,7 @@ import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 /**
- * Returns the absolute path to the agent state file for the given project, session, and pane. State
- * files are stored flat under `$XDG_CACHE_HOME/orc/state/`, with the project, session, and pane
- * encoded into the filename.
+ * Returns the absolute path to the agent state file for the given project, session, and pane.
  *
  * @param project The project name.
  * @param session The session name within the project.

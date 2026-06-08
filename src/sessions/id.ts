@@ -11,9 +11,9 @@ export function sessionId(project: string, session: string): string {
 }
 
 /**
- * Splits a session id back into its project and session parts. Splits on the first slash, so
- * slashes inside the session part are preserved. Returns `null` for ids that don't contain a slash
- * (e.g. foreign tmux sessions on the orc socket).
+ * Splits a session id back into its project and session parts. Only the first slash separates the
+ * two, so slashes inside the session part are preserved. Returns `null` for ids that don't contain
+ * a slash (e.g. foreign tmux sessions on the orc socket).
  *
  * @param id The session id to parse.
  * @returns A `[project, session]` tuple, or `null` if the id has no slash.

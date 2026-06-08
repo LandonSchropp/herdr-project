@@ -70,12 +70,12 @@ function payloadToStatus(payload: HookPayload): AgentStatus | null {
 }
 
 /**
- * Processes a Claude Code hook payload for the given firing pane. Looks up the session name for the
- * pane and writes the corresponding agent status to its state file. Silently skips payloads that do
- * not map to a status change, such as informational Notifications.
+ * Processes a Claude Code hook payload for the given firing pane, recording the corresponding agent
+ * status for its session. Silently skips payloads that do not map to a status change, including
+ * informational Notifications (like the idle reminder) that the Stop event already covers as Idle.
  *
- * The state file is left untouched when its status already matches, so the recorded timestamp keeps
- * marking when the agent entered that status rather than when the latest event fired.
+ * When the status is unchanged the recorded timestamp is preserved, so it keeps marking when the
+ * agent entered that status rather than when the latest event fired.
  *
  * @param payload The validated hook payload from Claude Code.
  * @param paneId The tmux pane id where the hook fired.

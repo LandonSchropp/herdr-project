@@ -15,9 +15,8 @@ export function isDeleteWorker(): boolean {
 }
 
 /**
- * Spawns a detached worker that deletes the given session. The worker re-invokes `orc delete` with
- * the worker flag set, in its own session with a stable working directory, so it finishes the
- * deletion even after the pane that launched it is killed.
+ * Spawns a detached worker that deletes the given session, finishing the deletion even after the
+ * pane that launched it is killed.
  *
  * @param project The project name.
  * @param session The session name within the project.

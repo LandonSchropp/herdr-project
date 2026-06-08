@@ -6,12 +6,9 @@ import { readSessionFile, removeSessionFile } from "./session-file.ts";
 import { removeSessionStateFiles } from "./state.ts";
 
 /**
- * Deletes an orc session. Kills the tmux session, removes the session's Git worktree, and cleans up
- * its session file and any agent state files left behind. The repository is resolved from the
- * persisted session file rather than the worktree directory, so removal still cleans up Git's
- * registration when the worktree directory is already gone (a prunable worktree). Removal is
- * guarded on the worktree being registered in Git, not on the directory existing on disk. Does not
- * delete the underlying branch.
+ * Deletes an orc session: its tmux session, its Git worktree (even when the worktree directory is
+ * already gone), its session file, and any agent state files left behind. Does not delete the
+ * underlying branch.
  *
  * @param project The project name.
  * @param session The session name within the project.

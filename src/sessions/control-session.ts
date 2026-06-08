@@ -28,9 +28,7 @@ export function shouldRenderTui(): boolean {
 }
 
 /**
- * Builds the shell command the control session's first pane runs: the current orc binary re-invoked
- * with {@link RENDER_TUI_ENVIRONMENT_VARIABLE} set and no subcommand, so it renders the TUI
- * directly.
+ * Builds the shell command the control session runs to render the TUI directly.
  *
  * @returns The shell command for the control session.
  */
@@ -40,9 +38,7 @@ function controlSessionCommand(): string {
 }
 
 /**
- * Ensures the hidden control session exists, creating it with its status bar hidden if needed, then
- * moves to it: switches the current client when already inside an orc tmux session, otherwise
- * attaches the terminal.
+ * Ensures the hidden control session exists, creating it if needed, then moves to it.
  */
 export async function attachOrSwitchToControlSession(): Promise<void> {
   await createTmuxSessionUnlessExists(CONTROL_SESSION, controlSessionCommand(), {

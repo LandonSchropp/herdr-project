@@ -2,8 +2,8 @@ import { attachTmuxSession, isInsideOrcTmuxSession, switchTmuxSession } from "..
 import { sessionId } from "./id.ts";
 
 /**
- * Switches to the orc session identified by `project` and `session`. When called from inside an orc
- * tmux session, switches the current client; otherwise attaches the terminal to the session.
+ * Switches to the orc session identified by `project` and `session`, whether called from inside an
+ * orc tmux session or from a plain terminal.
  *
  * @param project The project name.
  * @param session The session name within the project.

@@ -4,8 +4,7 @@ import { basename, dirname, join } from "node:path";
 
 /**
  * Lists the roots of the git repositories matched by `projectPath`, a glob whose matches are
- * treated as projects when they contain a `.git` entry. Globs `<projectPath>/.git` so each match is
- * a repository's `.git`, whose parent is the repository root.
+ * treated as projects when they contain a `.git` entry.
  *
  * @param projectPath The glob to expand.
  * @returns The absolute roots of the matched git repositories.

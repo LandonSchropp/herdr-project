@@ -11,14 +11,10 @@ import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 
 /**
- * Creates a new orc session. The session named "main" runs on the project's main worktree; every
- * other session gets a dedicated Git worktree — reusing an existing worktree if present, checking
- * out the session's branch when it already exists, or branching from the project's default branch
- * when it does not. Records the session in a state file when it is first created — leaving any
- * existing file untouched — so it can be listed and resumed after a restart. Starts tmuxinator
- * against the chosen directory — a tmuxinator source uses its own template, falling back to the
- * `default` template when its config has been deleted, and a directory source always uses the
- * `default` template — then switches to the new session.
+ * Creates a new orc session and switches to it. The session named "main" runs on the project's main
+ * worktree; every other session gets a dedicated Git worktree, on the session's existing branch if
+ * one exists or a new branch off the project's default branch otherwise. The session is recorded so
+ * it can be listed and resumed after a restart.
  *
  * @param source The project to create the session in.
  * @param session The session name within the project.
