@@ -10,8 +10,7 @@ export async function isGitInstalled(): Promise<boolean> {
 }
 
 /**
- * Returns the default branch for the repo at `repositoryRoot`. Tries `origin/HEAD` first, then
- * falls back to a local `main` or `master` branch. Returns `null` if no default can be determined.
+ * Returns the default branch for the repo at `repositoryRoot`, or `null` if none can be determined.
  *
  * @param repositoryRoot The path to the git repository.
  * @returns The default branch name, or `null`.
@@ -123,12 +122,12 @@ export async function addWorktree(
 }
 
 /**
- * Removes the git worktree at `worktreePath`. Forces the removal so untracked or modified files in
- * the worktree do not block deletion. Leaves the branch ref in the main repo untouched.
+ * Removes the git worktree at `worktreePath`, even when it has untracked or modified files. Leaves
+ * the branch in the main repo untouched.
  *
  * @param repositoryRoot The path to the git repository.
  * @param worktreePath The path to the worktree to remove.
- * @throws If `git worktree remove` fails.
+ * @throws If the worktree cannot be removed.
  */
 export async function removeWorktree(repositoryRoot: string, worktreePath: string): Promise<void> {
   const { exitCode, stderr } = await runCommand([

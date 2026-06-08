@@ -70,9 +70,9 @@ export type RunDetachedCommandOptions = {
 };
 
 /**
- * Spawns a command in a fully detached process: its own session, with stdio ignored and unref'd, so
- * it keeps running after the caller exits or the caller's tmux pane is killed. The caller cannot
- * observe the process, so the command is responsible for reporting its own failures.
+ * Spawns a command in a fully detached process that keeps running after the caller exits or the
+ * caller's tmux pane is killed. The caller cannot observe the process, so the command is
+ * responsible for reporting its own failures.
  *
  * @param command The command and its arguments.
  * @param options The working directory and any extra environment variables.

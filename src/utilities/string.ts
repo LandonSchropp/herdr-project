@@ -1,6 +1,6 @@
 /**
- * Compares two strings for alphabetical ordering, suitable as an `Array#sort` comparator. Delegates
- * to `localeCompare` so ordering follows the user's locale.
+ * Compares two strings for alphabetical ordering, suitable as an `Array#sort` comparator. Ordering
+ * follows the user's locale.
  *
  * @param a The first string to compare.
  * @param b The second string to compare.

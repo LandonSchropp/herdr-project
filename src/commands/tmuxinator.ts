@@ -43,9 +43,8 @@ export async function isTmuxinatorInstalled(): Promise<boolean> {
 }
 
 /**
- * Lists the available tmuxinator project names. Drops the `tmuxinator projects:` header that
- * `tmuxinator list --newline` prints before the names, along with the built-in `default` project,
- * which is a tmuxinator scaffold rather than a real orc project.
+ * Lists the available tmuxinator project names. Excludes the built-in `default` project, which is a
+ * tmuxinator scaffold rather than a real orc project.
  *
  * @returns The available tmuxinator project names.
  */
@@ -85,10 +84,8 @@ export async function readTmuxinatorProject(project: string): Promise<Tmuxinator
 
 /**
  * Starts a tmuxinator project, naming the tmux session `<project>/<session>` and overriding its
- * `root` with the given path. Reads the `template` project's YAML for the window layout —
- * defaulting to `project`, but a directory project passes `default` since it has no config of its
- * own — writes a modified copy to a temp file, then invokes tmuxinator. Does not attach the calling
- * process — callers attach separately.
+ * `root` with the given path. The `template` project supplies the window layout. Does not attach
+ * the calling process — callers attach separately.
  *
  * @param project The orc project name, used for the session id.
  * @param session The session name within the project.

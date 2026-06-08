@@ -22,8 +22,7 @@ export async function isTmuxInstalled(): Promise<boolean> {
 }
 
 /**
- * Returns `true` if the calling process is inside an orc tmux session. Detected via the `$TMUX`
- * environment variable's socket path.
+ * Returns `true` if the calling process is inside an orc tmux session.
  *
  * @returns `true` when inside an orc tmux session, otherwise `false`.
  */
@@ -47,12 +46,11 @@ export async function detachTmuxClient(): Promise<void> {
 }
 
 /**
- * Returns the orc id for the session the given pane belongs to. Runs `tmux display-message` against
- * orc's isolated server.
+ * Returns the orc id for the session the given pane belongs to.
  *
  * @param paneId The tmux pane id (e.g. `%5`).
  * @returns The session id (e.g. `project/feature-a`).
- * @throws If tmux exits with an error.
+ * @throws If the session id cannot be determined.
  */
 export async function sessionId(paneId: string): Promise<string> {
   const { exitCode, stdout, stderr } = await tmux(["display-message", "-p", "-t", paneId, "#S"]);
@@ -65,8 +63,8 @@ export async function sessionId(paneId: string): Promise<string> {
 }
 
 /**
- * Returns the name of the current client's session on orc's isolated server, read from tmux's
- * `session_name`. Returns null when there is no current session.
+ * Returns the name of the current client's session on orc's isolated server, or null when there is
+ * no current session.
  *
  * @returns The current session name, or null.
  */
@@ -79,8 +77,8 @@ export async function currentTmuxSession(): Promise<string | null> {
 }
 
 /**
- * Returns the name of the session the current client was attached to before its current one, read
- * from tmux's `client_last_session`. Returns null when the client has no previous session.
+ * Returns the name of the session the current client was attached to before its current one, or
+ * null when the client has no previous session.
  *
  * @returns The previous session name, or null.
  */
@@ -110,7 +108,7 @@ type CreateTmuxSessionOptions = {
 
 /**
  * Creates a detached session on orc's isolated server that runs the given command. When `statusBar`
- * is `false`, hides the session's status bar in the same invocation.
+ * is `false`, hides the session's status bar.
  *
  * @param name The name for the new session.
  * @param command The shell command the session's first pane runs.
@@ -211,9 +209,8 @@ export async function listTmuxSessions(): Promise<TmuxSession[]> {
 }
 
 /**
- * Parses a single tab-separated line emitted by `tmux list-sessions` using `SESSION_FORMAT`.
- * Returns `null` for session names that do not contain a `/`, signalling a foreign session that
- * should be skipped.
+ * Parses a single tab-separated line emitted by `tmux list-sessions`. Returns `null` for session
+ * names that do not contain a `/`, signalling a foreign session that should be skipped.
  *
  * @param line A line of tmux output: `name<TAB>created<TAB>path`.
  * @returns The parsed session, or `null` if the name is not in `project/session` form.
@@ -257,9 +254,9 @@ export async function listTmuxPanes(): Promise<TmuxPane[]> {
 }
 
 /**
- * Parses a single tab-separated line emitted by `tmux list-panes` using `PANE_FORMAT`. Returns
- * `null` for session names that do not contain a `/`, signalling a foreign session on the orc
- * socket that should be skipped.
+ * Parses a single tab-separated line emitted by `tmux list-panes`. Returns `null` for session
+ * names that do not contain a `/`, signalling a foreign session on the orc socket that should be
+ * skipped.
  *
  * @param line A line of tmux output: `sessionId<TAB>paneId<TAB>paneTitle`.
  * @returns The parsed pane, or `null` if the session is not in `project/session` form.
