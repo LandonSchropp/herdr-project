@@ -155,7 +155,7 @@ export async function createTmuxSessionUnlessExists(
 /**
  * Kills the orc tmux session with the given name.
  *
- * @param name The full `project:session` name to kill.
+ * @param name The full `project/session` name to kill.
  * @throws If tmux fails to kill the session.
  */
 export async function killTmuxSession(name: string): Promise<void> {
@@ -169,7 +169,7 @@ export async function killTmuxSession(name: string): Promise<void> {
 /**
  * Switches the current orc tmux client to the session with the given name.
  *
- * @param name The full `project:session` name to switch to.
+ * @param name The full `project/session` name to switch to.
  */
 export async function switchTmuxSession(name: string): Promise<void> {
   await tmux(["switch-client", "-t", name]);
@@ -254,8 +254,8 @@ export async function listTmuxPanes(): Promise<TmuxPane[]> {
 }
 
 /**
- * Parses a single tab-separated line emitted by `tmux list-panes`. Returns `null` for session
- * names that do not contain a `/`, signalling a foreign session on the orc socket that should be
+ * Parses a single tab-separated line emitted by `tmux list-panes`. Returns `null` for session names
+ * that do not contain a `/`, signalling a foreign session on the orc socket that should be
  * skipped.
  *
  * @param line A line of tmux output: `sessionId<TAB>paneId<TAB>paneTitle`.
