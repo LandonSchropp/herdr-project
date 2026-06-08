@@ -1,5 +1,5 @@
 import { removeWorktree, worktreeExists } from "../commands/git.ts";
-import { killTmuxSession } from "../commands/tmux.ts";
+import { hasTmuxSession, killTmuxSession } from "../commands/tmux.ts";
 import { sessionId } from "./id.ts";
 import { worktreePath } from "./paths.ts";
 import { readSessionFile, removeSessionFile } from "./session-file.ts";
@@ -15,8 +15,13 @@ import { removeSessionStateFiles } from "./state.ts";
  */
 export async function deleteSession(project: string, session: string): Promise<void> {
   // Kill the session first so an interruption can never leave a live session whose panes point at an
-  // already-deleted worktree directory.
-  await killTmuxSession(sessionId(project, session));
+  // already-deleted worktree directory. A stopped or deleted session has no live tmux session to
+  // kill.
+  const id = sessionId(project, session);
+
+  if (await hasTmuxSession(id)) {
+    await killTmuxSession(id);
+  }
 
   const sessionInfo = await readSessionFile(project, session);
 

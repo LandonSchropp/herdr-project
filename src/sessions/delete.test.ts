@@ -16,6 +16,7 @@ const sessionInfo: SessionInfo = {
 };
 
 const killTmuxSessionMock = mock((): Promise<void> => Promise.resolve());
+const hasTmuxSessionMock = mock((): Promise<boolean> => Promise.resolve(true));
 const worktreeExistsMock = mock((): Promise<boolean> => Promise.resolve(true));
 const removeWorktreeMock = mock((): Promise<void> => Promise.resolve());
 const removeSessionStateFilesMock = mock((): Promise<void> => Promise.resolve());
@@ -24,6 +25,7 @@ const removeSessionFileMock = mock((): Promise<void> => Promise.resolve());
 
 await mock.module("../commands/tmux.ts", () => ({
   killTmuxSession: killTmuxSessionMock,
+  hasTmuxSession: hasTmuxSessionMock,
 }));
 
 await mock.module("./id.ts", () => ({
@@ -47,6 +49,7 @@ await mock.module("./session-file.ts", () => ({
 beforeEach(() => {
   worktreeExistsMock.mockResolvedValue(true);
   readSessionFileMock.mockResolvedValue(sessionInfo);
+  hasTmuxSessionMock.mockResolvedValue(true);
 });
 
 describe("deleteSession", () => {
@@ -110,6 +113,25 @@ describe("deleteSession", () => {
 
     it("kills the tmux session", () => {
       expect(killTmuxSessionMock).toHaveBeenCalledWith("test-project/feature-a");
+    });
+
+    it("removes the session file", () => {
+      expect(removeSessionFileMock).toHaveBeenCalledWith("test-project", "feature-a");
+    });
+  });
+
+  describe("when the tmux session is not running", () => {
+    beforeEach(async () => {
+      hasTmuxSessionMock.mockResolvedValue(false);
+      await deleteSession("test-project", "feature-a");
+    });
+
+    it("does not attempt to kill the tmux session", () => {
+      expect(killTmuxSessionMock).not.toHaveBeenCalled();
+    });
+
+    it("removes the worktree", () => {
+      expect(removeWorktreeMock).toHaveBeenCalledWith(repositoryRoot, worktreePath);
     });
 
     it("removes the session file", () => {
