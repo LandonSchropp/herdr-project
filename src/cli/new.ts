@@ -1,7 +1,7 @@
 import { createSession } from "../sessions/create.ts";
 import { findSession } from "../sessions/find.ts";
 import { sessionId } from "../sessions/id.ts";
-import { tmuxinatorSource } from "../sessions/project-sources.ts";
+import { findProjectSource } from "../sessions/project-sources.ts";
 import { defineCommand } from "citty";
 
 export const newCommand = defineCommand({
@@ -28,6 +28,13 @@ export const newCommand = defineCommand({
       return process.exit(1);
     }
 
-    await createSession(await tmuxinatorSource(args.project), args.session);
+    const source = await findProjectSource(args.project);
+
+    if (!source) {
+      process.stderr.write(`Project not found: ${args.project}\n`);
+      return process.exit(1);
+    }
+
+    await createSession(source, args.session);
   },
 });

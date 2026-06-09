@@ -36,3 +36,14 @@ export async function listProjectSources(): Promise<ProjectSource[]> {
 
   return [...tmuxinatorSources, ...directorySources].sort((a, b) => compareStrings(a.name, b.name));
 }
+
+/**
+ * Finds the project source with the given name among those a new session can be created in.
+ *
+ * @param name The project name to match.
+ * @returns The matching project source, or `null` when no available source has that name.
+ */
+export async function findProjectSource(name: string): Promise<ProjectSource | null> {
+  const sources = await listProjectSources();
+  return sources.find((source) => source.name === name) ?? null;
+}

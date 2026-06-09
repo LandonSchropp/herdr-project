@@ -7,8 +7,8 @@ import { runCommand } from "citty";
 
 const createSessionMock = mock((): Promise<void> => Promise.resolve());
 const findSessionMock = mock((): Promise<Session | null> => Promise.resolve(null));
-const tmuxinatorSourceMock = mock<(name: string) => Promise<ProjectSource>>((name) =>
-  Promise.resolve({ kind: "tmuxinator", name, repositoryRoot: `/repos/${name}` }),
+const findProjectSourceMock = mock<(name: string) => Promise<ProjectSource | null>>(() =>
+  Promise.resolve(null),
 );
 
 await mock.module("../sessions/create.ts", () => ({
@@ -20,13 +20,18 @@ await mock.module("../sessions/find.ts", () => ({
 }));
 
 await mock.module("../sessions/project-sources.ts", () => ({
-  tmuxinatorSource: tmuxinatorSourceMock,
+  findProjectSource: findProjectSourceMock,
 }));
 
 describe("newCommand", () => {
-  describe("when no session with the same name exists", () => {
-    it("creates the session", async () => {
+  describe("when the project exists and no session with the same name exists", () => {
+    it("creates the session for the matching source", async () => {
       findSessionMock.mockResolvedValue(null);
+      findProjectSourceMock.mockResolvedValue({
+        kind: "tmuxinator",
+        name: "test-project",
+        repositoryRoot: "/repos/test-project",
+      });
 
       await runCommand(newCommand, { rawArgs: ["test-project", "feature-a"] });
 
@@ -35,6 +40,19 @@ describe("newCommand", () => {
         { kind: "tmuxinator", name: "test-project", repositoryRoot: "/repos/test-project" },
         "feature-a",
       );
+    });
+  });
+
+  describe("when the project is not found", () => {
+    it("prints an error and exits with code 1 without creating", async () => {
+      findSessionMock.mockResolvedValue(null);
+      findProjectSourceMock.mockResolvedValue(null);
+
+      await runCommand(newCommand, { rawArgs: ["test-project", "feature-a"] });
+
+      expect(stderrSpy).toHaveBeenCalledWith("Project not found: test-project\n");
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(createSessionMock).not.toHaveBeenCalled();
     });
   });
 

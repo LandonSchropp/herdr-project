@@ -1,5 +1,5 @@
 import type { ProjectSource } from "../types.ts";
-import { listProjectSources, tmuxinatorSource } from "./project-sources.ts";
+import { findProjectSource, listProjectSources, tmuxinatorSource } from "./project-sources.ts";
 import { describe, expect, it, mock } from "bun:test";
 
 const listTmuxinatorProjectsMock = mock<() => Promise<string[]>>(() => Promise.resolve([]));
@@ -108,6 +108,32 @@ describe("listProjectSources", () => {
       listDirectoryProjectsMock.mockResolvedValue([]);
 
       expect(await listProjectSources()).toEqual([]);
+    });
+  });
+});
+
+describe("findProjectSource", () => {
+  describe("when a project source has the given name", () => {
+    it("returns the matching source", async () => {
+      listTmuxinatorProjectsMock.mockResolvedValue(["orc"]);
+      readTmuxinatorProjectMock.mockResolvedValue({ root: "/repos/orc" });
+      listDirectoryProjectsMock.mockResolvedValue([]);
+
+      expect(await findProjectSource("orc")).toEqual({
+        kind: "tmuxinator",
+        name: "orc",
+        repositoryRoot: "/repos/orc",
+      });
+    });
+  });
+
+  describe("when no project source has the given name", () => {
+    it("returns null", async () => {
+      listTmuxinatorProjectsMock.mockResolvedValue(["orc"]);
+      readTmuxinatorProjectMock.mockResolvedValue({ root: "/repos/orc" });
+      listDirectoryProjectsMock.mockResolvedValue([]);
+
+      expect(await findProjectSource("missing")).toBeNull();
     });
   });
 });
