@@ -1,5 +1,5 @@
 import { previousTmuxSession, switchTmuxSession } from "../../commands/tmux.ts";
-import { switchSession } from "../../sessions/switch.ts";
+import { createOrSwitchSession } from "../../sessions/create-or-switch-session.ts";
 import { findSession } from "../state/find-session.ts";
 import { useStore } from "../state/store.tsx";
 import { useApp, useInput } from "ink";
@@ -7,10 +7,10 @@ import { useApp, useInput } from "ink";
 /**
  * Handles every key press in the session list view: `q` or escape returns to the previous session
  * (quitting when there is none), the arrow keys and their vim equivalents (`k`/up, `j`/down,
- * `h`/left, `l`/right) move the selected session, `enter` or `a` attaches to the selected session,
- * `n` opens the project picker to start a new session, and `d` opens the delete-confirmation modal
- * when a session is selected. Stays silent while a modal is open so the modal's own `useInput`
- * block owns input.
+ * `h`/left, `l`/right) move the selected session, `enter` or `a` attaches to the selected session
+ * (recreating it first when it is stopped), `n` opens the project picker to start a new session,
+ * and `d` opens the delete-confirmation modal when a session is selected. Stays silent while a
+ * modal is open so the modal's own `useInput` block owns input.
  */
 export function useSessionListKeybindings() {
   const { exit } = useApp();
@@ -26,10 +26,10 @@ export function useSessionListKeybindings() {
     selectProject,
   } = useStore();
 
-  /** Attaches to the selected session, if one is selected. */
+  /** Attaches to the selected session, recreating it first when it is stopped. */
   function attach() {
     const session = findSession(projects, selectedSessionId);
-    if (session) void switchSession(session.project, session.session);
+    if (session) void createOrSwitchSession(session);
   }
 
   /**

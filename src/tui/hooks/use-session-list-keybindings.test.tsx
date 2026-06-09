@@ -6,10 +6,10 @@ import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import * as ink from "ink";
 import { render } from "ink-testing-library";
 
-const switchSessionMock = mock(() => Promise.resolve());
+const createOrSwitchSessionMock = mock(() => Promise.resolve());
 
-await mock.module("../../sessions/switch.ts", () => ({
-  switchSession: switchSessionMock,
+await mock.module("../../sessions/create-or-switch-session.ts", () => ({
+  createOrSwitchSession: createOrSwitchSessionMock,
 }));
 
 const previousTmuxSessionMock = mock((): Promise<string | null> => Promise.resolve(null));
@@ -159,7 +159,7 @@ describe("useSessionListKeybindings", () => {
       stdin.write("\r");
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(switchSessionMock).toHaveBeenCalledWith("orc", "tui");
+      expect(createOrSwitchSessionMock).toHaveBeenCalledWith(session);
     });
   });
 
@@ -179,7 +179,7 @@ describe("useSessionListKeybindings", () => {
       stdin.write("a");
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(switchSessionMock).toHaveBeenCalledWith("orc", "tui");
+      expect(createOrSwitchSessionMock).toHaveBeenCalledWith(session);
     });
   });
 
@@ -194,7 +194,7 @@ describe("useSessionListKeybindings", () => {
       stdin.write("\r");
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(switchSessionMock).not.toHaveBeenCalled();
+      expect(createOrSwitchSessionMock).not.toHaveBeenCalled();
     });
   });
 
