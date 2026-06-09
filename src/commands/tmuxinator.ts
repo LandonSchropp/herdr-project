@@ -43,29 +43,32 @@ export async function isTmuxinatorInstalled(): Promise<boolean> {
 }
 
 /**
- * Lists the available tmuxinator project names. Excludes the built-in `default` project, which is a
+ * Lists the available tmuxinator projects. Excludes the built-in `default` project, which is a
  * tmuxinator scaffold rather than a real orc project.
  *
- * @returns The available tmuxinator project names.
+ * @returns The parsed tmuxinator projects.
  */
-export async function listTmuxinatorProjects(): Promise<string[]> {
+export async function listTmuxinatorProjects(): Promise<TmuxinatorProject[]> {
   const { stdout } = await runCommand(["tmuxinator", "list", "--newline"]);
 
-  return stdout
+  const names = stdout
     .split("\n")
     .slice(1)
     .filter((line) => line.length > 0)
     .filter((project) => project !== DEFAULT_PROJECT);
+
+  return Promise.all(names.map(readTmuxinatorProject));
 }
 
 /**
  * Reads and parses the tmuxinator project config for the given project name. Expands a leading `~/`
- * in the project's `root` to the user's home directory.
+ * in the project's `root` to the user's home directory; a config with no `root` yields a `null`
+ * root.
  *
  * @param project The tmuxinator project name (the file in `~/.config/tmuxinator/<project>.yml`).
- * @returns The parsed tmuxinator project with an absolute `root` path.
+ * @returns The parsed tmuxinator project, with an absolute `root` path when the config defines one.
  * @throws If the file cannot be read, the YAML is invalid, or the project is missing a string
- *   `name` or `root` field.
+ *   `name` field.
  */
 export async function readTmuxinatorProject(project: string): Promise<TmuxinatorProject> {
   const path = tmuxinatorConfigPath(project);
@@ -75,11 +78,9 @@ export async function readTmuxinatorProject(project: string): Promise<Tmuxinator
     throw new Error(`Tmuxinator config at ${path} is missing a string \`name\` field`);
   }
 
-  if (typeof parsed.root !== "string") {
-    throw new Error(`Tmuxinator config at ${path} is missing a string \`root\` field`);
-  }
+  const root = typeof parsed.root === "string" ? expandHome(parsed.root) : null;
 
-  return { ...parsed, root: expandHome(parsed.root) } as TmuxinatorProject;
+  return { ...parsed, name: parsed.name, root };
 }
 
 /**

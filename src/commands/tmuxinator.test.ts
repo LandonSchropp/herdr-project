@@ -48,14 +48,31 @@ describe("isTmuxinatorInstalled", () => {
 });
 
 describe("listTmuxinatorProjects", () => {
+  beforeEach(() => {
+    stubEnv("XDG_CONFIG_HOME", configHome);
+  });
+
+  afterEach(async () => {
+    await rm(configHome, { recursive: true, force: true });
+  });
+
   describe("when projects exist", () => {
-    it("returns the project names without the header", async () => {
+    it("returns the parsed projects without the header", async () => {
       runCommandMock.mockResolvedValue({
         exitCode: 0,
-        stdout: "tmuxinator projects:\nagent-toolkit\ndotfiles\nnotes\n",
+        stdout: "tmuxinator projects:\nagent-toolkit\nnotes\n",
         stderr: "",
       });
-      expect(await listTmuxinatorProjects()).toEqual(["agent-toolkit", "dotfiles", "notes"]);
+      await Bun.write(
+        `${configHome}/tmuxinator/agent-toolkit.yml`,
+        "name: agent-toolkit\nroot: ~/Development/agent-toolkit\n",
+      );
+      await Bun.write(`${configHome}/tmuxinator/notes.yml`, "name: notes\nroot: ~/Notes\n");
+
+      expect(await listTmuxinatorProjects()).toEqual([
+        { name: "agent-toolkit", root: `${homedir()}/Development/agent-toolkit` },
+        { name: "notes", root: `${homedir()}/Notes` },
+      ]);
     });
   });
 
@@ -77,7 +94,16 @@ describe("listTmuxinatorProjects", () => {
         stdout: "tmuxinator projects:\nagent-toolkit\ndefault\nnotes\n",
         stderr: "",
       });
-      expect(await listTmuxinatorProjects()).toEqual(["agent-toolkit", "notes"]);
+      await Bun.write(
+        `${configHome}/tmuxinator/agent-toolkit.yml`,
+        "name: agent-toolkit\nroot: ~/\n",
+      );
+      await Bun.write(`${configHome}/tmuxinator/notes.yml`, "name: notes\nroot: ~/\n");
+
+      expect((await listTmuxinatorProjects()).map((project) => project.name)).toEqual([
+        "agent-toolkit",
+        "notes",
+      ]);
     });
   });
 });
@@ -196,13 +222,24 @@ describe("readTmuxinatorProject", () => {
     });
   });
 
-  describe("when the project is missing a root field", () => {
+  describe("when the project has no root field", () => {
     beforeEach(async () => {
-      await Bun.write(configPath, "name: agent-toolkit\n");
+      await Bun.write(
+        configPath,
+        dedent`
+          name: agent-toolkit
+          windows:
+            - shell:
+        `,
+      );
     });
 
-    it("throws an error", () => {
-      expect(readTmuxinatorProject("agent-toolkit")).rejects.toThrow(/missing a string `root`/);
+    it("parses the project with a null root", async () => {
+      expect(await readTmuxinatorProject("agent-toolkit")).toEqual({
+        name: "agent-toolkit",
+        root: null,
+        windows: [{ shell: null }],
+      });
     });
   });
 });
@@ -275,6 +312,34 @@ describe("startTmuxinatorProject", () => {
         root: "/tmp/worktree",
         tmux_options: "-L orc",
         windows: [{ editor: "nvim" }],
+      });
+    });
+  });
+
+  describe("when the template has no root", () => {
+    beforeEach(async () => {
+      runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
+      await Bun.write(
+        `${configHome}/tmuxinator/default.yml`,
+        dedent`
+          name: default
+          windows:
+            - shell:
+            - claude: claude
+        `,
+      );
+      await startTmuxinatorProject("my-directory", "feature-a", "/tmp/worktree", "default");
+    });
+
+    it("starts the session using the overridden root", async () => {
+      const args = runCommandMock.mock.calls[0][0];
+      const configPath = args[args.indexOf("-p") + 1];
+
+      expect(YAML.parse(await Bun.file(configPath).text())).toEqual({
+        name: "my-directory/feature-a",
+        root: "/tmp/worktree",
+        tmux_options: "-L orc",
+        windows: [{ shell: null }, { claude: "claude" }],
       });
     });
   });

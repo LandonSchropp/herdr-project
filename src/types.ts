@@ -160,5 +160,8 @@ export type YamlValue = JsonValue;
 /** A YAML mapping (top-level object). */
 export type YamlObject = JsonObject;
 
-/** A tmuxinator project — a YAML object with at least a `name` and `root`. */
-export type TmuxinatorProject = YamlObject & { name: string; root: string };
+/** A tmuxinator project — a YAML object with a `name` and a `root` that may be absent. */
+export type TmuxinatorProject = YamlObject & { name: string; root: string | null };
+
+/** A tmuxinator project whose `root` is present. */
+export type RootedTmuxinatorProject = TmuxinatorProject & { root: string };
