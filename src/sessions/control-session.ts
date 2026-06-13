@@ -1,9 +1,11 @@
 import {
   attachTmuxSession,
   createTmuxSessionUnlessExists,
+  currentTmuxSession,
   isInsideOrcTmuxSession,
   switchTmuxSession,
 } from "../commands/tmux.ts";
+import { setLastSession } from "./last-session.ts";
 
 /**
  * Name of the hidden tmux session that hosts the orc TUI. No slash keeps it out of the session
@@ -37,15 +39,15 @@ function controlSessionCommand(): string {
   return `${RENDER_TUI_ENVIRONMENT_VARIABLE}=1 ${tokens.join(" ")}`;
 }
 
-/**
- * Ensures the hidden control session exists, creating it if needed, then moves to it.
- */
+/** Ensures the hidden control session exists, creating it if needed, then moves to it. */
 export async function attachOrSwitchToControlSession(): Promise<void> {
   await createTmuxSessionUnlessExists(CONTROL_SESSION, controlSessionCommand(), {
     statusBar: false,
   });
 
   if (isInsideOrcTmuxSession()) {
+    const cameFrom = await currentTmuxSession();
+    if (cameFrom) await setLastSession(cameFrom);
     await switchTmuxSession(CONTROL_SESSION);
   } else {
     await attachTmuxSession(CONTROL_SESSION);

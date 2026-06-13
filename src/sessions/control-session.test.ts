@@ -10,12 +10,19 @@ const createTmuxSessionUnlessExistsMock = mock((): Promise<void> => Promise.reso
 const switchTmuxSessionMock = mock((): Promise<void> => Promise.resolve());
 const attachTmuxSessionMock = mock((): Promise<void> => Promise.resolve());
 const isInsideOrcTmuxSessionMock = mock((): boolean => false);
+const currentTmuxSessionMock = mock((): Promise<string | null> => Promise.resolve(null));
+const setLastSessionMock = mock((): Promise<void> => Promise.resolve());
 
 await mock.module("../commands/tmux.ts", () => ({
   createTmuxSessionUnlessExists: createTmuxSessionUnlessExistsMock,
   switchTmuxSession: switchTmuxSessionMock,
   attachTmuxSession: attachTmuxSessionMock,
   isInsideOrcTmuxSession: isInsideOrcTmuxSessionMock,
+  currentTmuxSession: currentTmuxSessionMock,
+}));
+
+await mock.module("./last-session.ts", () => ({
+  setLastSession: setLastSessionMock,
 }));
 
 describe("shouldRenderTui", () => {
@@ -48,11 +55,17 @@ describe("attachOrSwitchToControlSession", () => {
   describe("when inside an orc tmux session", () => {
     beforeEach(async () => {
       isInsideOrcTmuxSessionMock.mockReturnValue(true);
+      currentTmuxSessionMock.mockReturnValue(Promise.resolve("project/came-from"));
+      setLastSessionMock.mockClear();
       await attachOrSwitchToControlSession();
     });
 
     it("switches the client to the control session", () => {
       expect(switchTmuxSessionMock).toHaveBeenCalledWith(CONTROL_SESSION);
+    });
+
+    it("records the session it came from as the last session", () => {
+      expect(setLastSessionMock).toHaveBeenCalledWith("project/came-from");
     });
   });
 
