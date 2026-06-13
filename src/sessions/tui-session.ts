@@ -41,13 +41,20 @@ function tuiSessionCommand(): string {
 
 /** Ensures the hidden TUI session exists, creating it if needed, then moves to it. */
 export async function attachOrSwitchToTuiSession(): Promise<void> {
+  const insideOrcTmuxSession = isInsideOrcTmuxSession();
+
+  // Record the session we're leaving before the TUI loads, so a freshly created TUI seeds its
+  // selection with that session on its first render instead of opening on a stale one.
+  if (insideOrcTmuxSession) {
+    const cameFrom = await currentTmuxSession();
+    if (cameFrom) await setLastSession(cameFrom);
+  }
+
   await createTmuxSessionUnlessExists(TUI_SESSION, tuiSessionCommand(), {
     statusBar: false,
   });
 
-  if (isInsideOrcTmuxSession()) {
-    const cameFrom = await currentTmuxSession();
-    if (cameFrom) await setLastSession(cameFrom);
+  if (insideOrcTmuxSession) {
     await switchTmuxSession(TUI_SESSION);
   } else {
     await attachTmuxSession(TUI_SESSION);
