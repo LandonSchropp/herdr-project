@@ -1,5 +1,6 @@
 import type { ProjectSource, Session } from "../../types.ts";
 import { computeLayout } from "./compute-layout.ts";
+import { findSession } from "./find-session.ts";
 import { groupSessionsByProject } from "./group-sessions-by-project.ts";
 import * as move from "./move.ts";
 import { pickNextSelection } from "./pick-next-selection.ts";
@@ -53,6 +54,25 @@ function storeReducer(state: StoreState, action: StoreAction): StoreState {
   switch (action.type) {
     case "SET_SESSIONS": {
       return withSessions(state, action.sessions);
+    }
+    case "SELECT_SESSION": {
+      // Ignore a request to select a session that no longer exists, leaving the cursor put.
+      if (!findSession(state.projects, action.id)) {
+        return state;
+      }
+
+      return {
+        ...state,
+        selectedSessionId: action.id,
+        lastSelectedColumn: sessionColumn(state.projects, action.id, state.numberOfColumns),
+        scrollOffset: scrollOffsetForSelection(
+          state.projects,
+          action.id,
+          state.numberOfColumns,
+          state.scrollOffset,
+          state.windowHeight,
+        ),
+      };
     }
     case "REMOVE_SESSION": {
       const sessions = state.projects.flatMap((project) => project.sessions);
@@ -164,8 +184,8 @@ function storeReducer(state: StoreState, action: StoreAction): StoreState {
 
 /**
  * Provides the store state along with action-dispatching callbacks that update it, including
- * `setWindowSize` for keeping the store's layout and height in sync with resize events. Exported for
- * direct testing; production callers should use `StoreProvider` and `useStore` instead.
+ * `setWindowSize` for keeping the store's layout and height in sync with resize events. Exported
+ * for direct testing; production callers should use `StoreProvider` and `useStore` instead.
  *
  * @param initialWindowWidth The initial width of the terminal window.
  * @param initialWindowHeight The initial height of the terminal window.
@@ -191,6 +211,13 @@ export function useStoreReducer(
   const setSessions = useCallback(
     (sessions: Session[]) => {
       dispatch({ type: "SET_SESSIONS", sessions });
+    },
+    [dispatch],
+  );
+
+  const selectSession = useCallback(
+    (id: string) => {
+      dispatch({ type: "SELECT_SESSION", id });
     },
     [dispatch],
   );
@@ -247,6 +274,7 @@ export function useStoreReducer(
   return {
     ...state,
     setSessions,
+    selectSession,
     removeSession,
     setWindowSize,
     moveLeft,
