@@ -1,4 +1,4 @@
-import { previousTmuxSession } from "../../commands/tmux.ts";
+import { readLastSession, removeLastSession } from "../../sessions/last-session.ts";
 import { listSessions } from "../../sessions/list.ts";
 import { useEffectAsync } from "../hooks/use-effect-async.ts";
 import { useInterval } from "../hooks/use-interval.ts";
@@ -18,19 +18,19 @@ type StoreProviderProps = {
 };
 
 /**
- * Resolves the session the client came from, then mounts the store seeded to select it. Renders
- * nothing until the previous session is known so the initial selection lands on it rather than
- * flashing the first session and then jumping.
+ * Reads the session orc was opened from, then mounts the store seeded to select it. Renders nothing
+ * until that session is known so the initial selection lands on it rather than flashing the first
+ * session and then jumping.
  */
 export function StoreProvider({ children }: StoreProviderProps) {
-  // `undefined` while the previous session is still being resolved; `null` once we know there's none.
+  // `undefined` while the last session is still being read; `null` once we know there's none.
   const [selectedSessionId, setSelectedSessionId] = useState<string | null | undefined>(undefined);
 
   useEffectAsync(async () => {
-    setSelectedSessionId(await previousTmuxSession());
+    setSelectedSessionId(await readLastSession());
   }, []);
 
-  // Hold off on mounting the store until the previous session has resolved, so it can seed the
+  // Hold off on mounting the store until the last session has resolved, so it can seed the
   // initial selection rather than flashing the first session and then jumping.
   if (selectedSessionId === undefined) {
     return null;
@@ -55,7 +55,7 @@ function Store({ selectedSessionId, children }: StoreProps) {
   const { columns, rows } = useWindowSize();
   const ticks = useInterval(POLL_INTERVAL);
   const store = useStoreReducer(columns, rows, selectedSessionId);
-  const { setSessions, setWindowSize } = store;
+  const { setSessions, selectSession, setWindowSize } = store;
 
   useEffect(() => {
     setWindowSize(columns, rows);
@@ -63,7 +63,15 @@ function Store({ selectedSessionId, children }: StoreProps) {
 
   useEffectAsync(async () => {
     setSessions(await listSessions());
-  }, [ticks, setSessions]);
+
+    // Each open records the session the client came from as the last session. The TUI process
+    // outlives a single open, so re-point the cursor here on every poll rather than only at mount.
+    const lastSession = await readLastSession();
+    if (lastSession !== null) {
+      selectSession(lastSession);
+      await removeLastSession();
+    }
+  }, [ticks, setSessions, selectSession]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

@@ -1,5 +1,5 @@
 import { sessionFactory } from "../../../test/factories/session.ts";
-import * as tmuxModule from "../../commands/tmux.ts";
+import * as lastSessionModule from "../../sessions/last-session.ts";
 import * as listSessionsModule from "../../sessions/list.ts";
 import { StoreProvider, useStore } from "./store.tsx";
 import * as useWindowSizeModule from "./use-window-size.ts";
@@ -13,7 +13,8 @@ GlobalRegistrator.register();
 beforeEach(() => {
   spyOn(useWindowSizeModule, "useWindowSize").mockReturnValue({ columns: 100, rows: 30 });
   spyOn(listSessionsModule, "listSessions").mockResolvedValue([]);
-  spyOn(tmuxModule, "previousTmuxSession").mockResolvedValue(null);
+  spyOn(lastSessionModule, "readLastSession").mockResolvedValue(null);
+  spyOn(lastSessionModule, "removeLastSession").mockResolvedValue();
 });
 
 /**
@@ -65,16 +66,46 @@ describe("useStore", () => {
       });
     });
 
-    it("selects the previous session on the first load", async () => {
+    it("seeds the selection with the last session on the first load", async () => {
       const a = sessionFactory.build({ project: "orc", session: "a" });
       const b = sessionFactory.build({ project: "orc", session: "b" });
       spyOn(listSessionsModule, "listSessions").mockResolvedValue([a, b]);
-      spyOn(tmuxModule, "previousTmuxSession").mockResolvedValue("orc/b");
+      spyOn(lastSessionModule, "readLastSession").mockResolvedValue("orc/b");
 
       const { result } = renderHook(() => useStore(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.selectedSessionId).toBe("orc/b");
+      });
+    });
+
+    it("applies a last session that appears after the seed", async () => {
+      const a = sessionFactory.build({ project: "orc", session: "a" });
+      const b = sessionFactory.build({ project: "orc", session: "b" });
+      spyOn(listSessionsModule, "listSessions").mockResolvedValue([a, b]);
+      // No last session when the store seeds, then one appears for the poll to apply.
+      spyOn(lastSessionModule, "readLastSession")
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue("orc/b");
+
+      const { result } = renderHook(() => useStore(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.selectedSessionId).toBe("orc/b");
+      });
+    });
+
+    it("clears the last session once it has been applied", async () => {
+      const a = sessionFactory.build({ project: "orc", session: "a" });
+      const b = sessionFactory.build({ project: "orc", session: "b" });
+      spyOn(listSessionsModule, "listSessions").mockResolvedValue([a, b]);
+      spyOn(lastSessionModule, "readLastSession").mockResolvedValue("orc/b");
+      const removeLastSession = spyOn(lastSessionModule, "removeLastSession").mockResolvedValue();
+
+      renderHook(() => useStore(), { wrapper });
+
+      await waitFor(() => {
+        expect(removeLastSession).toHaveBeenCalled();
       });
     });
   });
