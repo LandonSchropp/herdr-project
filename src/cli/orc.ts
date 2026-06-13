@@ -1,4 +1,4 @@
-import { attachOrSwitchToControlSession, shouldRenderTui } from "../sessions/control-session.ts";
+import { attachOrSwitchToTuiSession, shouldRenderTui } from "../sessions/tui-session.ts";
 import { deleteCommand } from "./delete.ts";
 import { detachCommand } from "./detach.ts";
 import { hookCommand } from "./hook.ts";
@@ -26,8 +26,8 @@ export const orc = defineCommand({
     // exits and hangs the process.
     if (rawArgs.length > 0) return;
 
-    // When re-invoked from inside the control session, render the TUI directly. Otherwise enter the
-    // control session, which runs this command from inside itself.
+    // When re-invoked from inside the TUI session, render the TUI directly. Otherwise enter the TUI
+    // session, which runs this command from inside itself.
     if (shouldRenderTui()) {
       // The import is lazy so subcommands never load the Ink/React module graph at all.
       const { runTui } = await import("../tui/index.tsx");
@@ -35,6 +35,6 @@ export const orc = defineCommand({
       return;
     }
 
-    await attachOrSwitchToControlSession();
+    await attachOrSwitchToTuiSession();
   },
 });

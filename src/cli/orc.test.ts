@@ -4,15 +4,15 @@ import type { CommandContext } from "citty";
 import { runCommand } from "citty";
 
 const runTuiMock = mock(() => Promise.resolve());
-const attachOrSwitchToControlSessionMock = mock(() => Promise.resolve());
+const attachOrSwitchToTuiSessionMock = mock(() => Promise.resolve());
 const shouldRenderTuiMock = mock((): boolean => false);
 
 await mock.module("../tui/index.tsx", () => ({
   runTui: runTuiMock,
 }));
 
-await mock.module("../sessions/control-session.ts", () => ({
-  attachOrSwitchToControlSession: attachOrSwitchToControlSessionMock,
+await mock.module("../sessions/tui-session.ts", () => ({
+  attachOrSwitchToTuiSession: attachOrSwitchToTuiSessionMock,
   shouldRenderTui: shouldRenderTuiMock,
 }));
 
@@ -28,15 +28,15 @@ describe("orc", () => {
       await runCommand(orc, { rawArgs: [] });
 
       expect(runTuiMock).toHaveBeenCalled();
-      expect(attachOrSwitchToControlSessionMock).not.toHaveBeenCalled();
+      expect(attachOrSwitchToTuiSessionMock).not.toHaveBeenCalled();
     });
   });
 
   describe("when run without a subcommand and the TUI should not render", () => {
-    it("enters the control session", async () => {
+    it("enters the TUI session", async () => {
       await runCommand(orc, { rawArgs: [] });
 
-      expect(attachOrSwitchToControlSessionMock).toHaveBeenCalled();
+      expect(attachOrSwitchToTuiSessionMock).toHaveBeenCalled();
       expect(runTuiMock).not.toHaveBeenCalled();
     });
   });
@@ -50,7 +50,7 @@ describe("orc", () => {
       await orc.run?.(context);
 
       expect(runTuiMock).not.toHaveBeenCalled();
-      expect(attachOrSwitchToControlSessionMock).not.toHaveBeenCalled();
+      expect(attachOrSwitchToTuiSessionMock).not.toHaveBeenCalled();
     });
   });
 });

@@ -34,7 +34,7 @@ export function useSessionListKeybindings() {
 
   /**
    * Leaves the session list: switches back to the session the client came from, or exits the TUI
-   * when there is none. Switching back leaves the control session alive in the background.
+   * when there is none. Switching back leaves the TUI session alive in the background.
    */
   async function quit() {
     const previous = await previousTmuxSession();

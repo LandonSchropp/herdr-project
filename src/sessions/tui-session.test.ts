@@ -1,9 +1,5 @@
 import { stubEnv } from "../../test/helpers/env.ts";
-import {
-  CONTROL_SESSION,
-  attachOrSwitchToControlSession,
-  shouldRenderTui,
-} from "./control-session.ts";
+import { TUI_SESSION, attachOrSwitchToTuiSession, shouldRenderTui } from "./tui-session.ts";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 const createTmuxSessionUnlessExistsMock = mock((): Promise<void> => Promise.resolve());
@@ -41,12 +37,12 @@ describe("shouldRenderTui", () => {
   });
 });
 
-describe("attachOrSwitchToControlSession", () => {
-  it("runs the TUI in the control session with its status bar hidden", async () => {
-    await attachOrSwitchToControlSession();
+describe("attachOrSwitchToTuiSession", () => {
+  it("creates the TUI session with its status bar hidden", async () => {
+    await attachOrSwitchToTuiSession();
 
     expect(createTmuxSessionUnlessExistsMock).toHaveBeenCalledWith(
-      CONTROL_SESSION,
+      TUI_SESSION,
       expect.stringContaining("ORC_INTERNAL_RENDER_TUI=1"),
       { statusBar: false },
     );
@@ -57,11 +53,11 @@ describe("attachOrSwitchToControlSession", () => {
       isInsideOrcTmuxSessionMock.mockReturnValue(true);
       currentTmuxSessionMock.mockReturnValue(Promise.resolve("project/came-from"));
       setLastSessionMock.mockClear();
-      await attachOrSwitchToControlSession();
+      await attachOrSwitchToTuiSession();
     });
 
-    it("switches the client to the control session", () => {
-      expect(switchTmuxSessionMock).toHaveBeenCalledWith(CONTROL_SESSION);
+    it("switches the client to the TUI session", () => {
+      expect(switchTmuxSessionMock).toHaveBeenCalledWith(TUI_SESSION);
     });
 
     it("records the session it came from as the last session", () => {
@@ -72,11 +68,11 @@ describe("attachOrSwitchToControlSession", () => {
   describe("when not inside an orc tmux session", () => {
     beforeEach(async () => {
       isInsideOrcTmuxSessionMock.mockReturnValue(false);
-      await attachOrSwitchToControlSession();
+      await attachOrSwitchToTuiSession();
     });
 
-    it("attaches the terminal to the control session", () => {
-      expect(attachTmuxSessionMock).toHaveBeenCalledWith(CONTROL_SESSION);
+    it("attaches the terminal to the TUI session", () => {
+      expect(attachTmuxSessionMock).toHaveBeenCalledWith(TUI_SESSION);
     });
   });
 });
