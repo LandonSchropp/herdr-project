@@ -37,7 +37,7 @@ beforeEach(() => {
 describe("useSessionListKeybindings", () => {
   describe("when q is pressed", () => {
     describe("and there is a previous session", () => {
-      it("switches to it without exiting", async () => {
+      it("switches to it and exits so the TUI session is torn down", async () => {
         previousTmuxSessionMock.mockResolvedValue("orc/a");
 
         const { stdin } = render(<Harness />);
@@ -46,7 +46,7 @@ describe("useSessionListKeybindings", () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         expect(switchTmuxSessionMock).toHaveBeenCalledWith("orc/a");
-        expect(exit).not.toHaveBeenCalled();
+        expect(exit).toHaveBeenCalled();
       });
     });
 
@@ -160,6 +160,7 @@ describe("useSessionListKeybindings", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(createOrSwitchSessionMock).toHaveBeenCalledWith(session);
+      expect(exit).toHaveBeenCalled();
     });
   });
 
@@ -180,6 +181,7 @@ describe("useSessionListKeybindings", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(createOrSwitchSessionMock).toHaveBeenCalledWith(session);
+      expect(exit).toHaveBeenCalled();
     });
   });
 
@@ -195,6 +197,7 @@ describe("useSessionListKeybindings", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(createOrSwitchSessionMock).not.toHaveBeenCalled();
+      expect(exit).not.toHaveBeenCalled();
     });
   });
 

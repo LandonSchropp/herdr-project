@@ -14,6 +14,7 @@ import { useApp, useInput } from "ink";
  */
 export function useSessionListKeybindings() {
   const { exit } = useApp();
+
   const {
     activeModal,
     selectedSessionId,
@@ -26,20 +27,30 @@ export function useSessionListKeybindings() {
     selectProject,
   } = useStore();
 
-  /** Attaches to the selected session, recreating it first when it is stopped. */
-  function attach() {
+  /**
+   * Attaches to the selected session, recreating it first when it is stopped, then exits the TUI so
+   * its session is torn down. Does nothing when no session is selected.
+   */
+  async function attach() {
     const session = findSession(projects, selectedSessionId);
-    if (session) void createOrSwitchSession(session);
+
+    if (!session) return;
+
+    await createOrSwitchSession(session);
+    exit();
   }
 
   /**
-   * Leaves the session list: switches back to the session the client came from, or exits the TUI
-   * when there is none. Switching back leaves the TUI session alive in the background.
+   * Leaves the session list: switches back to the session the client came from when there is one,
+   * then exits the TUI. Exiting ends the TUI process, which tears down its tmux session so the next
+   * open starts fresh.
    */
   async function quit() {
     const previous = await previousTmuxSession();
+
     if (previous) await switchTmuxSession(previous);
-    else exit();
+
+    exit();
   }
 
   useInput(
@@ -59,7 +70,7 @@ export function useSessionListKeybindings() {
       } else if (input === "d" && selectedSessionId !== null) {
         confirmDelete();
       } else if (input === "a" || key.return) {
-        attach();
+        void attach();
       }
     },
     { isActive: activeModal === null },

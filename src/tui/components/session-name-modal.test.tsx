@@ -5,7 +5,7 @@ import { waitFor } from "../../../test/helpers/wait-for.ts";
 import * as storeModule from "../state/store.tsx";
 import { SessionNameModal } from "./session-name-modal.tsx";
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
-import { Box } from "ink";
+import * as ink from "ink";
 import { render } from "ink-testing-library";
 import type { ReactNode } from "react";
 
@@ -15,6 +15,8 @@ await mock.module("../../sessions/create.ts", () => ({
   createSession: createSessionMock,
 }));
 
+const exit = mock(() => {});
+
 /**
  * Wraps the modal in a sized viewport so its overlay has a parent to anchor to.
  *
@@ -22,14 +24,15 @@ await mock.module("../../sessions/create.ts", () => ({
  */
 function renderInViewport(children: ReactNode) {
   return render(
-    <Box width={80} height={20}>
+    <ink.Box width={80} height={20}>
       {children}
-    </Box>,
+    </ink.Box>,
   );
 }
 
 beforeEach(() => {
   spyOn(storeModule, "useStore").mockReturnValue(storeFactory.build());
+  spyOn(ink, "useApp").mockReturnValue({ exit, waitUntilRenderFlush: () => Promise.resolve() });
 });
 
 describe("SessionNameModal", () => {
@@ -101,7 +104,7 @@ describe("SessionNameModal", () => {
   });
 
   describe("when the user submits a session name", () => {
-    it("creates the session and closes the modal", async () => {
+    it("creates the session, closes the modal, and exits the TUI", async () => {
       const cancel = mock(() => {});
       const source = projectSourceFactory.build({ name: "orc" });
       spyOn(storeModule, "useStore").mockReturnValue(
@@ -115,10 +118,11 @@ describe("SessionNameModal", () => {
       const { stdin } = renderInViewport(<SessionNameModal />);
 
       stdin.write("\r");
-      await waitFor(() => cancel.mock.calls.length > 0);
+      await waitFor(() => exit.mock.calls.length > 0);
 
       expect(createSessionMock).toHaveBeenCalledWith(source, "main");
       expect(cancel).toHaveBeenCalled();
+      expect(exit).toHaveBeenCalled();
     });
   });
 

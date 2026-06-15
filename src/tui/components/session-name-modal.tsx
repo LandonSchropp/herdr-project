@@ -2,7 +2,7 @@ import { createSession } from "../../sessions/create.ts";
 import { MAIN_SESSION_NAME, isMainWorktree } from "../../sessions/main-worktree.ts";
 import { useStore } from "../state/store.tsx";
 import { Prompt } from "./prompt.tsx";
-import { Text } from "ink";
+import { Text, useApp } from "ink";
 
 /**
  * The session-name prompt modal for the picked project. Defaults the name to `"main"` when the
@@ -10,6 +10,7 @@ import { Text } from "ink";
  * otherwise it closes the modal and creates the session.
  */
 export function SessionNameModal() {
+  const { exit } = useApp();
   const { activeModal, projects, cancel } = useStore();
 
   if (activeModal?.type !== "session-name") return null;
@@ -38,7 +39,7 @@ export function SessionNameModal() {
       }}
       onSubmit={(sessionName) => {
         cancel();
-        void createSession(source, sessionName);
+        void createSession(source, sessionName).then(() => exit());
       }}
       onCancel={cancel}
     />
