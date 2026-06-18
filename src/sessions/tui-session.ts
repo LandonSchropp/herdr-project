@@ -1,11 +1,13 @@
 import {
   attachTmuxSession,
-  createTmuxSessionUnlessExists,
+  createTmuxSession,
   currentTmuxSession,
+  hasTmuxSession,
   isInsideOrcTmuxSession,
+  killTmuxSession,
   switchTmuxSession,
 } from "../commands/tmux.ts";
-import { setLastSession } from "./last-session.ts";
+import { removeLastSession, setLastSession } from "./last-session.ts";
 
 /**
  * Name of the hidden tmux session that hosts the orc TUI. No slash keeps it out of the session
@@ -39,20 +41,38 @@ function tuiSessionCommand(): string {
   return `${RENDER_TUI_ENVIRONMENT_VARIABLE}=1 ${tokens.join(" ")}`;
 }
 
-/** Ensures the hidden TUI session exists, creating it if needed, then moves to it. */
-export async function attachOrSwitchToTuiSession(): Promise<void> {
-  const insideOrcTmuxSession = isInsideOrcTmuxSession();
+/** Kills the TUI session if it is running. */
+export async function closeTuiSession(): Promise<void> {
+  if (await hasTmuxSession(TUI_SESSION)) {
+    await killTmuxSession(TUI_SESSION);
+  }
+}
 
-  // Record the session we're leaving before the TUI loads, so a freshly created TUI seeds its
-  // selection with that session on its first render instead of opening on a stale one.
-  if (insideOrcTmuxSession) {
-    const cameFrom = await currentTmuxSession();
-    if (cameFrom) await setLastSession(cameFrom);
+/**
+ * Starts a fresh TUI session and moves to it. The TUI exits when the user leaves it, which tears
+ * down its session, so there is normally nothing to close first; closing is a backup for a TUI that
+ * crashed or a `remain-on-exit on` config that left a dead pane behind. Starting fresh each open
+ * keeps the selection from going stale: the new TUI seeds it from the last session on its first
+ * render.
+ */
+export async function startTuiSession(): Promise<void> {
+  const insideOrcTmuxSession = isInsideOrcTmuxSession();
+  const cameFrom = insideOrcTmuxSession ? await currentTmuxSession() : null;
+
+  // Hand the new TUI the session we're leaving so it seeds its selection with it on its first
+  // render. Launching from outside orc has no such session, so clear the record and let it open on
+  // the first session.
+  if (cameFrom) {
+    await setLastSession(cameFrom);
+  } else {
+    await removeLastSession();
   }
 
-  await createTmuxSessionUnlessExists(TUI_SESSION, tuiSessionCommand(), {
-    statusBar: false,
-  });
+  // The TUI tears itself down on exit, so there is normally no session here; close it anyway as a
+  // backup in case it crashed or was left behind, so the next step always starts from a clean slate.
+  await closeTuiSession();
+
+  await createTmuxSession(TUI_SESSION, tuiSessionCommand(), { statusBar: false });
 
   if (insideOrcTmuxSession) {
     await switchTmuxSession(TUI_SESSION);

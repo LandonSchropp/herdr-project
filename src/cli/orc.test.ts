@@ -4,7 +4,7 @@ import type { CommandContext } from "citty";
 import { runCommand } from "citty";
 
 const runTuiMock = mock(() => Promise.resolve());
-const attachOrSwitchToTuiSessionMock = mock(() => Promise.resolve());
+const startTuiSessionMock = mock(() => Promise.resolve());
 const shouldRenderTuiMock = mock((): boolean => false);
 
 await mock.module("../tui/index.tsx", () => ({
@@ -12,7 +12,7 @@ await mock.module("../tui/index.tsx", () => ({
 }));
 
 await mock.module("../sessions/tui-session.ts", () => ({
-  attachOrSwitchToTuiSession: attachOrSwitchToTuiSessionMock,
+  startTuiSession: startTuiSessionMock,
   shouldRenderTui: shouldRenderTuiMock,
 }));
 
@@ -28,7 +28,7 @@ describe("orc", () => {
       await runCommand(orc, { rawArgs: [] });
 
       expect(runTuiMock).toHaveBeenCalled();
-      expect(attachOrSwitchToTuiSessionMock).not.toHaveBeenCalled();
+      expect(startTuiSessionMock).not.toHaveBeenCalled();
     });
   });
 
@@ -36,7 +36,7 @@ describe("orc", () => {
     it("enters the TUI session", async () => {
       await runCommand(orc, { rawArgs: [] });
 
-      expect(attachOrSwitchToTuiSessionMock).toHaveBeenCalled();
+      expect(startTuiSessionMock).toHaveBeenCalled();
       expect(runTuiMock).not.toHaveBeenCalled();
     });
   });
@@ -50,7 +50,7 @@ describe("orc", () => {
       await orc.run?.(context);
 
       expect(runTuiMock).not.toHaveBeenCalled();
-      expect(attachOrSwitchToTuiSessionMock).not.toHaveBeenCalled();
+      expect(startTuiSessionMock).not.toHaveBeenCalled();
     });
   });
 });
