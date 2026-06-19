@@ -78,35 +78,5 @@ describe("useStore", () => {
         expect(result.current.selectedSessionId).toBe("orc/b");
       });
     });
-
-    it("applies a last session that appears after the seed", async () => {
-      const a = sessionFactory.build({ project: "orc", session: "a" });
-      const b = sessionFactory.build({ project: "orc", session: "b" });
-      spyOn(listSessionsModule, "listSessions").mockResolvedValue([a, b]);
-      // No last session when the store seeds, then one appears for the poll to apply.
-      spyOn(lastSessionModule, "readLastSession")
-        .mockResolvedValueOnce(null)
-        .mockResolvedValue("orc/b");
-
-      const { result } = renderHook(() => useStore(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.selectedSessionId).toBe("orc/b");
-      });
-    });
-
-    it("clears the last session once it has been applied", async () => {
-      const a = sessionFactory.build({ project: "orc", session: "a" });
-      const b = sessionFactory.build({ project: "orc", session: "b" });
-      spyOn(listSessionsModule, "listSessions").mockResolvedValue([a, b]);
-      spyOn(lastSessionModule, "readLastSession").mockResolvedValue("orc/b");
-      const removeLastSession = spyOn(lastSessionModule, "removeLastSession").mockResolvedValue();
-
-      renderHook(() => useStore(), { wrapper });
-
-      await waitFor(() => {
-        expect(removeLastSession).toHaveBeenCalled();
-      });
-    });
   });
 });

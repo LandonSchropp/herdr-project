@@ -15,7 +15,6 @@ export const storeFactory = Factory.define<Store>(() => ({
   scrollOffset: 0,
   activeModal: null,
   setSessions: () => {},
-  selectSession: () => {},
   removeSession: () => {},
   setWindowSize: () => {},
   moveLeft: () => {},

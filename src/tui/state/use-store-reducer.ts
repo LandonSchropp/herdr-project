@@ -1,6 +1,5 @@
 import type { ProjectSource, Session } from "../../types.ts";
 import { computeLayout } from "./compute-layout.ts";
-import { findSession } from "./find-session.ts";
 import { groupSessionsByProject } from "./group-sessions-by-project.ts";
 import * as move from "./move.ts";
 import { pickNextSelection } from "./pick-next-selection.ts";
@@ -54,25 +53,6 @@ function storeReducer(state: StoreState, action: StoreAction): StoreState {
   switch (action.type) {
     case "SET_SESSIONS": {
       return withSessions(state, action.sessions);
-    }
-    case "SELECT_SESSION": {
-      // Ignore a request to select a session that no longer exists, leaving the cursor put.
-      if (!findSession(state.projects, action.id)) {
-        return state;
-      }
-
-      return {
-        ...state,
-        selectedSessionId: action.id,
-        lastSelectedColumn: sessionColumn(state.projects, action.id, state.numberOfColumns),
-        scrollOffset: scrollOffsetForSelection(
-          state.projects,
-          action.id,
-          state.numberOfColumns,
-          state.scrollOffset,
-          state.windowHeight,
-        ),
-      };
     }
     case "REMOVE_SESSION": {
       const sessions = state.projects.flatMap((project) => project.sessions);
@@ -215,13 +195,6 @@ export function useStoreReducer(
     [dispatch],
   );
 
-  const selectSession = useCallback(
-    (id: string) => {
-      dispatch({ type: "SELECT_SESSION", id });
-    },
-    [dispatch],
-  );
-
   const removeSession = useCallback(
     (id: string) => {
       dispatch({ type: "REMOVE_SESSION", id });
@@ -274,7 +247,6 @@ export function useStoreReducer(
   return {
     ...state,
     setSessions,
-    selectSession,
     removeSession,
     setWindowSize,
     moveLeft,

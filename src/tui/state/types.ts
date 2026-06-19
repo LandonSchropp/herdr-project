@@ -35,7 +35,6 @@ export type StoreState = {
 /** Actions for the state reducer. */
 export type StoreAction =
   | { type: "SET_SESSIONS"; sessions: Session[] }
-  | { type: "SELECT_SESSION"; id: string }
   | { type: "REMOVE_SESSION"; id: string }
   | { type: "SET_WINDOW_SIZE"; windowWidth: number; windowHeight: number }
   | { type: "MOVE_LEFT" }

@@ -213,48 +213,6 @@ describe("useStoreReducer", () => {
     });
   });
 
-  describe("when selectSession is called", () => {
-    describe("when the session is present", () => {
-      it("selects it", () => {
-        const a = sessionFactory.build({ project: "orc", session: "a" });
-        const b = sessionFactory.build({ project: "orc", session: "b" });
-
-        const { result } = renderHook(() => useStoreReducer(100, 30, null));
-
-        act(() => result.current.setSessions([a, b]));
-        act(() => result.current.selectSession("orc/b"));
-
-        expect(result.current.selectedSessionId).toBe("orc/b");
-      });
-
-      it("remembers the selected session's column", () => {
-        const a = sessionFactory.build({ project: "orc", session: "a" });
-        const b = sessionFactory.build({ project: "orc", session: "b" });
-
-        const { result } = renderHook(() => useStoreReducer(100, 30, null));
-
-        act(() => result.current.setSessions([a, b]));
-        act(() => result.current.selectSession("orc/b"));
-
-        expect(result.current.lastSelectedColumn).toBe(1);
-      });
-    });
-
-    describe("when the session is absent", () => {
-      it("leaves the selection unchanged", () => {
-        const a = sessionFactory.build({ project: "orc", session: "a" });
-        const b = sessionFactory.build({ project: "orc", session: "b" });
-
-        const { result } = renderHook(() => useStoreReducer(100, 30, null));
-
-        act(() => result.current.setSessions([a, b]));
-        act(() => result.current.selectSession("orc/ghost"));
-
-        expect(result.current.selectedSessionId).toBe("orc/a");
-      });
-    });
-  });
-
   describe("when removeSession is called", () => {
     it("removes the session from its project", () => {
       const a = sessionFactory.build({ project: "orc", session: "a" });

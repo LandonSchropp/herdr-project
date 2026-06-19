@@ -1,4 +1,4 @@
-import { readLastSession, removeLastSession } from "../../sessions/last-session.ts";
+import { readLastSession } from "../../sessions/last-session.ts";
 import { listSessions } from "../../sessions/list.ts";
 import { useEffectAsync } from "../hooks/use-effect-async.ts";
 import { useInterval } from "../hooks/use-interval.ts";
@@ -55,7 +55,7 @@ function Store({ selectedSessionId, children }: StoreProps) {
   const { columns, rows } = useWindowSize();
   const ticks = useInterval(POLL_INTERVAL);
   const store = useStoreReducer(columns, rows, selectedSessionId);
-  const { setSessions, selectSession, setWindowSize } = store;
+  const { setSessions, setWindowSize } = store;
 
   useEffect(() => {
     setWindowSize(columns, rows);
@@ -63,15 +63,7 @@ function Store({ selectedSessionId, children }: StoreProps) {
 
   useEffectAsync(async () => {
     setSessions(await listSessions());
-
-    // Each open records the session the client came from as the last session. The TUI process
-    // outlives a single open, so re-point the cursor here on every poll rather than only at mount.
-    const lastSession = await readLastSession();
-    if (lastSession !== null) {
-      selectSession(lastSession);
-      await removeLastSession();
-    }
-  }, [ticks, setSessions, selectSession]);
+  }, [ticks, setSessions]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }
