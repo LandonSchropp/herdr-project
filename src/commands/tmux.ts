@@ -135,24 +135,6 @@ export async function createTmuxSession(
 }
 
 /**
- * Creates a detached session on orc's isolated server only if one with the given name does not
- * already exist.
- *
- * @param name The name for the session.
- * @param command The shell command the session's first pane runs.
- * @param options Session creation options.
- * @throws If tmux fails to create the session.
- */
-export async function createTmuxSessionUnlessExists(
-  name: string,
-  command: string,
-  options?: CreateTmuxSessionOptions,
-): Promise<void> {
-  if (await hasTmuxSession(name)) return;
-  await createTmuxSession(name, command, options);
-}
-
-/**
  * Kills the orc tmux session with the given name.
  *
  * @param name The full `project/session` name to kill.

@@ -3,7 +3,6 @@ import { worktreePath } from "../sessions/paths.ts";
 import {
   attachTmuxSession,
   createTmuxSession,
-  createTmuxSessionUnlessExists,
   sessionId,
   detachTmuxClient,
   hasTmuxSession,
@@ -360,56 +359,6 @@ describe("previousTmuxSession", () => {
     it("returns null", async () => {
       runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "\n", stderr: "" });
       expect(await previousTmuxSession()).toBeNull();
-    });
-  });
-});
-
-describe("createTmuxSessionUnlessExists", () => {
-  describe("when the session already exists", () => {
-    it("does not create a new session", async () => {
-      runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
-
-      await createTmuxSessionUnlessExists("orc", "orc --tui");
-
-      expect(runCommandMock).toHaveBeenCalledTimes(1);
-      expect(runCommandMock).toHaveBeenCalledWith([
-        "tmux",
-        "-L",
-        "orc",
-        "has-session",
-        "-t",
-        "orc",
-      ]);
-    });
-  });
-
-  describe("when the session does not exist", () => {
-    it("creates it, forwarding the command and options", async () => {
-      runCommandMock.mockResolvedValueOnce({
-        exitCode: 1,
-        stdout: "",
-        stderr: "can't find session: orc\n",
-      });
-      runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
-
-      await createTmuxSessionUnlessExists("orc", "orc --tui", { statusBar: false });
-
-      expect(runCommandMock).toHaveBeenCalledWith([
-        "tmux",
-        "-L",
-        "orc",
-        "new-session",
-        "-d",
-        "-s",
-        "orc",
-        "orc --tui",
-        ";",
-        "set-option",
-        "-t",
-        "orc",
-        "status",
-        "off",
-      ]);
     });
   });
 });
