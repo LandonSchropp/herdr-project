@@ -211,6 +211,21 @@ describe("useStoreReducer", () => {
         expect(result.current.lastSelectedColumn).toBe(2);
       });
     });
+
+    describe("when a seeded selection sits below the fold", () => {
+      it("scrolls it into view on the first load", () => {
+        const sessions = ["a", "b", "c", "d", "e", "f"].map((session) =>
+          sessionFactory.build({ project: "orc", session }),
+        );
+
+        // One column (width 40) and a short window so the last session starts off-screen.
+        const { result } = renderHook(() => useStoreReducer(40, 20, "orc/f"));
+
+        act(() => result.current.setSessions(sessions));
+
+        expect(result.current.scrollOffset).toBeGreaterThan(0);
+      });
+    });
   });
 
   describe("when removeSession is called", () => {
