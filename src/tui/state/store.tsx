@@ -4,7 +4,7 @@ import { useEffectAsync } from "../hooks/use-effect-async.ts";
 import { useInterval } from "../hooks/use-interval.ts";
 import { POLL_INTERVAL } from "./constants.ts";
 import { useStoreReducer } from "./use-store-reducer.ts";
-import { useWindowSize } from "./use-window-size.ts";
+import { useWindowSize } from "ink";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 

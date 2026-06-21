@@ -2,16 +2,20 @@ import { sessionFactory } from "../../../test/factories/session.ts";
 import * as lastSessionModule from "../../sessions/last-session.ts";
 import * as listSessionsModule from "../../sessions/list.ts";
 import { StoreProvider, useStore } from "./store.tsx";
-import * as useWindowSizeModule from "./use-window-size.ts";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import * as ink from "ink";
 import type { ReactNode } from "react";
 
 GlobalRegistrator.register();
 
+await mock.module("ink", () => ({
+  ...ink,
+  useWindowSize: mock(() => ({ columns: 100, rows: 30 })),
+}));
+
 beforeEach(() => {
-  spyOn(useWindowSizeModule, "useWindowSize").mockReturnValue({ columns: 100, rows: 30 });
   spyOn(listSessionsModule, "listSessions").mockResolvedValue([]);
   spyOn(lastSessionModule, "readLastSession").mockResolvedValue(null);
   spyOn(lastSessionModule, "removeLastSession").mockResolvedValue();
