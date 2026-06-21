@@ -4,16 +4,10 @@ import * as listSessionsModule from "../../sessions/list.ts";
 import { StoreProvider, useStore } from "./store.tsx";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
-import * as ink from "ink";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import type { ReactNode } from "react";
 
 GlobalRegistrator.register();
-
-await mock.module("ink", () => ({
-  ...ink,
-  useWindowSize: mock(() => ({ columns: 100, rows: 30 })),
-}));
 
 beforeEach(() => {
   spyOn(listSessionsModule, "listSessions").mockResolvedValue([]);
