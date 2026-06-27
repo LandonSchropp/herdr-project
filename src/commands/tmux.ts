@@ -168,6 +168,25 @@ export async function attachTmuxSession(name: string): Promise<void> {
 }
 
 /**
+ * Determines whether a failed tmux command's stderr indicates the orc server is simply unavailable
+ * rather than a genuine error. Covers a missing server, a missing socket, a server shutting down,
+ * and a non-zero exit with no message at all, which tmux can emit when the server is killed
+ * mid-command.
+ *
+ * @param stderr The stderr captured from the failed tmux command.
+ * @returns `true` when the failure reflects an unavailable server, otherwise `false`.
+ */
+function isTransientTmuxServerError(stderr: string): boolean {
+  return (
+    stderr.trim() === "" ||
+    stderr.includes("no server running") ||
+    stderr.includes("error connecting") ||
+    stderr.includes("server exited unexpectedly") ||
+    stderr.includes("lost server")
+  );
+}
+
+/**
  * Lists the tmux sessions running on orc's isolated server. Returns an empty array when no server
  * is running or while one is shutting down. Sessions whose names do not follow orc's
  * `project/session` convention are skipped so foreign sessions on the orc socket do not break orc
@@ -180,15 +199,7 @@ export async function listTmuxSessions(): Promise<TmuxSession[]> {
   const { exitCode, stdout, stderr } = await tmux(["list-sessions", "-F", SESSION_FORMAT]);
 
   if (exitCode !== 0) {
-    if (
-      stderr.trim() === "" ||
-      stderr.includes("no server running") ||
-      stderr.includes("error connecting") ||
-      stderr.includes("server exited unexpectedly") ||
-      stderr.includes("lost server")
-    ) {
-      return [];
-    }
+    if (isTransientTmuxServerError(stderr)) return [];
     throw new Error(`tmux list-sessions failed: ${stderr.trim()}`);
   }
 
