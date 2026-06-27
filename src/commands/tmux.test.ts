@@ -481,6 +481,42 @@ describe("listTmuxPanes", () => {
     });
   });
 
+  describe("when the orc tmux server is shutting down", () => {
+    it("returns an empty array", async () => {
+      runCommandMock.mockResolvedValue({
+        exitCode: 1,
+        stdout: "",
+        stderr: "server exited unexpectedly\n",
+      });
+
+      expect(await listTmuxPanes()).toEqual([]);
+    });
+  });
+
+  describe("when the connection to the orc tmux server is lost", () => {
+    it("returns an empty array", async () => {
+      runCommandMock.mockResolvedValue({
+        exitCode: 1,
+        stdout: "",
+        stderr: "lost server\n",
+      });
+
+      expect(await listTmuxPanes()).toEqual([]);
+    });
+  });
+
+  describe("when tmux exits non-zero with no error message", () => {
+    it("returns an empty array", async () => {
+      runCommandMock.mockResolvedValue({
+        exitCode: 1,
+        stdout: "",
+        stderr: "",
+      });
+
+      expect(await listTmuxPanes()).toEqual([]);
+    });
+  });
+
   describe("when there are panes", () => {
     it("invokes `tmux list-panes -a` against the orc server", async () => {
       runCommandMock.mockResolvedValue({

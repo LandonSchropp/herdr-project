@@ -234,8 +234,9 @@ function parseSessionLine(line: string): TmuxSession | null {
 
 /**
  * Lists every tmux pane across every session on orc's isolated server. Returns an empty array when
- * no server is running. Panes whose session names do not follow orc's `project/session` convention
- * are skipped so foreign sessions on the orc socket do not pollute orc's view.
+ * no server is running or while one is shutting down. Panes whose session names do not follow orc's
+ * `project/session` convention are skipped so foreign sessions on the orc socket do not pollute
+ * orc's view.
  *
  * @returns The parsed tmux panes.
  * @throws If tmux exits with an unexpected error.
@@ -244,7 +245,7 @@ export async function listTmuxPanes(): Promise<TmuxPane[]> {
   const { exitCode, stdout, stderr } = await tmux(["list-panes", "-a", "-F", PANE_FORMAT]);
 
   if (exitCode !== 0) {
-    if (stderr.includes("no server running") || stderr.includes("error connecting")) return [];
+    if (isTransientTmuxServerError(stderr)) return [];
     throw new Error(`tmux list-panes failed: ${stderr.trim()}`);
   }
 
