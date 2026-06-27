@@ -1,4 +1,5 @@
 import { shouldRenderTui, startTuiSession } from "../sessions/tui-session.ts";
+import { callerSessionCommand } from "./caller-session.ts";
 import { deleteCommand } from "./delete.ts";
 import { detachCommand } from "./detach.ts";
 import { hookCommand } from "./hook.ts";
@@ -19,6 +20,7 @@ export const orc = defineCommand({
     detach: detachCommand,
     delete: deleteCommand,
     hook: hookCommand,
+    "caller-session": callerSessionCommand,
   },
   async run({ rawArgs }) {
     // Citty runs a parent command's `run` even after it dispatches a subcommand, so only launch the
