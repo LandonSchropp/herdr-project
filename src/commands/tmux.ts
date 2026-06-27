@@ -181,6 +181,7 @@ export async function listTmuxSessions(): Promise<TmuxSession[]> {
 
   if (exitCode !== 0) {
     if (
+      stderr.trim() === "" ||
       stderr.includes("no server running") ||
       stderr.includes("error connecting") ||
       stderr.includes("server exited unexpectedly") ||

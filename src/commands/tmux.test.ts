@@ -116,6 +116,17 @@ describe("listTmuxSessions", () => {
     });
   });
 
+  describe("when tmux exits non-zero with no error message", () => {
+    it("returns an empty array", async () => {
+      runCommandMock.mockResolvedValue({
+        exitCode: 1,
+        stdout: "",
+        stderr: "",
+      });
+      expect(await listTmuxSessions()).toEqual([]);
+    });
+  });
+
   describe("when there are no sessions", () => {
     it("returns an empty array", async () => {
       runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
