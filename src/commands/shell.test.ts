@@ -1,4 +1,4 @@
-import { runAttachedCommand, runCommand, runDetachedCommand } from "./shell.ts";
+import { CommandError, runAttachedCommand, runCommand, runDetachedCommand } from "./shell.ts";
 import { describe, expect, it, mock } from "bun:test";
 
 const unrefMock = mock(() => {});
@@ -24,12 +24,22 @@ describe("runCommand", () => {
   });
 
   describe("when the command fails", () => {
-    it("throws", () => {
-      expect(runCommand(["false"])).rejects.toThrow();
+    it("throws a CommandError", () => {
+      expect(runCommand(["false"])).rejects.toBeInstanceOf(CommandError);
     });
 
     it("includes the command's output in the error", () => {
       expect(runCommand(["sh", "-c", "echo boom; exit 1"])).rejects.toThrow("boom");
+    });
+
+    it("carries the command, exit code, and output", async () => {
+      const command = ["sh", "-c", "echo out; echo err >&2; exit 3"];
+      const error = (await runCommand(command).catch((caught: unknown) => caught)) as CommandError;
+
+      expect(error.command).toEqual(command);
+      expect(error.exitCode).toBe(3);
+      expect(error.stdout.trim()).toBe("out");
+      expect(error.stderr.trim()).toBe("err");
     });
   });
 

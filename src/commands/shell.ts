@@ -23,6 +23,38 @@ export type RunCommandOptions = {
   error?: boolean;
 };
 
+/**
+ * Error thrown by {@link runCommand} when a command exits non-zero and errors are not suppressed.
+ * Carries the command and its full output so callers and crash logs can inspect the failure.
+ */
+export class CommandError extends Error {
+  /** The command and its arguments that failed. */
+  readonly command: string[];
+  /** The non-zero exit code the command returned. */
+  readonly exitCode: number;
+  /** The standard output the command produced before failing. */
+  readonly stdout: string;
+  /** The standard error the command produced before failing. */
+  readonly stderr: string;
+
+  /**
+   * @param command The command and its arguments that failed.
+   * @param result The exit code and captured output of the failed command.
+   */
+  constructor(command: string[], result: RunCommandResultWithExitCode) {
+    super(
+      `Command failed with exit code ${result.exitCode}: ${command.join(" ")}\n` +
+        `${result.stdout}${result.stderr}`,
+    );
+
+    this.name = "CommandError";
+    this.command = command;
+    this.exitCode = result.exitCode;
+    this.stdout = result.stdout;
+    this.stderr = result.stderr;
+  }
+}
+
 export function runCommand(
   command: string[],
   options: RunCommandOptions & { error: false },
@@ -70,10 +102,7 @@ export async function runCommand(
   }
 
   if (throwErrors && result.exitCode !== 0) {
-    throw new Error(
-      `Command failed with exit code ${result.exitCode}: ${command.join(" ")}\n` +
-        `${result.stdout}${result.stderr}`,
-    );
+    throw new CommandError(command, result);
   }
 
   return result;
