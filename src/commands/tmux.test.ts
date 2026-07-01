@@ -198,14 +198,10 @@ describe("switchTmuxSession", () => {
   it("invokes `tmux switch-client` against the orc server", async () => {
     runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
     await switchTmuxSession("orc/feature-a");
-    expect(runCommandMock).toHaveBeenCalledWith([
-      "tmux",
-      "-L",
-      "orc",
-      "switch-client",
-      "-t",
-      "orc/feature-a",
-    ]);
+    expect(runCommandMock).toHaveBeenCalledWith(
+      ["tmux", "-L", "orc", "switch-client", "-t", "orc/feature-a"],
+      { error: false },
+    );
   });
 });
 
@@ -248,7 +244,9 @@ describe("hasTmuxSession", () => {
 
     await hasTmuxSession("orc");
 
-    expect(runCommandMock).toHaveBeenCalledWith(["tmux", "-L", "orc", "has-session", "-t", "orc"]);
+    expect(runCommandMock).toHaveBeenCalledWith(["tmux", "-L", "orc", "has-session", "-t", "orc"], {
+      error: false,
+    });
   });
 });
 
@@ -296,12 +294,8 @@ describe("createTmuxSession", () => {
   });
 
   describe("when tmux fails", () => {
-    it("throws an error with the stderr message", () => {
-      runCommandMock.mockResolvedValue({
-        exitCode: 1,
-        stdout: "",
-        stderr: "duplicate session: orc\n",
-      });
+    it("propagates the error", () => {
+      runCommandMock.mockRejectedValue(new Error("duplicate session: orc"));
 
       expect(createTmuxSession("orc", "orc --tui")).rejects.toThrowError(/duplicate session/);
     });
@@ -314,14 +308,10 @@ describe("currentTmuxSession", () => {
 
     await currentTmuxSession();
 
-    expect(runCommandMock).toHaveBeenCalledWith([
-      "tmux",
-      "-L",
-      "orc",
-      "display-message",
-      "-p",
-      "#{session_name}",
-    ]);
+    expect(runCommandMock).toHaveBeenCalledWith(
+      ["tmux", "-L", "orc", "display-message", "-p", "#{session_name}"],
+      { error: false },
+    );
   });
 
   describe("when there is a current session", () => {
@@ -349,14 +339,10 @@ describe("previousTmuxSession", () => {
 
     await previousTmuxSession();
 
-    expect(runCommandMock).toHaveBeenCalledWith([
-      "tmux",
-      "-L",
-      "orc",
-      "display-message",
-      "-p",
-      "#{client_last_session}",
-    ]);
+    expect(runCommandMock).toHaveBeenCalledWith(
+      ["tmux", "-L", "orc", "display-message", "-p", "#{client_last_session}"],
+      { error: false },
+    );
   });
 
   describe("when the client has a previous session", () => {
@@ -378,7 +364,9 @@ describe("detachTmuxClient", () => {
   it("invokes `tmux detach-client` against the orc server", async () => {
     runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
     await detachTmuxClient();
-    expect(runCommandMock).toHaveBeenCalledWith(["tmux", "-L", "orc", "detach-client"]);
+    expect(runCommandMock).toHaveBeenCalledWith(["tmux", "-L", "orc", "detach-client"], {
+      error: false,
+    });
   });
 });
 
@@ -399,12 +387,8 @@ describe("killTmuxSession", () => {
   });
 
   describe("when tmux fails", () => {
-    it("throws an error with the stderr message", () => {
-      runCommandMock.mockResolvedValue({
-        exitCode: 1,
-        stdout: "",
-        stderr: "can't find session: orc/feature-a\n",
-      });
+    it("propagates the error", () => {
+      runCommandMock.mockRejectedValue(new Error("can't find session: orc/feature-a"));
 
       expect(killTmuxSession("orc/feature-a")).rejects.toThrowError(/can't find session/);
     });
@@ -444,12 +428,8 @@ describe("sessionId", () => {
   });
 
   describe("when tmux fails", () => {
-    it("throws an error with the stderr message", () => {
-      runCommandMock.mockResolvedValue({
-        exitCode: 1,
-        stdout: "",
-        stderr: "can't find pane: %5\n",
-      });
+    it("propagates the error", () => {
+      runCommandMock.mockRejectedValue(new Error("can't find pane: %5"));
 
       expect(sessionId("%5")).rejects.toThrowError(/can't find pane/);
     });
@@ -527,15 +507,18 @@ describe("listTmuxPanes", () => {
 
       await listTmuxPanes();
 
-      expect(runCommandMock).toHaveBeenCalledWith([
-        "tmux",
-        "-L",
-        "orc",
-        "list-panes",
-        "-a",
-        "-F",
-        "#{session_name}\t#{pane_id}\t#{pane_title}",
-      ]);
+      expect(runCommandMock).toHaveBeenCalledWith(
+        [
+          "tmux",
+          "-L",
+          "orc",
+          "list-panes",
+          "-a",
+          "-F",
+          "#{session_name}\t#{pane_id}\t#{pane_title}",
+        ],
+        { error: false },
+      );
     });
 
     it("returns an array of parsed pane objects", async () => {

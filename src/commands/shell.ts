@@ -1,22 +1,55 @@
 import { spawn } from "node:child_process";
 
-/** The result of running a shell command. */
+/** The captured output of a shell command that ran to completion. */
 export type RunCommandResult = {
-  /** The exit code of the process. */
-  exitCode: number;
   /** The standard output of the process. */
   stdout: string;
   /** The standard error of the process. */
   stderr: string;
 };
 
+/** A {@link RunCommandResult} plus the process exit code, for callers that inspect it. */
+export type RunCommandResultWithExitCode = RunCommandResult & {
+  /** The exit code of the process. */
+  exitCode: number;
+};
+
+/** Options for {@link runCommand}. */
+export type RunCommandOptions = {
+  /**
+   * Whether a non-zero exit throws instead of returning the exit code. Defaults to `true`. Pass
+   * `false` to inspect the exit code yourself.
+   */
+  error?: boolean;
+};
+
+export function runCommand(
+  command: string[],
+  options: RunCommandOptions & { error: false },
+): Promise<RunCommandResultWithExitCode>;
+
+export function runCommand(
+  command: string[],
+  options?: RunCommandOptions,
+): Promise<RunCommandResult>;
 /**
- * Runs a command and captures its output. Returns exit code 127 if the command is not found.
+ * Runs a command and captures its output. A command that is not found exits with code 127. When
+ * `error` is `true` (the default), a non-zero exit throws; when `false`, it resolves with the exit
+ * code instead.
  *
  * @param command The command and its arguments, e.g. `["git", "--version"]`.
- * @returns The exit code, stdout, and stderr from the process.
+ * @param options Options for running the command.
+ * @returns The captured output, including the exit code only when `error` is `false`.
+ * @throws When the command exits non-zero and `error` is not `false`.
  */
-export async function runCommand(command: string[]): Promise<RunCommandResult> {
+export async function runCommand(
+  command: string[],
+  options: RunCommandOptions = {},
+): Promise<RunCommandResult | RunCommandResultWithExitCode> {
+  const { error: throwErrors = true } = options;
+
+  let result: RunCommandResultWithExitCode;
+
   try {
     const process = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });
 
@@ -25,16 +58,25 @@ export async function runCommand(command: string[]): Promise<RunCommandResult> {
       new Response(process.stderr).text(),
     ]);
 
-    return { exitCode: await process.exited, stdout, stderr };
-  } catch (error) {
+    result = { exitCode: await process.exited, stdout, stderr };
+  } catch (caught) {
     // If the command doesn't exist, Bun throws ENOENT
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return { exitCode: 127, stdout: "", stderr: "" };
+    if (caught instanceof Error && "code" in caught && caught.code === "ENOENT") {
+      result = { exitCode: 127, stdout: "", stderr: "" };
+    } else {
+      // Otherwise, let the error pass through
+      throw caught;
     }
-
-    // Otherwise, let the error pass through
-    throw error;
   }
+
+  if (throwErrors && result.exitCode !== 0) {
+    throw new Error(
+      `Command failed with exit code ${result.exitCode}: ${command.join(" ")}\n` +
+        `${result.stdout}${result.stderr}`,
+    );
+  }
+
+  return result;
 }
 
 /**

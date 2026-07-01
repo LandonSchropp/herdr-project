@@ -39,7 +39,7 @@ export async function tmuxinatorProjectExists(project: string): Promise<boolean>
  * @returns `true` when tmuxinator is installed, otherwise `false`.
  */
 export async function isTmuxinatorInstalled(): Promise<boolean> {
-  return (await runCommand(["tmuxinator", "version"])).exitCode === 0;
+  return (await runCommand(["tmuxinator", "version"], { error: false })).exitCode === 0;
 }
 
 /**
@@ -115,15 +115,5 @@ export async function startTmuxinatorProject(
     ),
   );
 
-  const { exitCode, stderr } = await runCommand([
-    "tmuxinator",
-    "start",
-    "-p",
-    configPath,
-    "--no-attach",
-  ]);
-
-  if (exitCode !== 0) {
-    throw new Error(`tmuxinator start failed: ${stderr.trim()}`);
-  }
+  await runCommand(["tmuxinator", "start", "-p", configPath, "--no-attach"]);
 }

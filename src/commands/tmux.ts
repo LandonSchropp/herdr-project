@@ -1,6 +1,6 @@
 import type { TmuxPane, TmuxSession } from "../types.ts";
 import { orcWorktreesDirectory } from "../utilities/xdg.ts";
-import { runAttachedCommand, runCommand, type RunCommandResult } from "./shell.ts";
+import { runAttachedCommand, runCommand } from "./shell.ts";
 import { sep } from "node:path";
 
 /** Socket name for orc's isolated tmux server. */
@@ -18,7 +18,7 @@ const PANE_FORMAT = "#{session_name}\t#{pane_id}\t#{pane_title}";
  * @returns `true` when tmux is installed, otherwise `false`.
  */
 export async function isTmuxInstalled(): Promise<boolean> {
-  return (await runCommand(["tmux", "-V"])).exitCode === 0;
+  return (await runCommand(["tmux", "-V"], { error: false })).exitCode === 0;
 }
 
 /**
@@ -31,18 +31,18 @@ export function isInsideOrcTmuxSession(): boolean {
 }
 
 /**
- * Runs a tmux command against orc's isolated server.
+ * Builds a command that runs tmux against orc's isolated server.
  *
  * @param args Arguments to pass to tmux, after the socket flag.
- * @returns The exit code, stdout, and stderr from the command.
+ * @returns The full command, ready to pass to {@link runCommand}.
  */
-function tmux(args: string[]): Promise<RunCommandResult> {
-  return runCommand(["tmux", "-L", ORC_SOCKET, ...args]);
+function tmuxCommand(args: string[]): string[] {
+  return ["tmux", "-L", ORC_SOCKET, ...args];
 }
 
-/** Detaches the current client from the orc tmux server. */
+/** Detaches the current client from the orc tmux server. Does nothing when there is no client. */
 export async function detachTmuxClient(): Promise<void> {
-  await tmux(["detach-client"]);
+  await runCommand(tmuxCommand(["detach-client"]), { error: false });
 }
 
 /**
@@ -53,12 +53,7 @@ export async function detachTmuxClient(): Promise<void> {
  * @throws If the session id cannot be determined.
  */
 export async function sessionId(paneId: string): Promise<string> {
-  const { exitCode, stdout, stderr } = await tmux(["display-message", "-p", "-t", paneId, "#S"]);
-
-  if (exitCode !== 0) {
-    throw new Error(`tmux display-message failed: ${stderr.trim()}`);
-  }
-
+  const { stdout } = await runCommand(tmuxCommand(["display-message", "-p", "-t", paneId, "#S"]));
   return stdout.trim();
 }
 
@@ -69,7 +64,8 @@ export async function sessionId(paneId: string): Promise<string> {
  * @returns The current session name, or null.
  */
 export async function currentTmuxSession(): Promise<string | null> {
-  const { exitCode, stdout } = await tmux(["display-message", "-p", "#{session_name}"]);
+  const command = tmuxCommand(["display-message", "-p", "#{session_name}"]);
+  const { exitCode, stdout } = await runCommand(command, { error: false });
 
   if (exitCode !== 0) return null;
 
@@ -83,7 +79,8 @@ export async function currentTmuxSession(): Promise<string | null> {
  * @returns The previous session name, or null.
  */
 export async function previousTmuxSession(): Promise<string | null> {
-  const { exitCode, stdout } = await tmux(["display-message", "-p", "#{client_last_session}"]);
+  const command = tmuxCommand(["display-message", "-p", "#{client_last_session}"]);
+  const { exitCode, stdout } = await runCommand(command, { error: false });
 
   if (exitCode !== 0) return null;
 
@@ -97,7 +94,8 @@ export async function previousTmuxSession(): Promise<string | null> {
  * @returns `true` when the session exists, otherwise `false`.
  */
 export async function hasTmuxSession(name: string): Promise<boolean> {
-  return (await tmux(["has-session", "-t", name])).exitCode === 0;
+  const command = tmuxCommand(["has-session", "-t", name]);
+  return (await runCommand(command, { error: false })).exitCode === 0;
 }
 
 /** Options for {@link createTmuxSession}. */
@@ -127,11 +125,7 @@ export async function createTmuxSession(
     args.push(";", "set-option", "-t", name, "status", "off");
   }
 
-  const { exitCode, stderr } = await tmux(args);
-
-  if (exitCode !== 0) {
-    throw new Error(`Failed to create tmux session: ${stderr.trim()}`);
-  }
+  await runCommand(tmuxCommand(args));
 }
 
 /**
@@ -141,11 +135,7 @@ export async function createTmuxSession(
  * @throws If tmux fails to kill the session.
  */
 export async function killTmuxSession(name: string): Promise<void> {
-  const { exitCode, stderr } = await tmux(["kill-session", "-t", name]);
-
-  if (exitCode !== 0) {
-    throw new Error(`Failed to kill tmux session: ${stderr.trim()}`);
-  }
+  await runCommand(tmuxCommand(["kill-session", "-t", name]));
 }
 
 /**
@@ -154,7 +144,7 @@ export async function killTmuxSession(name: string): Promise<void> {
  * @param name The full `project/session` name to switch to.
  */
 export async function switchTmuxSession(name: string): Promise<void> {
-  await tmux(["switch-client", "-t", name]);
+  await runCommand(tmuxCommand(["switch-client", "-t", name]), { error: false });
 }
 
 /**
@@ -164,7 +154,7 @@ export async function switchTmuxSession(name: string): Promise<void> {
  * @param name The full `project:session` name to attach to.
  */
 export async function attachTmuxSession(name: string): Promise<void> {
-  await runAttachedCommand(["tmux", "-L", ORC_SOCKET, "attach-session", "-t", name]);
+  await runAttachedCommand(tmuxCommand(["attach-session", "-t", name]));
 }
 
 /**
@@ -196,7 +186,8 @@ function isTransientTmuxServerError(stderr: string): boolean {
  * @throws If tmux exits with an unexpected error.
  */
 export async function listTmuxSessions(): Promise<TmuxSession[]> {
-  const { exitCode, stdout, stderr } = await tmux(["list-sessions", "-F", SESSION_FORMAT]);
+  const command = tmuxCommand(["list-sessions", "-F", SESSION_FORMAT]);
+  const { exitCode, stdout, stderr } = await runCommand(command, { error: false });
 
   if (exitCode !== 0) {
     if (isTransientTmuxServerError(stderr)) return [];
@@ -242,7 +233,8 @@ function parseSessionLine(line: string): TmuxSession | null {
  * @throws If tmux exits with an unexpected error.
  */
 export async function listTmuxPanes(): Promise<TmuxPane[]> {
-  const { exitCode, stdout, stderr } = await tmux(["list-panes", "-a", "-F", PANE_FORMAT]);
+  const command = tmuxCommand(["list-panes", "-a", "-F", PANE_FORMAT]);
+  const { exitCode, stdout, stderr } = await runCommand(command, { error: false });
 
   if (exitCode !== 0) {
     if (isTransientTmuxServerError(stderr)) return [];

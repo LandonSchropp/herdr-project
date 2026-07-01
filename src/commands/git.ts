@@ -6,7 +6,7 @@ import { runCommand } from "./shell.ts";
  * @returns `true` when git is installed, otherwise `false`.
  */
 export async function isGitInstalled(): Promise<boolean> {
-  return (await runCommand(["git", "--version"])).exitCode === 0;
+  return (await runCommand(["git", "--version"], { error: false })).exitCode === 0;
 }
 
 /**
@@ -16,27 +16,20 @@ export async function isGitInstalled(): Promise<boolean> {
  * @returns The default branch name, or `null`.
  */
 export async function defaultBranch(repositoryRoot: string): Promise<string | null> {
-  const originResult = await runCommand([
-    "git",
-    "-C",
-    repositoryRoot,
-    "symbolic-ref",
-    "refs/remotes/origin/HEAD",
-  ]);
+  const originResult = await runCommand(
+    ["git", "-C", repositoryRoot, "symbolic-ref", "refs/remotes/origin/HEAD"],
+    { error: false },
+  );
 
   if (originResult.exitCode === 0) {
     return originResult.stdout.trim().split("/").pop() ?? null;
   }
 
   for (const candidate of ["main", "master"]) {
-    const localResult = await runCommand([
-      "git",
-      "-C",
-      repositoryRoot,
-      "show-ref",
-      "--verify",
-      `refs/heads/${candidate}`,
-    ]);
+    const localResult = await runCommand(
+      ["git", "-C", repositoryRoot, "show-ref", "--verify", `refs/heads/${candidate}`],
+      { error: false },
+    );
 
     if (localResult.exitCode === 0) return candidate;
   }
@@ -52,15 +45,10 @@ export async function defaultBranch(repositoryRoot: string): Promise<string | nu
  * @returns `true` when the branch exists, otherwise `false`.
  */
 export async function branchExists(repositoryRoot: string, branch: string): Promise<boolean> {
-  const { exitCode } = await runCommand([
-    "git",
-    "-C",
-    repositoryRoot,
-    "show-ref",
-    "--verify",
-    "--quiet",
-    `refs/heads/${branch}`,
-  ]);
+  const { exitCode } = await runCommand(
+    ["git", "-C", repositoryRoot, "show-ref", "--verify", "--quiet", `refs/heads/${branch}`],
+    { error: false },
+  );
 
   return exitCode === 0;
 }
@@ -76,14 +64,10 @@ export async function worktreeExists(
   repositoryRoot: string,
   worktreePath: string,
 ): Promise<boolean> {
-  const { stdout } = await runCommand([
-    "git",
-    "-C",
-    repositoryRoot,
-    "worktree",
-    "list",
-    "--porcelain",
-  ]);
+  const { stdout } = await runCommand(
+    ["git", "-C", repositoryRoot, "worktree", "list", "--porcelain"],
+    { error: false },
+  );
 
   return stdout.split("\n").some((line) => line === `worktree ${worktreePath}`);
 }
@@ -106,7 +90,7 @@ export async function addWorktree(
 ): Promise<void> {
   const branchArguments = baseBranch === undefined ? [branch] : ["-b", branch, baseBranch];
 
-  const { exitCode, stderr } = await runCommand([
+  await runCommand([
     "git",
     "-C",
     repositoryRoot,
@@ -115,10 +99,6 @@ export async function addWorktree(
     worktreePath,
     ...branchArguments,
   ]);
-
-  if (exitCode !== 0) {
-    throw new Error(`git worktree add failed: ${stderr.trim()}`);
-  }
 }
 
 /**
@@ -130,17 +110,5 @@ export async function addWorktree(
  * @throws If the worktree cannot be removed.
  */
 export async function removeWorktree(repositoryRoot: string, worktreePath: string): Promise<void> {
-  const { exitCode, stderr } = await runCommand([
-    "git",
-    "-C",
-    repositoryRoot,
-    "worktree",
-    "remove",
-    "--force",
-    worktreePath,
-  ]);
-
-  if (exitCode !== 0) {
-    throw new Error(`Failed to remove git worktree: ${stderr.trim()}`);
-  }
+  await runCommand(["git", "-C", repositoryRoot, "worktree", "remove", "--force", worktreePath]);
 }

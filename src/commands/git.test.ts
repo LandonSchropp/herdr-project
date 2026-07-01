@@ -83,15 +83,10 @@ describe("branchExists", () => {
 
       expect(await branchExists("/repo", "feature-a")).toBe(true);
 
-      expect(runCommandMock).toHaveBeenCalledWith([
-        "git",
-        "-C",
-        "/repo",
-        "show-ref",
-        "--verify",
-        "--quiet",
-        "refs/heads/feature-a",
-      ]);
+      expect(runCommandMock).toHaveBeenCalledWith(
+        ["git", "-C", "/repo", "show-ref", "--verify", "--quiet", "refs/heads/feature-a"],
+        { error: false },
+      );
     });
   });
 
@@ -124,14 +119,10 @@ describe("worktreeExists", () => {
 
       expect(await worktreeExists("/repo", "/worktree")).toBe(true);
 
-      expect(runCommandMock).toHaveBeenCalledWith([
-        "git",
-        "-C",
-        "/repo",
-        "worktree",
-        "list",
-        "--porcelain",
-      ]);
+      expect(runCommandMock).toHaveBeenCalledWith(
+        ["git", "-C", "/repo", "worktree", "list", "--porcelain"],
+        { error: false },
+      );
     });
   });
 
@@ -188,12 +179,8 @@ describe("addWorktree", () => {
   });
 
   describe("when git fails", () => {
-    it("throws an error with the stderr message", () => {
-      runCommandMock.mockResolvedValue({
-        exitCode: 128,
-        stdout: "",
-        stderr: "fatal: '/worktree' already exists\n",
-      });
+    it("propagates the error", () => {
+      runCommandMock.mockRejectedValue(new Error("fatal: '/worktree' already exists"));
 
       expect(addWorktree("/repo", "/worktree", "feature-a", "main")).rejects.toThrowError(
         /already exists/,
@@ -220,12 +207,8 @@ describe("removeWorktree", () => {
   });
 
   describe("when git fails", () => {
-    it("throws an error with the stderr message", () => {
-      runCommandMock.mockResolvedValue({
-        exitCode: 128,
-        stdout: "",
-        stderr: "fatal: '/worktree' is not a working tree\n",
-      });
+    it("propagates the error", () => {
+      runCommandMock.mockRejectedValue(new Error("fatal: '/worktree' is not a working tree"));
 
       expect(removeWorktree("/repo", "/worktree")).rejects.toThrowError(/not a working tree/);
     });

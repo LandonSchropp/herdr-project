@@ -1,5 +1,5 @@
 import { stubEnv } from "../../test/helpers/env.ts";
-import { runCommand } from "./shell.ts";
+import type { RunCommandOptions, RunCommandResultWithExitCode } from "./shell.ts";
 import {
   isTmuxinatorInstalled,
   listTmuxinatorProjects,
@@ -16,9 +16,9 @@ import { dedent } from "ts-dedent";
 
 const configHome = "/tmp/orc-test-config";
 
-const runCommandMock = mock<typeof runCommand>(() =>
-  Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
-);
+const runCommandMock = mock<
+  (command: string[], options?: RunCommandOptions) => Promise<RunCommandResultWithExitCode>
+>(() => Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }));
 
 await mock.module("./shell.ts", () => ({
   runCommand: runCommandMock,
@@ -346,14 +346,10 @@ describe("startTmuxinatorProject", () => {
 
   describe("when tmuxinator fails", () => {
     beforeEach(() => {
-      runCommandMock.mockResolvedValue({
-        exitCode: 1,
-        stdout: "",
-        stderr: "could not start tmuxinator\n",
-      });
+      runCommandMock.mockRejectedValue(new Error("could not start tmuxinator"));
     });
 
-    it("throws an error with the stderr message", () => {
+    it("propagates the error", () => {
       expect(startTmuxinatorProject("agent-toolkit", "feature-a", "/tmp/worktree")).rejects.toThrow(
         /could not start tmuxinator/,
       );
