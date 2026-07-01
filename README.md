@@ -4,9 +4,10 @@
 
 ![Orc TUI](docs/tui.png)
 
-Orc is a TUI/CLI agent *orc*hestrator for running Claude Code agents in parallel without losing track
-of them. Each session gets its own Git worktree and tmux session, so your agents work in isolation,
-and you can see what every agent is doing right now from a convenient dashboard.
+Orc is a TUI/CLI agent *orc*hestrator for running Claude Code agents in parallel without losing
+track of them. It glues tmux, Tmuxinator, and Git worktrees together into a seamless whole. Each
+session gets its own Git worktree and tmux session, so your agents work in isolation, and you can
+see what every agent is doing right now from a convenient dashboard.
 
 ## Why Orc?
 
