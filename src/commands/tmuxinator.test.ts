@@ -233,6 +233,11 @@ describe("startTmuxinatorProject", () => {
       expect(YAML.parse(await Bun.file(configPath).text())).toEqual({
         name: "agent-toolkit/feature-a",
         root: "/tmp/worktree",
+        pre_window: [
+          "export ORC_PROJECT=agent-toolkit",
+          "export ORC_SESSION=feature-a",
+          "export ORC_WORKTREE=/tmp/worktree",
+        ],
         tmux_options: "-L orc",
       });
     });
@@ -260,6 +265,11 @@ describe("startTmuxinatorProject", () => {
       expect(YAML.parse(await Bun.file(configPath).text())).toEqual({
         name: "my-directory/feature-a",
         root: "/tmp/worktree",
+        pre_window: [
+          "export ORC_PROJECT=my-directory",
+          "export ORC_SESSION=feature-a",
+          "export ORC_WORKTREE=/tmp/worktree",
+        ],
         tmux_options: "-L orc",
         windows: [{ editor: "nvim" }],
       });
@@ -288,8 +298,51 @@ describe("startTmuxinatorProject", () => {
       expect(YAML.parse(await Bun.file(configPath).text())).toEqual({
         name: "my-directory/feature-a",
         root: "/tmp/worktree",
+        pre_window: [
+          "export ORC_PROJECT=my-directory",
+          "export ORC_SESSION=feature-a",
+          "export ORC_WORKTREE=/tmp/worktree",
+        ],
         tmux_options: "-L orc",
         windows: [{ shell: null }, { claude: "claude" }],
+      });
+    });
+  });
+
+  describe("when the template already defines pre_window commands", () => {
+    beforeEach(async () => {
+      runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
+      await Bun.write(
+        `${XDG_CONFIG_HOME}/tmuxinator/default.yml`,
+        dedent`
+          name: default
+          root: ~/
+          pre_window:
+            - rbenv shell 3.3.0
+            - nvm use
+          windows:
+            - shell:
+        `,
+      );
+      await startTmuxinatorProject("my-directory", "feature-a", "/tmp/worktree", "default");
+    });
+
+    it("prepends the orc context exports without dropping the template's commands", async () => {
+      const args = runCommandMock.mock.calls[0][0];
+      const configPath = args[args.indexOf("-p") + 1];
+
+      expect(YAML.parse(await Bun.file(configPath).text())).toEqual({
+        name: "my-directory/feature-a",
+        root: "/tmp/worktree",
+        pre_window: [
+          "export ORC_PROJECT=my-directory",
+          "export ORC_SESSION=feature-a",
+          "export ORC_WORKTREE=/tmp/worktree",
+          "rbenv shell 3.3.0",
+          "nvm use",
+        ],
+        tmux_options: "-L orc",
+        windows: [{ shell: null }],
       });
     });
   });

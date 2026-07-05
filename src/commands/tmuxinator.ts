@@ -1,6 +1,6 @@
 import { DEFAULT_PROJECT } from "../constants.ts";
 import { sessionId } from "../sessions/id.ts";
-import type { TmuxinatorProject, YamlObject } from "../types.ts";
+import type { TmuxinatorProject, YamlObject, YamlValue } from "../types.ts";
 import { expandHome } from "../utilities/directory.ts";
 import { exists } from "../utilities/exists.ts";
 import { XDG_CONFIG_HOME } from "../directories.ts";
@@ -109,11 +109,45 @@ export async function startTmuxinatorProject(
   await Bun.write(
     configPath,
     YAML.stringify(
-      { ...tmuxinatorProject, name: id, root, tmux_options: `-L ${ORC_SOCKET}` },
+      {
+        ...tmuxinatorProject,
+        name: id,
+        root,
+        pre_window: preWindowContext(project, session, root, tmuxinatorProject.pre_window),
+        tmux_options: `-L ${ORC_SOCKET}`,
+      },
       null,
       2,
     ),
   );
 
   await runCommand(["tmuxinator", "start", "-p", configPath, "--no-attach"]);
+}
+
+/**
+ * Builds the `pre_window` commands that export orc's session context into every pane's shell,
+ * preserving any commands the template's own `pre_window` already defines. The orc exports run
+ * first so the template's commands can read them.
+ *
+ * @param project The orc project name.
+ * @param session The session name within the project.
+ * @param worktree The absolute path to the session's directory.
+ * @param existing The template's existing `pre_window`, if any, as a single command or a list.
+ * @returns The combined list of `pre_window` commands.
+ */
+function preWindowContext(
+  project: string,
+  session: string,
+  worktree: string,
+  existing: YamlValue | undefined,
+): YamlValue[] {
+  const exports = [
+    `export ORC_PROJECT=${Bun.$.escape(project)}`,
+    `export ORC_SESSION=${Bun.$.escape(session)}`,
+    `export ORC_WORKTREE=${Bun.$.escape(worktree)}`,
+  ];
+
+  const existingCommands = existing == null ? [] : Array.isArray(existing) ? existing : [existing];
+
+  return [...exports, ...existingCommands];
 }
