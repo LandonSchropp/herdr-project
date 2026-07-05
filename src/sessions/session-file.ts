@@ -1,7 +1,7 @@
 import { PROJECT_KINDS } from "../constants.ts";
-import { ORC_CACHE_DIRECTORY } from "../directories.ts";
 import type { SessionInfo } from "../types.ts";
 import { safeGlob } from "../utilities/glob.ts";
+import { ORC_STATE_DIRECTORY } from "../directories.ts";
 import { sessionId } from "./id.ts";
 import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -26,7 +26,7 @@ const sessionInfoSchema = z
  * @returns The absolute path under `$XDG_CACHE_HOME/orc/state/<project>:<session>.json`.
  */
 export function sessionFilePath(project: string, session: string): string {
-  return join(ORC_CACHE_DIRECTORY, "state", `${project}:${session}.json`);
+  return join(ORC_STATE_DIRECTORY, `${project}:${session}.json`);
 }
 
 /**
@@ -80,12 +80,12 @@ export async function sessionFileExists(project: string, session: string): Promi
  * @throws If any session file cannot be parsed or fails the schema.
  */
 export async function listSessionFiles(): Promise<SessionInfo[]> {
-  const names = await safeGlob("*.json", { cwd: join(ORC_CACHE_DIRECTORY, "state") });
+  const names = await safeGlob("*.json", { cwd: ORC_STATE_DIRECTORY });
   const sessionNames = names.filter((name) => name.split(":").length === 2);
 
   return Promise.all(
     sessionNames.map(async (name) =>
-      sessionInfoSchema.parse(await Bun.file(join(ORC_CACHE_DIRECTORY, "state", name)).json()),
+      sessionInfoSchema.parse(await Bun.file(join(ORC_STATE_DIRECTORY, name)).json()),
     ),
   );
 }

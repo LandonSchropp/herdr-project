@@ -1,4 +1,4 @@
-import { ORC_CACHE_DIRECTORY } from "../directories.ts";
+import { ORC_STATE_DIRECTORY } from "../directories.ts";
 import { AgentState } from "../types.ts";
 import { readStateFile, removeSessionStateFiles, stateFilePath, writeStateFile } from "./state.ts";
 import { beforeEach, describe, expect, it } from "bun:test";
@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 describe("stateFilePath", () => {
   it("returns a flat path encoding project, session, and pane id", () => {
     expect(stateFilePath("test-project", "feature-a", "%5")).toBe(
-      `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a:%5.json`,
+      `${ORC_STATE_DIRECTORY}/test-project:feature-a:%5.json`,
     );
   });
 });
@@ -17,7 +17,7 @@ describe("writeStateFile", () => {
       await writeStateFile("test-project", "feature-a", "%5", "Working");
 
       const written = (await Bun.file(
-        `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a:%5.json`,
+        `${ORC_STATE_DIRECTORY}/test-project:feature-a:%5.json`,
       ).json()) as unknown as AgentState;
 
       expect(written.status).toBe("Working");
@@ -29,7 +29,7 @@ describe("writeStateFile", () => {
     await writeStateFile("test-project", "feature-a", "%5", "Idle");
 
     const written = (await Bun.file(
-      `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a:%5.json`,
+      `${ORC_STATE_DIRECTORY}/test-project:feature-a:%5.json`,
     ).json()) as unknown as AgentState;
 
     expect(written.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
@@ -44,7 +44,7 @@ describe("writeStateFile", () => {
       await writeStateFile("test-project", "feature-a", "%5", "Idle");
 
       const written = (await Bun.file(
-        `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a:%5.json`,
+        `${ORC_STATE_DIRECTORY}/test-project:feature-a:%5.json`,
       ).json()) as unknown as AgentState;
 
       expect(written.status).toBe("Idle");
@@ -73,10 +73,7 @@ describe("readStateFile", () => {
 
   describe("when the file is malformed JSON", () => {
     beforeEach(async () => {
-      await Bun.write(
-        `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a:%5.json`,
-        "{not valid json",
-      );
+      await Bun.write(`${ORC_STATE_DIRECTORY}/test-project:feature-a:%5.json`, "{not valid json");
     });
 
     it("throws an error", () => {
@@ -87,7 +84,7 @@ describe("readStateFile", () => {
   describe("when the file has an invalid shape", () => {
     beforeEach(async () => {
       await Bun.write(
-        `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a:%5.json`,
+        `${ORC_STATE_DIRECTORY}/test-project:feature-a:%5.json`,
         JSON.stringify({ status: "Bogus", timestamp: "2026-05-17T00:00:00.000Z" }),
       );
     });
@@ -108,12 +105,12 @@ describe("removeSessionStateFiles", () => {
     it("removes every state file for the session", async () => {
       await removeSessionStateFiles("test-project", "feature-a");
 
-      expect(
-        await Bun.file(`${ORC_CACHE_DIRECTORY}/state/test-project:feature-a:%5.json`).exists(),
-      ).toBe(false);
-      expect(
-        await Bun.file(`${ORC_CACHE_DIRECTORY}/state/test-project:feature-a:%6.json`).exists(),
-      ).toBe(false);
+      expect(await Bun.file(`${ORC_STATE_DIRECTORY}/test-project:feature-a:%5.json`).exists()).toBe(
+        false,
+      );
+      expect(await Bun.file(`${ORC_STATE_DIRECTORY}/test-project:feature-a:%6.json`).exists()).toBe(
+        false,
+      );
     });
 
     it("does not touch files for other sessions", async () => {
@@ -122,7 +119,7 @@ describe("removeSessionStateFiles", () => {
       await removeSessionStateFiles("test-project", "feature-a");
 
       expect(
-        await Bun.file(`${ORC_CACHE_DIRECTORY}/state/other-project:feature-a:%7.json`).exists(),
+        await Bun.file(`${ORC_STATE_DIRECTORY}/other-project:feature-a:%7.json`).exists(),
       ).toBe(true);
     });
   });
@@ -136,7 +133,7 @@ describe("removeSessionStateFiles", () => {
       await removeSessionStateFiles("test-project", "feature-a");
 
       expect(
-        await Bun.file(`${ORC_CACHE_DIRECTORY}/state/other-project:feature-z:%9.json`).exists(),
+        await Bun.file(`${ORC_STATE_DIRECTORY}/other-project:feature-z:%9.json`).exists(),
       ).toBe(true);
     });
   });

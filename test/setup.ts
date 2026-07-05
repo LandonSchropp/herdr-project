@@ -20,6 +20,7 @@ await mock.module("../src/directories.ts", () => ({
   XDG_CACHE_HOME: cacheHome,
   ORC_CONFIG_DIRECTORY: join(configHome, "orc"),
   ORC_CACHE_DIRECTORY: orcCache,
+  ORC_STATE_DIRECTORY: join(orcCache, "state"),
   ORC_WORKTREES_DIRECTORY: join(orcCache, "worktrees"),
 }));
 

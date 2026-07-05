@@ -13,5 +13,8 @@ export const ORC_CONFIG_DIRECTORY = join(XDG_CONFIG_HOME, "orc");
 /** Orc's cache directory: `$XDG_CACHE_HOME/orc`. Holds worktrees and orc-managed runtime state. */
 export const ORC_CACHE_DIRECTORY = join(XDG_CACHE_HOME, "orc");
 
+/** The directory orc writes runtime state files under: `$XDG_CACHE_HOME/orc/state`. */
+export const ORC_STATE_DIRECTORY = join(ORC_CACHE_DIRECTORY, "state");
+
 /** The directory orc creates session worktrees under: `$XDG_CACHE_HOME/orc/worktrees`. */
 export const ORC_WORKTREES_DIRECTORY = join(ORC_CACHE_DIRECTORY, "worktrees");

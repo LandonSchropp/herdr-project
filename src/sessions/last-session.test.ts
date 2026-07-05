@@ -1,4 +1,4 @@
-import { ORC_CACHE_DIRECTORY } from "../directories.ts";
+import { ORC_STATE_DIRECTORY } from "../directories.ts";
 import {
   lastSessionFilePath,
   readLastSession,
@@ -10,7 +10,7 @@ import { join } from "node:path";
 
 describe("lastSessionFilePath", () => {
   it("returns last-session under the orc state directory", () => {
-    expect(lastSessionFilePath()).toBe(join(ORC_CACHE_DIRECTORY, "state", "last-session"));
+    expect(lastSessionFilePath()).toBe(join(ORC_STATE_DIRECTORY, "last-session"));
   });
 });
 

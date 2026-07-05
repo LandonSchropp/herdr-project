@@ -1,4 +1,4 @@
-import { ORC_CACHE_DIRECTORY } from "../directories.ts";
+import { ORC_STATE_DIRECTORY } from "../directories.ts";
 import { hookLogPath, logHookEvent } from "./hook-log.ts";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { join } from "node:path";
@@ -23,7 +23,7 @@ afterEach(() => {
 
 describe("hookLogPath", () => {
   it("returns hook.log under the orc state directory", () => {
-    expect(hookLogPath()).toBe(join(ORC_CACHE_DIRECTORY, "state", "hook.log"));
+    expect(hookLogPath()).toBe(join(ORC_STATE_DIRECTORY, "hook.log"));
   });
 });
 
@@ -31,7 +31,7 @@ describe("logHookEvent", () => {
   it("ensures the state directory exists before appending", async () => {
     await logHookEvent("%5", { hook_event_name: "Stop" });
 
-    expect(mkdirMock).toHaveBeenCalledWith(join(ORC_CACHE_DIRECTORY, "state"), { recursive: true });
+    expect(mkdirMock).toHaveBeenCalledWith(ORC_STATE_DIRECTORY, { recursive: true });
   });
 
   it("appends a JSON line capturing the pane id and the full payload", async () => {
@@ -41,7 +41,7 @@ describe("logHookEvent", () => {
 
     expect(appendFileMock).toHaveBeenCalledTimes(1);
     const [path, line] = appendFileMock.mock.calls[0] as unknown as [string, string];
-    expect(path).toBe(join(ORC_CACHE_DIRECTORY, "state", "hook.log"));
+    expect(path).toBe(join(ORC_STATE_DIRECTORY, "hook.log"));
     expect(line.endsWith("\n")).toBe(true);
     const entry = JSON.parse(line) as { timestamp: string; paneId: string; payload: unknown };
     expect(entry).toMatchObject({ paneId: "%5", payload });

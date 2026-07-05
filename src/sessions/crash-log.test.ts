@@ -1,5 +1,5 @@
 import { CommandError } from "../commands/shell.ts";
-import { ORC_CACHE_DIRECTORY } from "../directories.ts";
+import { ORC_STATE_DIRECTORY } from "../directories.ts";
 import { crashLogPath, writeCrashLog } from "./crash-log.ts";
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -7,7 +7,7 @@ import { join } from "node:path";
 
 describe("crashLogPath", () => {
   it("returns crash.log under the orc state directory", () => {
-    expect(crashLogPath()).toBe(join(ORC_CACHE_DIRECTORY, "state", "crash.log"));
+    expect(crashLogPath()).toBe(join(ORC_STATE_DIRECTORY, "crash.log"));
   });
 });
 

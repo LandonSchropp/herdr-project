@@ -1,5 +1,5 @@
 import { sessionInfoFactory } from "../../test/factories/session-info.ts";
-import { ORC_CACHE_DIRECTORY } from "../directories.ts";
+import { ORC_STATE_DIRECTORY } from "../directories.ts";
 import {
   listSessionFiles,
   readSessionFile,
@@ -20,7 +20,7 @@ const info = sessionInfoFactory.build({
 describe("sessionFilePath", () => {
   it("returns a flat path encoding project and session", () => {
     expect(sessionFilePath("test-project", "feature-a")).toBe(
-      `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a.json`,
+      `${ORC_STATE_DIRECTORY}/test-project:feature-a.json`,
     );
   });
 });
@@ -29,9 +29,7 @@ describe("writeSessionFile", () => {
   it("writes the session info as its stored shape, creating the state directory", async () => {
     await writeSessionFile(info);
 
-    const written = await Bun.file(
-      `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a.json`,
-    ).json();
+    const written = await Bun.file(`${ORC_STATE_DIRECTORY}/test-project:feature-a.json`).json();
 
     expect(written).toEqual({
       project: "test-project",
@@ -63,7 +61,7 @@ describe("readSessionFile", () => {
   describe("when the file has an invalid shape", () => {
     beforeEach(async () => {
       await Bun.write(
-        `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a.json`,
+        `${ORC_STATE_DIRECTORY}/test-project:feature-a.json`,
         JSON.stringify({ project: "test-project" }),
       );
     });
@@ -98,7 +96,7 @@ describe("listSessionFiles", () => {
       await writeSessionFile(info);
       await writeSessionFile({ ...info, session: "feature-b", id: "test-project/feature-b" });
       await Bun.write(
-        `${ORC_CACHE_DIRECTORY}/state/test-project:feature-a:%5.json`,
+        `${ORC_STATE_DIRECTORY}/test-project:feature-a:%5.json`,
         JSON.stringify({ status: "Idle", timestamp: "2026-06-06T18:00:00.000Z" }),
       );
     });
@@ -129,9 +127,9 @@ describe("removeSessionFile", () => {
     it("removes the file", async () => {
       await removeSessionFile("test-project", "feature-a");
 
-      expect(
-        await Bun.file(`${ORC_CACHE_DIRECTORY}/state/test-project:feature-a.json`).exists(),
-      ).toBe(false);
+      expect(await Bun.file(`${ORC_STATE_DIRECTORY}/test-project:feature-a.json`).exists()).toBe(
+        false,
+      );
     });
   });
 

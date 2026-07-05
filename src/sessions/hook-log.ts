@@ -1,4 +1,4 @@
-import { ORC_CACHE_DIRECTORY } from "../directories.ts";
+import { ORC_STATE_DIRECTORY } from "../directories.ts";
 import { appendFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
  * @returns The path under `$XDG_CACHE_HOME/orc/state/hook.log`.
  */
 export function hookLogPath(): string {
-  return join(ORC_CACHE_DIRECTORY, "state", "hook.log");
+  return join(ORC_STATE_DIRECTORY, "hook.log");
 }
 
 /**

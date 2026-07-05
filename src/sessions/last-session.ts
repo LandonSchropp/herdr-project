@@ -1,4 +1,4 @@
-import { ORC_CACHE_DIRECTORY } from "../directories.ts";
+import { ORC_STATE_DIRECTORY } from "../directories.ts";
 import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
  * @returns The absolute path under `$XDG_CACHE_HOME/orc/state/last-session`.
  */
 export function lastSessionFilePath(): string {
-  return join(ORC_CACHE_DIRECTORY, "state", "last-session");
+  return join(ORC_STATE_DIRECTORY, "last-session");
 }
 
 /**
