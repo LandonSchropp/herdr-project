@@ -1,7 +1,7 @@
+import { ORC_CACHE_DIRECTORY } from "../directories.ts";
 import { isAgentState } from "../type-guards.ts";
 import { type AgentState, type AgentStatus } from "../types.ts";
 import { safeGlob } from "../utilities/glob.ts";
-import { orcCacheDirectory } from "../utilities/xdg.ts";
 import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -14,7 +14,7 @@ import { dirname, join } from "node:path";
  * @returns The absolute path under `$XDG_CACHE_HOME/orc/state/<project>:<session>:<paneId>.json`.
  */
 export function stateFilePath(project: string, session: string, paneId: string): string {
-  return join(orcCacheDirectory(), "state", `${project}:${session}:${paneId}.json`);
+  return join(ORC_CACHE_DIRECTORY, "state", `${project}:${session}:${paneId}.json`);
 }
 
 /**
@@ -73,8 +73,11 @@ export async function readStateFile(
  * @param session The session name within the project.
  */
 export async function removeSessionStateFiles(project: string, session: string): Promise<void> {
-  const directory = join(orcCacheDirectory(), "state");
-  const names = await safeGlob(`${project}:${session}:*.json`, { cwd: directory });
+  const names = await safeGlob(`${project}:${session}:*.json`, {
+    cwd: join(ORC_CACHE_DIRECTORY, "state"),
+  });
 
-  await Promise.all(names.map((name) => rm(join(directory, name), { force: true })));
+  await Promise.all(
+    names.map((name) => rm(join(ORC_CACHE_DIRECTORY, "state", name), { force: true })),
+  );
 }

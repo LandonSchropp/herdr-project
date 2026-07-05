@@ -1,4 +1,4 @@
-import { xdgConfigHome } from "../utilities/xdg.ts";
+import { XDG_CONFIG_HOME } from "../directories.ts";
 import { settingsSchema } from "./schema.ts";
 import type { Settings } from "./types.ts";
 import { join } from "node:path";
@@ -10,7 +10,7 @@ import { join } from "node:path";
  * @returns The absolute path to `settings.json`.
  */
 export function settingsPath(): string {
-  return join(xdgConfigHome(), "orc", "settings.json");
+  return join(XDG_CONFIG_HOME, "orc", "settings.json");
 }
 
 /**

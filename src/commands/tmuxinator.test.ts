@@ -1,4 +1,4 @@
-import { stubEnv } from "../../test/helpers/env.ts";
+import { XDG_CONFIG_HOME } from "../directories.ts";
 import type { RunCommandOptions, RunCommandResultWithExitCode } from "./shell.ts";
 import {
   isTmuxinatorInstalled,
@@ -9,12 +9,9 @@ import {
   tmuxinatorProjectExists,
 } from "./tmuxinator.ts";
 import { YAML } from "bun";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { rm } from "node:fs/promises";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { homedir } from "node:os";
 import { dedent } from "ts-dedent";
-
-const configHome = "/tmp/orc-test-config";
 
 const runCommandMock = mock<
   (command: string[], options?: RunCommandOptions) => Promise<RunCommandResultWithExitCode>
@@ -48,14 +45,6 @@ describe("isTmuxinatorInstalled", () => {
 });
 
 describe("listTmuxinatorProjects", () => {
-  beforeEach(() => {
-    stubEnv("XDG_CONFIG_HOME", configHome);
-  });
-
-  afterEach(async () => {
-    await rm(configHome, { recursive: true, force: true });
-  });
-
   describe("when projects exist", () => {
     it("returns the parsed projects without the header", async () => {
       runCommandMock.mockResolvedValue({
@@ -64,10 +53,10 @@ describe("listTmuxinatorProjects", () => {
         stderr: "",
       });
       await Bun.write(
-        `${configHome}/tmuxinator/agent-toolkit.yml`,
+        `${XDG_CONFIG_HOME}/tmuxinator/agent-toolkit.yml`,
         "name: agent-toolkit\nroot: ~/Development/agent-toolkit\n",
       );
-      await Bun.write(`${configHome}/tmuxinator/notes.yml`, "name: notes\nroot: ~/Notes\n");
+      await Bun.write(`${XDG_CONFIG_HOME}/tmuxinator/notes.yml`, "name: notes\nroot: ~/Notes\n");
 
       expect(await listTmuxinatorProjects()).toEqual([
         { name: "agent-toolkit", root: `${homedir()}/Development/agent-toolkit` },
@@ -95,10 +84,10 @@ describe("listTmuxinatorProjects", () => {
         stderr: "",
       });
       await Bun.write(
-        `${configHome}/tmuxinator/agent-toolkit.yml`,
+        `${XDG_CONFIG_HOME}/tmuxinator/agent-toolkit.yml`,
         "name: agent-toolkit\nroot: ~/\n",
       );
-      await Bun.write(`${configHome}/tmuxinator/notes.yml`, "name: notes\nroot: ~/\n");
+      await Bun.write(`${XDG_CONFIG_HOME}/tmuxinator/notes.yml`, "name: notes\nroot: ~/\n");
 
       expect((await listTmuxinatorProjects()).map((project) => project.name)).toEqual([
         "agent-toolkit",
@@ -109,41 +98,15 @@ describe("listTmuxinatorProjects", () => {
 });
 
 describe("tmuxinatorConfigPath", () => {
-  describe("when $XDG_CONFIG_HOME is set", () => {
-    beforeEach(() => {
-      stubEnv("XDG_CONFIG_HOME", configHome);
-    });
-
-    it("returns the project YAML under $XDG_CONFIG_HOME/tmuxinator", () => {
-      expect(tmuxinatorConfigPath("agent-toolkit")).toBe(
-        `${configHome}/tmuxinator/agent-toolkit.yml`,
-      );
-    });
-  });
-
-  describe("when $XDG_CONFIG_HOME is not set", () => {
-    beforeEach(() => {
-      stubEnv("XDG_CONFIG_HOME", undefined);
-    });
-
-    it("returns the project YAML under ~/.config/tmuxinator", () => {
-      expect(tmuxinatorConfigPath("agent-toolkit")).toBe(
-        `${homedir()}/.config/tmuxinator/agent-toolkit.yml`,
-      );
-    });
+  it("returns the project YAML under $XDG_CONFIG_HOME/tmuxinator", () => {
+    expect(tmuxinatorConfigPath("agent-toolkit")).toBe(
+      `${XDG_CONFIG_HOME}/tmuxinator/agent-toolkit.yml`,
+    );
   });
 });
 
 describe("tmuxinatorProjectExists", () => {
-  const configPath = `${configHome}/tmuxinator/agent-toolkit.yml`;
-
-  beforeEach(() => {
-    stubEnv("XDG_CONFIG_HOME", configHome);
-  });
-
-  afterEach(async () => {
-    await rm(configHome, { recursive: true, force: true });
-  });
+  const configPath = `${XDG_CONFIG_HOME}/tmuxinator/agent-toolkit.yml`;
 
   describe("when the project config exists", () => {
     beforeEach(async () => {
@@ -163,15 +126,7 @@ describe("tmuxinatorProjectExists", () => {
 });
 
 describe("readTmuxinatorProject", () => {
-  const configPath = `${configHome}/tmuxinator/agent-toolkit.yml`;
-
-  beforeEach(() => {
-    stubEnv("XDG_CONFIG_HOME", configHome);
-  });
-
-  afterEach(async () => {
-    await rm(configHome, { recursive: true, force: true });
-  });
+  const configPath = `${XDG_CONFIG_HOME}/tmuxinator/agent-toolkit.yml`;
 
   describe("when the file contains a valid YAML config", () => {
     beforeEach(async () => {
@@ -246,18 +201,13 @@ describe("readTmuxinatorProject", () => {
 
 describe("startTmuxinatorProject", () => {
   beforeEach(async () => {
-    stubEnv("XDG_CONFIG_HOME", configHome);
     await Bun.write(
-      `${configHome}/tmuxinator/agent-toolkit.yml`,
+      `${XDG_CONFIG_HOME}/tmuxinator/agent-toolkit.yml`,
       dedent`
         name: agent-toolkit
         root: ~/Development/agent-toolkit
       `,
     );
-  });
-
-  afterEach(async () => {
-    await rm(configHome, { recursive: true, force: true });
   });
 
   describe("when tmuxinator succeeds", () => {
@@ -292,7 +242,7 @@ describe("startTmuxinatorProject", () => {
     beforeEach(async () => {
       runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
       await Bun.write(
-        `${configHome}/tmuxinator/default.yml`,
+        `${XDG_CONFIG_HOME}/tmuxinator/default.yml`,
         dedent`
           name: default
           root: ~/
@@ -320,7 +270,7 @@ describe("startTmuxinatorProject", () => {
     beforeEach(async () => {
       runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
       await Bun.write(
-        `${configHome}/tmuxinator/default.yml`,
+        `${XDG_CONFIG_HOME}/tmuxinator/default.yml`,
         dedent`
           name: default
           windows:

@@ -1,10 +1,10 @@
+import { ORC_WORKTREES_DIRECTORY } from "../directories.ts";
 import type { SessionInfo } from "../types.ts";
 import { deleteSession } from "./delete.ts";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { homedir } from "node:os";
 
 const repositoryRoot = "/repos/test-project";
-const worktreePath = `${homedir()}/.cache/orc/worktrees/test-project/feature-a`;
+const worktreePath = `${ORC_WORKTREES_DIRECTORY}/test-project/feature-a`;
 
 const sessionInfo: SessionInfo = {
   project: "test-project",

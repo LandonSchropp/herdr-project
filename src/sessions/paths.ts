@@ -1,4 +1,4 @@
-import { orcWorktreesDirectory } from "../utilities/xdg.ts";
+import { ORC_WORKTREES_DIRECTORY } from "../directories.ts";
 import { join } from "node:path";
 
 /**
@@ -9,5 +9,5 @@ import { join } from "node:path";
  * @returns The absolute path under `$XDG_CACHE_HOME/orc/worktrees`.
  */
 export function worktreePath(project: string, session: string): string {
-  return join(orcWorktreesDirectory(), project, session);
+  return join(ORC_WORKTREES_DIRECTORY, project, session);
 }

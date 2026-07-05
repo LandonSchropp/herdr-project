@@ -1,5 +1,5 @@
 import type { TmuxPane, TmuxSession } from "../types.ts";
-import { orcWorktreesDirectory } from "../utilities/xdg.ts";
+import { ORC_WORKTREES_DIRECTORY } from "../directories.ts";
 import { runAttachedCommand, runCommand } from "./shell.ts";
 import { sep } from "node:path";
 
@@ -219,7 +219,7 @@ function parseSessionLine(line: string): TmuxSession | null {
     session: id.slice(separatorIndex + 1),
     id,
     createdAt: new Date(Number(createdAt) * 1000),
-    worktree: path.startsWith(`${orcWorktreesDirectory()}${sep}`) ? "linked" : "main",
+    worktree: path.startsWith(`${ORC_WORKTREES_DIRECTORY}${sep}`) ? "linked" : "main",
   };
 }
 

@@ -1,7 +1,7 @@
 import { projectSourceFactory } from "../../test/factories/project-source.ts";
+import { ORC_WORKTREES_DIRECTORY } from "../directories.ts";
 import { createSession } from "./create.ts";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { homedir } from "node:os";
 
 const startTmuxinatorProjectMock = mock((): Promise<void> => Promise.resolve());
 const defaultBranchMock = mock((): Promise<string | null> => Promise.resolve("main"));
@@ -40,7 +40,7 @@ await mock.module("./session-file.ts", () => ({
 }));
 
 const repositoryRoot = "/repos/test-project";
-const worktreeParent = `${homedir()}/.cache/orc/worktrees/test-project`;
+const worktreeParent = `${ORC_WORKTREES_DIRECTORY}/test-project`;
 const worktreePath = `${worktreeParent}/feature-a`;
 const source = projectSourceFactory.build({ name: "test-project", repositoryRoot });
 

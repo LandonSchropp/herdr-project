@@ -3,7 +3,7 @@ import { sessionId } from "../sessions/id.ts";
 import type { TmuxinatorProject, YamlObject } from "../types.ts";
 import { expandHome } from "../utilities/directory.ts";
 import { exists } from "../utilities/exists.ts";
-import { xdgConfigHome } from "../utilities/xdg.ts";
+import { XDG_CONFIG_HOME } from "../directories.ts";
 import { runCommand } from "./shell.ts";
 import { ORC_SOCKET } from "./tmux.ts";
 import { YAML } from "bun";
@@ -19,7 +19,7 @@ import { join } from "node:path";
  * @returns The absolute path to the project's YAML config file.
  */
 export function tmuxinatorConfigPath(project: string): string {
-  return join(xdgConfigHome(), "tmuxinator", `${project}.yml`);
+  return join(XDG_CONFIG_HOME, "tmuxinator", `${project}.yml`);
 }
 
 /**

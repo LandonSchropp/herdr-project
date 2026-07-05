@@ -1,31 +1,17 @@
 import { CommandError } from "../commands/shell.ts";
-import { stubEnv } from "../../test/helpers/env.ts";
+import { ORC_CACHE_DIRECTORY } from "../directories.ts";
 import { crashLogPath, writeCrashLog } from "./crash-log.ts";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
-import { rm } from "node:fs/promises";
-
-const cacheHome = "/tmp/orc-test-crash-cache";
+import { join } from "node:path";
 
 describe("crashLogPath", () => {
-  beforeEach(() => {
-    stubEnv("XDG_CACHE_HOME", cacheHome);
-  });
-
-  it("returns the path under the orc cache directory", () => {
-    expect(crashLogPath()).toBe(`${cacheHome}/orc/state/crash.log`);
+  it("returns crash.log under the orc state directory", () => {
+    expect(crashLogPath()).toBe(join(ORC_CACHE_DIRECTORY, "state", "crash.log"));
   });
 });
 
 describe("writeCrashLog", () => {
-  beforeEach(() => {
-    stubEnv("XDG_CACHE_HOME", cacheHome);
-  });
-
-  afterEach(async () => {
-    await rm(cacheHome, { recursive: true, force: true });
-  });
-
   describe("when the value is an Error", () => {
     it("writes the error's stack to the crash log", () => {
       const error = new Error("boom");

@@ -1,26 +1,16 @@
-import { stubEnv } from "../../test/helpers/env.ts";
+import { ORC_CACHE_DIRECTORY } from "../directories.ts";
 import {
   lastSessionFilePath,
   readLastSession,
   removeLastSession,
   setLastSession,
 } from "./last-session.ts";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { rm } from "node:fs/promises";
-
-const cacheHome = "/tmp/orc-test-last-session";
-
-beforeEach(() => {
-  stubEnv("XDG_CACHE_HOME", cacheHome);
-});
-
-afterEach(async () => {
-  await rm(cacheHome, { recursive: true, force: true });
-});
+import { describe, expect, it } from "bun:test";
+import { join } from "node:path";
 
 describe("lastSessionFilePath", () => {
-  it("returns a path inside the state directory", () => {
-    expect(lastSessionFilePath()).toBe(`${cacheHome}/orc/state/last-session`);
+  it("returns last-session under the orc state directory", () => {
+    expect(lastSessionFilePath()).toBe(join(ORC_CACHE_DIRECTORY, "state", "last-session"));
   });
 });
 

@@ -1,4 +1,4 @@
-import { orcCacheDirectory } from "../utilities/xdg.ts";
+import { ORC_CACHE_DIRECTORY } from "../directories.ts";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
  * @returns The path under `$XDG_CACHE_HOME/orc/state/crash.log`.
  */
 export function crashLogPath(): string {
-  return join(orcCacheDirectory(), "state", "crash.log");
+  return join(ORC_CACHE_DIRECTORY, "state", "crash.log");
 }
 
 /**
