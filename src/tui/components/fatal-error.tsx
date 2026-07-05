@@ -1,3 +1,4 @@
+import { crashLogPath } from "../../sessions/crash-log.ts";
 import { Box, Text, useApp, useInput } from "ink";
 
 type FatalErrorProps = {
@@ -23,6 +24,10 @@ export function FatalError({ error }: FatalErrorProps) {
 
       <Box marginTop={1}>
         <Text>{Bun.inspect(error, { colors: true })}</Text>
+      </Box>
+
+      <Box marginTop={1}>
+        <Text dimColor>Crash log: {crashLogPath()}</Text>
       </Box>
 
       <Box marginTop={1}>

@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import * as ink from "ink";
 import { render } from "ink-testing-library";
 
+await mock.module("../../sessions/crash-log.ts", () => ({
+  crashLogPath: () => "/cache/orc/state/crash.log",
+}));
+
 const exit = mock(() => {});
 
 beforeEach(() => {
@@ -20,6 +24,13 @@ describe("FatalError", () => {
     const { lastFrame } = render(<FatalError error={new Error("boom")} />);
 
     expect(lastFrame()).toContain("Press q or escape to quit.");
+  });
+
+  it("shows where the crash log was written", () => {
+    const error = new Error("boom");
+    const { lastFrame } = render(<FatalError error={error} />);
+
+    expect(lastFrame()).toContain("Crash log: /cache/orc/state/crash.log");
   });
 
   describe("when q is pressed", () => {

@@ -6,6 +6,13 @@ import { render } from "ink-testing-library";
 
 const exit = mock(() => {});
 
+const writeCrashLogMock = mock(() => {});
+
+await mock.module("../../sessions/crash-log.ts", () => ({
+  writeCrashLog: writeCrashLogMock,
+  crashLogPath: () => "/cache/orc/state/crash.log",
+}));
+
 /** Throws during render so the boundary catches it. */
 function Boom(): never {
   throw new Error("render boom");
@@ -52,6 +59,16 @@ describe("Root", () => {
 
       expect(lastFrame()).toContain("orc crashed");
       expect(lastFrame()).toContain("render boom");
+    });
+
+    it("writes a crash log", () => {
+      render(
+        <Root>
+          <Boom />
+        </Root>,
+      );
+
+      expect(writeCrashLogMock).toHaveBeenCalled();
     });
   });
 
