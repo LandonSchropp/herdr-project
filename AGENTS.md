@@ -42,6 +42,12 @@ When modifying the TUI, kill the stale control session before re-running orc:
 tmux kill-session -t _tui
 ```
 
+Orc kills and recreates the whole `_tui` session on every switch into it, rather than reusing the running process. This is an intentional design decision, not something to "fix":
+
+- Fresh state: there is no good way to communicate with the orc process running inside the session, so we can't ask it to refresh. Nuking it and forcing a reload guarantees the TUI always starts from a clean state instead of whatever stale state the old process was holding.
+- Easier changes: with no old process lingering, code changes always take effect on the next switch.
+- No error recovery: we never have to restart a process that's sitting in a bad or errored state — every switch begins fresh.
+
 ## CLI Output
 
 Use `process.stdout.write` for command output, not `console.log`. CLI output is program data that should pipe cleanly to other tools — `console.log` is for diagnostics and goes through Node's console formatting layer. Remember to include the trailing `\n` since `process.stdout.write` does not append one.
