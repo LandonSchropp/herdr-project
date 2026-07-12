@@ -1,9 +1,9 @@
-import { DEFAULT_PROJECT } from "../constants.ts";
+import { COMMAND_RETRIES, DEFAULT_PROJECT } from "../constants.ts";
+import { XDG_CONFIG_HOME } from "../directories.ts";
 import { sessionId } from "../sessions/id.ts";
 import type { TmuxinatorProject, YamlObject, YamlValue } from "../types.ts";
 import { expandHome } from "../utilities/directory.ts";
 import { exists } from "../utilities/exists.ts";
-import { XDG_CONFIG_HOME } from "../directories.ts";
 import { runCommand } from "./shell.ts";
 import { ORC_SOCKET } from "./tmux.ts";
 import { YAML } from "bun";
@@ -121,7 +121,9 @@ export async function startTmuxinatorProject(
     ),
   );
 
-  await runCommand(["tmuxinator", "start", "-p", configPath, "--no-attach"]);
+  await runCommand(["tmuxinator", "start", "-p", configPath, "--no-attach"], {
+    retries: COMMAND_RETRIES,
+  });
 }
 
 /**

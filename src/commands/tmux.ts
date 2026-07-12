@@ -1,5 +1,6 @@
-import type { TmuxPane, TmuxSession } from "../types.ts";
+import { COMMAND_RETRIES } from "../constants.ts";
 import { ORC_WORKTREES_DIRECTORY } from "../directories.ts";
+import type { TmuxPane, TmuxSession } from "../types.ts";
 import { runAttachedCommand, runCommand } from "./shell.ts";
 import { sep } from "node:path";
 
@@ -125,7 +126,7 @@ export async function createTmuxSession(
     args.push(";", "set-option", "-t", name, "status", "off");
   }
 
-  await runCommand(tmuxCommand(args));
+  await runCommand(tmuxCommand(args), { retries: COMMAND_RETRIES });
 }
 
 /**
@@ -135,7 +136,7 @@ export async function createTmuxSession(
  * @throws If tmux fails to kill the session.
  */
 export async function killTmuxSession(name: string): Promise<void> {
-  await runCommand(tmuxCommand(["kill-session", "-t", name]));
+  await runCommand(tmuxCommand(["kill-session", "-t", name]), { retries: COMMAND_RETRIES });
 }
 
 /**

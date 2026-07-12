@@ -220,13 +220,16 @@ describe("startTmuxinatorProject", () => {
     });
 
     it("invokes `tmuxinator start` with `--no-attach`", () => {
-      expect(runCommandMock).toHaveBeenCalledWith([
-        "tmuxinator",
-        "start",
-        "-p",
-        expect.stringMatching(/\/orc-[^/]+\/project\.yml$/),
-        "--no-attach",
-      ]);
+      expect(runCommandMock).toHaveBeenCalledWith(
+        [
+          "tmuxinator",
+          "start",
+          "-p",
+          expect.stringMatching(/\/orc-[^/]+\/project\.yml$/),
+          "--no-attach",
+        ],
+        { retries: 2 },
+      );
     });
 
     it("writes the modified config with the qualified session name, overridden root, and orc socket", async () => {

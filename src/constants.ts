@@ -59,3 +59,9 @@ export const HOOK_EVENTS = [
  * tmuxinator config of their own.
  */
 export const DEFAULT_PROJECT = "default";
+
+/**
+ * How many times to retry a command that races with the tmux server spinning up or a session
+ * appearing before giving up. Such a command often fails transiently but succeeds on a retry.
+ */
+export const COMMAND_RETRIES = 2;

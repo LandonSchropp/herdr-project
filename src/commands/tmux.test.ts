@@ -251,21 +251,15 @@ describe("hasTmuxSession", () => {
 });
 
 describe("createTmuxSession", () => {
-  it("invokes `tmux new-session` detached, running the given command", async () => {
+  it("invokes `tmux new-session` detached", async () => {
     runCommandMock.mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
 
     await createTmuxSession("orc", "orc --tui");
 
-    expect(runCommandMock).toHaveBeenCalledWith([
-      "tmux",
-      "-L",
-      "orc",
-      "new-session",
-      "-d",
-      "-s",
-      "orc",
-      "orc --tui",
-    ]);
+    expect(runCommandMock).toHaveBeenCalledWith(
+      ["tmux", "-L", "orc", "new-session", "-d", "-s", "orc", "orc --tui"],
+      { retries: 2 },
+    );
   });
 
   describe("when the status bar is disabled", () => {
@@ -274,22 +268,25 @@ describe("createTmuxSession", () => {
 
       await createTmuxSession("orc", "orc --tui", { statusBar: false });
 
-      expect(runCommandMock).toHaveBeenCalledWith([
-        "tmux",
-        "-L",
-        "orc",
-        "new-session",
-        "-d",
-        "-s",
-        "orc",
-        "orc --tui",
-        ";",
-        "set-option",
-        "-t",
-        "orc",
-        "status",
-        "off",
-      ]);
+      expect(runCommandMock).toHaveBeenCalledWith(
+        [
+          "tmux",
+          "-L",
+          "orc",
+          "new-session",
+          "-d",
+          "-s",
+          "orc",
+          "orc --tui",
+          ";",
+          "set-option",
+          "-t",
+          "orc",
+          "status",
+          "off",
+        ],
+        { retries: 2 },
+      );
     });
   });
 
@@ -376,14 +373,10 @@ describe("killTmuxSession", () => {
 
     await killTmuxSession("orc/feature-a");
 
-    expect(runCommandMock).toHaveBeenCalledWith([
-      "tmux",
-      "-L",
-      "orc",
-      "kill-session",
-      "-t",
-      "orc/feature-a",
-    ]);
+    expect(runCommandMock).toHaveBeenCalledWith(
+      ["tmux", "-L", "orc", "kill-session", "-t", "orc/feature-a"],
+      { retries: 2 },
+    );
   });
 
   describe("when tmux fails", () => {
