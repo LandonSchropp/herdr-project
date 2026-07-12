@@ -1,4 +1,8 @@
+import { wait } from "../utilities/wait.ts";
 import { spawn } from "node:child_process";
+
+/** How long to wait between {@link runCommand} retries, in milliseconds. */
+const RETRY_DELAY = 100;
 
 /** The captured output of a shell command that ran to completion. */
 export type RunCommandResult = {
@@ -12,15 +16,6 @@ export type RunCommandResult = {
 export type RunCommandResultWithExitCode = RunCommandResult & {
   /** The exit code of the process. */
   exitCode: number;
-};
-
-/** Options for {@link runCommand}. */
-export type RunCommandOptions = {
-  /**
-   * Whether a non-zero exit throws instead of returning the exit code. Defaults to `true`. Pass
-   * `false` to inspect the exit code yourself.
-   */
-  error?: boolean;
 };
 
 /**
@@ -57,28 +52,34 @@ export class CommandError extends Error {
 
 export function runCommand(
   command: string[],
-  options: RunCommandOptions & { error: false },
+  options: { error: false },
 ): Promise<RunCommandResultWithExitCode>;
 
 export function runCommand(
   command: string[],
-  options?: RunCommandOptions,
+  options?: { error?: true; retries?: number },
 ): Promise<RunCommandResult>;
 /**
  * Runs a command and captures its output. A command that is not found exits with code 127. When
  * `error` is `true` (the default), a non-zero exit throws; when `false`, it resolves with the exit
- * code instead.
+ * code instead. When `retries` is set, a failed command is re-run, after a short delay, up to that
+ * many more times before the final failure surfaces.
  *
  * @param command The command and its arguments, e.g. `["git", "--version"]`.
  * @param options Options for running the command.
+ * @param options.error Whether a non-zero exit throws instead of returning the exit code. Defaults
+ *   to `true`. Pass `false` to inspect the exit code yourself.
+ * @param options.retries How many additional times to re-run the command, after a short delay, when
+ *   it fails. Defaults to `0`. Available only on the throwing path, so it cannot be combined with
+ *   `error: false`.
  * @returns The captured output, including the exit code only when `error` is `false`.
  * @throws When the command exits non-zero and `error` is not `false`.
  */
 export async function runCommand(
   command: string[],
-  options: RunCommandOptions = {},
+  options: { error?: boolean; retries?: number } = {},
 ): Promise<RunCommandResult | RunCommandResultWithExitCode> {
-  const { error: throwErrors = true } = options;
+  const { error: throwErrors = true, retries = 0 } = options;
 
   let result: RunCommandResultWithExitCode;
 
@@ -99,6 +100,11 @@ export async function runCommand(
       // Otherwise, let the error pass through
       throw caught;
     }
+  }
+
+  if (result.exitCode !== 0 && retries > 0) {
+    await wait(RETRY_DELAY);
+    return runCommand(command, { retries: retries - 1 });
   }
 
   if (throwErrors && result.exitCode !== 0) {

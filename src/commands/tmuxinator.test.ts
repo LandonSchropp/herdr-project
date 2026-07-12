@@ -1,5 +1,5 @@
 import { XDG_CONFIG_HOME } from "../directories.ts";
-import type { RunCommandOptions, RunCommandResultWithExitCode } from "./shell.ts";
+import type { RunCommandResultWithExitCode } from "./shell.ts";
 import {
   isTmuxinatorInstalled,
   listTmuxinatorProjects,
@@ -14,7 +14,10 @@ import { homedir } from "node:os";
 import { dedent } from "ts-dedent";
 
 const runCommandMock = mock<
-  (command: string[], options?: RunCommandOptions) => Promise<RunCommandResultWithExitCode>
+  (
+    command: string[],
+    options?: { error?: boolean; retries?: number },
+  ) => Promise<RunCommandResultWithExitCode>
 >(() => Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }));
 
 await mock.module("./shell.ts", () => ({

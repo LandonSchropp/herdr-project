@@ -1,5 +1,9 @@
 import { CommandError, runAttachedCommand, runCommand, runDetachedCommand } from "./shell.ts";
 import { describe, expect, it, mock } from "bun:test";
+import { chmod } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const unrefMock = mock(() => {});
 const spawnMock = mock(() => ({ unref: unrefMock }));
@@ -7,6 +11,41 @@ const spawnMock = mock(() => ({ unref: unrefMock }));
 await mock.module("node:child_process", () => ({
   spawn: spawnMock,
 }));
+
+const waitMock = mock(() => Promise.resolve());
+
+await mock.module("../utilities/wait.ts", () => ({
+  wait: waitMock,
+}));
+
+/**
+ * Writes an executable script that exits non-zero its first `failures` runs, then exits zero,
+ * tracking run count in a sibling file so the count survives across separate invocations.
+ *
+ * @param failures The number of leading runs that should fail before the script succeeds.
+ * @returns The command that runs the script.
+ */
+async function flakeyCommand(failures: number): Promise<string[]> {
+  const directory = await mkdtemp(join(tmpdir(), "orc-retry-"));
+  const counter = join(directory, "count");
+  const script = join(directory, "flake.sh");
+
+  await Bun.write(counter, "0");
+  await Bun.write(
+    script,
+    [
+      "#!/bin/sh",
+      `count=$(cat "${counter}")`,
+      "count=$((count + 1))",
+      `echo "$count" > "${counter}"`,
+      `if [ "$count" -le ${failures} ]; then echo "fail $count" >&2; exit 1; fi`,
+      'echo "ok"',
+    ].join("\n"),
+  );
+  await chmod(script, 0o755);
+
+  return [script];
+}
 
 describe("runCommand", () => {
   describe("when the command prints to stdout", () => {
@@ -46,6 +85,42 @@ describe("runCommand", () => {
   describe("when the command is not found", () => {
     it("throws", () => {
       expect(runCommand(["notarealcommand"])).rejects.toThrow();
+    });
+  });
+
+  describe("when retries is set", () => {
+    describe("when the command fails then succeeds within the retry budget", () => {
+      it("returns the successful result", async () => {
+        const command = await flakeyCommand(1);
+        const { stdout } = await runCommand(command, { retries: 1 });
+        expect(stdout.trim()).toBe("ok");
+      });
+
+      it("waits between attempts", async () => {
+        const command = await flakeyCommand(1);
+        await runCommand(command, { retries: 1 });
+        expect(waitMock).toHaveBeenCalledWith(100);
+      });
+    });
+
+    describe("when the command keeps failing past the retry budget", () => {
+      it("throws a CommandError after exhausting the retries", async () => {
+        const command = await flakeyCommand(5);
+        expect(runCommand(command, { retries: 2 })).rejects.toBeInstanceOf(CommandError);
+      });
+
+      it("retries the command the given number of times", async () => {
+        const command = await flakeyCommand(5);
+        await runCommand(command, { retries: 2 }).catch(() => {});
+        expect(waitMock).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    describe("when the command succeeds on the first attempt", () => {
+      it("does not wait", async () => {
+        await runCommand(["true"], { retries: 2 });
+        expect(waitMock).not.toHaveBeenCalled();
+      });
     });
   });
 
