@@ -2,9 +2,9 @@
 # herdr-plugin.toml registers herdr-project with Herdr. Install it from a checkout with
 # `herdr plugin link .`, or from GitHub with `herdr plugin install LandonSchropp/herdr-project`.
 #
-# The plugin opens a project and one of its Git worktrees from two pickers: choose the project,
-# then choose which worktree to open. The repository's main checkout leads the worktree list, and a
-# trailing row prompts for a branch name to create a new worktree.
+# The plugin opens a project and one of its Git worktrees in two steps: choose the project, then
+# name the branch to open it on. The name is prefilled with the repository's main checkout, and a
+# branch with no worktree yet gets one created for it.
 #
 # The same operations are available non-interactively for agents and scripts:
 #
@@ -25,10 +25,13 @@ command = ["sh", "scripts/build.sh"]
 
 # project — the plugin's entry point. Opens the picker flow, which ends by opening the chosen
 # worktree into a Herdr workspace. Bind a key to it or run it from Herdr's action menu.
+#
+# Herdr runs an action headless, so this asks Herdr for a pane running the "picker" entry point
+# below rather than rendering the TUI itself.
 [[actions]]
 id = "project"
 title = "Herdr Project: Open Project"
-command = ["./scripts/run.sh"]
+command = ["./scripts/open.sh"]
 
 # picker — the flow as a Herdr-managed pane. Herdr gives it a zoomed pane, runs the TUI, and tears
 # the pane down when it exits.

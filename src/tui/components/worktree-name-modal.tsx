@@ -3,42 +3,41 @@ import { Prompt } from "./prompt.tsx";
 import { Text } from "ink";
 
 type WorktreeNameModalProps = {
-  /** The project the worktree is created in. */
+  /** The project the worktree belongs to. */
   project: Project;
-  /** Branches that already have a worktree, rejected as duplicates. */
-  existingBranches: string[];
-  /** Fires with the validated branch name. */
+  /**
+   * The branch the input is prefilled with, which is the repository's main checkout so that
+   * accepting the default opens the project where it already sits.
+   */
+  defaultBranch: string;
+  /** Fires with the branch name to open, which may or may not already have a worktree. */
   onSubmit: (branch: string) => void;
   /** Fires when the user presses escape. */
   onCancel: () => void;
 };
 
 /**
- * The new-worktree prompt. Names the branch the worktree is created on, rejecting blank names and
- * branches that already have a worktree in the project.
+ * The second step of the flow: name the branch to open the project on. The input is prefilled with
+ * the repository's main checkout, so pressing enter opens the project as-is; typing another name
+ * opens that branch's worktree, creating it when it doesn't exist yet.
  */
 export function WorktreeNameModal({
   project,
-  existingBranches,
+  defaultBranch,
   onSubmit,
   onCancel,
 }: WorktreeNameModalProps) {
   return (
     <Prompt
-      title="New Worktree"
+      title="Open Worktree"
       message={[
-        "What would you like to name the",
+        "Which worktree would you like to",
         <>
-          <Text color="blue">{project.name}</Text> branch?
+          open in <Text color="blue">{project.name}</Text>?
         </>,
       ]}
-      onValidate={(branch) => {
-        if (branch.trim() === "") return "Enter a branch name.";
-
-        return existingBranches.includes(branch)
-          ? `A worktree for "${branch}"\nalready exists.`
-          : null;
-      }}
+      defaultValue={defaultBranch}
+      onValidate={(branch) => (branch.trim() === "" ? "Enter a branch name." : null)}
       onSubmit={onSubmit}
       onCancel={onCancel}
     />

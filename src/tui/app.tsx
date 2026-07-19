@@ -4,19 +4,16 @@ import { createProjectWorktree, openProjectWorktree } from "../workspaces.ts";
 import { listWorktrees } from "../worktrees.ts";
 import { ProjectPickerModal } from "./components/project-picker-modal.tsx";
 import { WorktreeNameModal } from "./components/worktree-name-modal.tsx";
-import { WorktreePickerModal } from "./components/worktree-picker-modal.tsx";
 import { useEffectAsync } from "./hooks/use-effect-async.ts";
 import { Box, Text, useApp, useWindowSize } from "ink";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-/** Which step of the two-step flow is showing. */
-type Step = "project" | "worktree" | "name";
-
 /**
- * The picker flow: choose a project, then choose which of its worktrees to open. Picking an
- * existing worktree opens it into a Herdr workspace; the trailing new-worktree row prompts for a
- * branch name and creates one. Escape steps back, and escape from the first step exits.
+ * The picker flow: choose a project, then name the worktree to open it on. The name defaults to the
+ * repository's main checkout, so pressing enter twice opens the project where it already sits;
+ * naming a branch that has no worktree yet creates one. Escape steps back, and escape from the
+ * first step exits.
  */
 export function App() {
   const { exit } = useApp();
@@ -24,7 +21,6 @@ export function App() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [worktrees, setWorktrees] = useState<Worktree[] | null>(null);
-  const [step, setStep] = useState<Step>("project");
   const [error, setError] = useState<string | null>(null);
 
   useEffectAsync(async () => {
@@ -32,13 +28,12 @@ export function App() {
   }, []);
 
   /**
-   * Loads the picked project's worktrees and advances to the worktree step.
+   * Loads the picked project's worktrees and advances to the naming step.
    *
    * @param picked The picked project.
    */
   async function handleProjectSelect(picked: Project) {
     setProject(picked);
-    setStep("worktree");
 
     try {
       setWorktrees(await listWorktrees(picked.repositoryRoot));
@@ -48,17 +43,31 @@ export function App() {
   }
 
   /**
-   * Opens a workspace and exits, surfacing any failure instead of closing silently.
+   * Opens the named branch: an existing worktree is opened where it sits, and a branch without one
+   * gets a worktree created for it. Exits once the workspace is up, surfacing any failure instead
+   * of closing silently.
    *
-   * @param open The action that opens the workspace and lays the project's tabs into it.
+   * @param branch The branch to open the project on.
    */
-  async function run(open: () => Promise<void>) {
+  async function handleSubmit(branch: string) {
+    if (project === null) return;
+
+    const existing = worktrees?.find((worktree) => worktree.branch === branch);
+
     try {
-      await open();
+      if (existing === undefined) await createProjectWorktree(project, branch);
+      else await openProjectWorktree(project, existing.path);
+
       exit();
     } catch (thrown) {
       setError(thrown instanceof Error ? thrown.message : String(thrown));
     }
+  }
+
+  /** Steps back from the naming prompt to the project picker. */
+  function handleCancel() {
+    setProject(null);
+    setWorktrees(null);
   }
 
   /**
@@ -72,10 +81,10 @@ export function App() {
     if (projects === null) return null;
 
     if (projects.length === 0) {
-      return <Text color="yellow">No projects found. Add a project TOML and try again.</Text>;
+      return <Text color="yellow">No projects found. Add a project and try again.</Text>;
     }
 
-    if (step === "project" || project === null) {
+    if (project === null) {
       return (
         <ProjectPickerModal
           projects={projects}
@@ -87,24 +96,12 @@ export function App() {
 
     if (worktrees === null) return null;
 
-    if (step === "name") {
-      return (
-        <WorktreeNameModal
-          project={project}
-          existingBranches={worktrees.map((worktree) => worktree.branch)}
-          onSubmit={(branch) => void run(() => createProjectWorktree(project, branch))}
-          onCancel={() => setStep("worktree")}
-        />
-      );
-    }
-
     return (
-      <WorktreePickerModal
+      <WorktreeNameModal
         project={project}
-        worktrees={worktrees}
-        onSelect={(worktree) => void run(() => openProjectWorktree(project, worktree.path))}
-        onCreate={() => setStep("name")}
-        onCancel={() => setStep("project")}
+        defaultBranch={worktrees.find((worktree) => worktree.isMain)?.branch ?? ""}
+        onSubmit={(branch) => void handleSubmit(branch)}
+        onCancel={handleCancel}
       />
     );
   }

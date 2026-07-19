@@ -17,9 +17,9 @@ leading the list.
 Running the plugin opens a two-step flow:
 
 1. **Pick a project.** Fuzzy-search the projects you've defined and pick one.
-2. **Pick a worktree.** The project's worktrees are listed with the repository's main checkout
-   first, so it's the default. Pick one to open it into a Herdr workspace, or choose
-   **+ New worktree…** to name a branch and create one.
+2. **Name the worktree.** The input is prefilled with the repository's main checkout, so pressing
+   enter opens the project where it already sits. Type another branch name to open that branch's
+   worktree, creating one if it doesn't exist yet.
 
 Escape steps back, and escape from the first step exits.
 
