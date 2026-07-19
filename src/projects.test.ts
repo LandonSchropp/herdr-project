@@ -1,150 +1,159 @@
 import { stubEnv } from "../test/helpers/env.ts";
-import { expandHome, listProjects, parseProject, projectsDirectory } from "./projects.ts";
+import { discoverProjects, listProjects, mergeProjects, scanRepositories } from "./projects.ts";
+import type { Project, Settings } from "./types.ts";
 import { describe, expect, it } from "bun:test";
-import { mkdtemp, writeFile } from "node:fs/promises";
-import { homedir, tmpdir } from "node:os";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-/**
- * Creates a temporary projects directory containing the given TOML files and points
- * `HERDR_PROJECTS_DIRECTORY` at it.
- *
- * @param files The file names mapped to their TOML contents.
- * @returns The directory's path.
- */
-async function stubProjectsDirectory(files: Record<string, string>): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), "herdr-project-"));
+const SHELL_TAB = { name: "shell", command: null };
 
-  for (const [name, contents] of Object.entries(files)) {
-    await writeFile(join(directory, name), contents);
+/**
+ * Creates a temporary directory holding the named repositories. Repositories are created with a
+ * `.git` directory, as a normal checkout has; any name in `linkedWorktrees` gets a `.git` file
+ * instead, as a linked worktree has.
+ *
+ * @param repositories The directory names to create as normal checkouts.
+ * @param options The other directories to create alongside them.
+ * @param options.linkedWorktrees Names to create with a `.git` file rather than a directory.
+ * @param options.plainDirectories Names to create with no `.git` entry at all.
+ * @returns The temporary directory's path.
+ */
+async function stubRepositories(
+  repositories: string[],
+  options: { linkedWorktrees?: string[]; plainDirectories?: string[] } = {},
+): Promise<string> {
+  const { linkedWorktrees = [], plainDirectories = [] } = options;
+  const root = await mkdtemp(join(tmpdir(), "herdr-project-repos-"));
+
+  for (const name of repositories) {
+    await mkdir(join(root, name, ".git"), { recursive: true });
   }
 
-  stubEnv("HERDR_PROJECTS_DIRECTORY", directory);
-  return directory;
+  for (const name of linkedWorktrees) {
+    await mkdir(join(root, name), { recursive: true });
+    await writeFile(join(root, name, ".git"), "gitdir: elsewhere");
+  }
+
+  for (const name of plainDirectories) {
+    await mkdir(join(root, name), { recursive: true });
+  }
+
+  return root;
 }
 
-describe("expandHome", () => {
-  describe("when the path starts with a tilde", () => {
-    it("expands the tilde to the home directory", () => {
-      expect(expandHome("~/Development/orc")).toEqual(`${homedir()}/Development/orc`);
-    });
-  });
+/**
+ * Builds settings for the discovery tests.
+ *
+ * @param overrides The fields to override on the defaults.
+ * @returns The settings.
+ */
+function buildSettings(overrides: Partial<Settings> = {}): Settings {
+  return { projectPaths: [], defaultTabs: [SHELL_TAB], projects: [], ...overrides };
+}
 
-  describe("when the path is already absolute", () => {
-    it("returns the path unchanged", () => {
-      expect(expandHome("/tmp/project")).toEqual("/tmp/project");
-    });
-  });
-
-  describe("when the path contains a tilde that does not lead it", () => {
-    it("returns the path unchanged", () => {
-      expect(expandHome("/tmp/~/project")).toEqual("/tmp/~/project");
-    });
-  });
-});
-
-describe("parseProject", () => {
-  describe("when the TOML declares a name and working directory", () => {
-    it("returns a project with an expanded repository root", () => {
-      const contents = 'name = "orc"\nworking_dir = "~/Development/orc"\n';
-
-      expect(parseProject(contents)).toEqual({
-        name: "orc",
-        repositoryRoot: `${homedir()}/Development/orc`,
+describe("scanRepositories", () => {
+  describe("when the glob matches Git repositories", () => {
+    it("returns normal checkouts and linked worktrees, but not plain directories", async () => {
+      const root = await stubRepositories(["alpha", "beta"], {
+        linkedWorktrees: ["gamma"],
+        plainDirectories: ["not-a-repository"],
       });
+
+      const found = await scanRepositories(join(root, "*"));
+
+      expect(found.map((path) => path.replace(`${root}/`, "")).sort()).toEqual([
+        "alpha",
+        "beta",
+        "gamma",
+      ]);
     });
   });
 
-  describe("when the TOML declares extra tables", () => {
-    it("ignores them", () => {
-      const contents = 'name = "notes"\nworking_dir = "/tmp/notes"\n\n[[tabs]]\nname = "shell"\n';
+  describe("when the glob matches nothing", () => {
+    it("returns an empty list", async () => {
+      const root = await stubRepositories([]);
 
-      expect(parseProject(contents)).toEqual({ name: "notes", repositoryRoot: "/tmp/notes" });
-    });
-  });
-
-  describe("when the TOML is missing a name", () => {
-    it("returns null", () => {
-      expect(parseProject('working_dir = "/tmp/notes"\n')).toBeNull();
-    });
-  });
-
-  describe("when the TOML is missing a working directory", () => {
-    it("returns null", () => {
-      expect(parseProject('name = "notes"\n')).toBeNull();
-    });
-  });
-
-  describe("when the TOML is malformed", () => {
-    it("returns null", () => {
-      expect(parseProject("name = = =")).toBeNull();
+      expect(await scanRepositories(join(root, "*"))).toEqual([]);
     });
   });
 });
 
-describe("projectsDirectory", () => {
-  describe("when HERDR_PROJECTS_DIRECTORY is set", () => {
-    it("uses it, expanding a leading tilde", () => {
-      stubEnv("HERDR_PROJECTS_DIRECTORY", "~/projects");
+describe("discoverProjects", () => {
+  describe("when repositories are found", () => {
+    it("names each project after its directory and gives it the default tabs", async () => {
+      const root = await stubRepositories(["widgets"]);
+      const defaultTabs = [{ name: "editor", command: "nvim" }];
 
-      expect(projectsDirectory()).toEqual(`${homedir()}/projects`);
+      const projects = await discoverProjects(
+        buildSettings({ projectPaths: [join(root, "*")], defaultTabs }),
+      );
+
+      expect(projects).toEqual([
+        { name: "widgets", repositoryRoot: join(root, "widgets"), tabs: defaultTabs },
+      ]);
     });
   });
 
-  describe("when HERDR_PROJECTS_DIRECTORY is not set", () => {
-    it("falls back to the Herdr Plus projects directory", () => {
-      stubEnv("HERDR_PROJECTS_DIRECTORY", undefined);
+  describe("when no project paths are configured", () => {
+    it("returns an empty list", async () => {
+      expect(await discoverProjects(buildSettings())).toEqual([]);
+    });
+  });
+});
 
-      expect(projectsDirectory()).toEqual(
-        join(homedir(), ".config/herdr/plugins/config/cloudmanic.herdr-plus/projects"),
-      );
+describe("mergeProjects", () => {
+  const declared: Project = {
+    name: "custom",
+    repositoryRoot: "/tmp/widgets",
+    tabs: [{ name: "editor", command: "nvim" }],
+  };
+
+  describe("when a discovered project shares a declared project's path", () => {
+    it("keeps the declared project and drops the discovered one", () => {
+      const discovered: Project = {
+        name: "widgets",
+        repositoryRoot: "/tmp/widgets",
+        tabs: [SHELL_TAB],
+      };
+
+      expect(mergeProjects([declared], [discovered])).toEqual([declared]);
+    });
+  });
+
+  describe("when a discovered project is at a different path", () => {
+    it("keeps both, sorted by name", () => {
+      const discovered: Project = {
+        name: "apple",
+        repositoryRoot: "/tmp/apple",
+        tabs: [SHELL_TAB],
+      };
+
+      expect(mergeProjects([declared], [discovered]).map((project) => project.name)).toEqual([
+        "apple",
+        "custom",
+      ]);
     });
   });
 });
 
 describe("listProjects", () => {
-  describe("when the directory holds project files", () => {
-    it("returns them sorted by name", async () => {
-      await stubProjectsDirectory({
-        "zebra.toml": 'name = "zebra"\nworking_dir = "/tmp/zebra"\n',
-        "apple.toml": 'name = "apple"\nworking_dir = "/tmp/apple"\n',
-      });
+  describe("when settings declare projects and project paths", () => {
+    it("returns both, sorted by name", async () => {
+      const root = await stubRepositories(["zebra"]);
+      const settingsDirectory = await mkdtemp(join(tmpdir(), "herdr-project-settings-"));
+      const settingsFile = join(settingsDirectory, "settings.json");
 
-      expect(await listProjects()).toEqual([
-        { name: "apple", repositoryRoot: "/tmp/apple" },
-        { name: "zebra", repositoryRoot: "/tmp/zebra" },
-      ]);
-    });
-  });
+      await writeFile(
+        settingsFile,
+        JSON.stringify({
+          projectPaths: [join(root, "*")],
+          projects: [{ name: "apple", path: "/tmp/apple" }],
+        }),
+      );
+      stubEnv("HERDR_PROJECT_SETTINGS", settingsFile);
 
-  describe("when a file is not TOML", () => {
-    it("ignores it", async () => {
-      await stubProjectsDirectory({
-        "notes.md": "not a project",
-        "apple.toml": 'name = "apple"\nworking_dir = "/tmp/apple"\n',
-      });
-
-      expect(await listProjects()).toEqual([{ name: "apple", repositoryRoot: "/tmp/apple" }]);
-    });
-  });
-
-  describe("when a project file is invalid", () => {
-    it("skips it and keeps the rest", async () => {
-      await stubProjectsDirectory({
-        "broken.toml": "name = = =",
-        "partial.toml": 'name = "partial"\n',
-        "apple.toml": 'name = "apple"\nworking_dir = "/tmp/apple"\n',
-      });
-
-      expect(await listProjects()).toEqual([{ name: "apple", repositoryRoot: "/tmp/apple" }]);
-    });
-  });
-
-  describe("when the directory does not exist", () => {
-    it("returns an empty list", async () => {
-      stubEnv("HERDR_PROJECTS_DIRECTORY", join(tmpdir(), "herdr-project-missing-directory"));
-
-      expect(await listProjects()).toEqual([]);
+      expect((await listProjects()).map((project) => project.name)).toEqual(["apple", "zebra"]);
     });
   });
 });

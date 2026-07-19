@@ -45,24 +45,48 @@ Escape steps back, and escape from the first step exits.
    description = "open a project"
    ```
 
+## CLI
+
+Every step the picker takes is also available non-interactively, so agents and scripts can drive
+it. Herdr's own commands cover everything else (switching, closing, listing worktrees).
+
+```sh
+herdr-project list [--json]                         # list the configured projects
+herdr-project create <project> [--branch <branch>]  # open a project's workspace
+```
+
+`list` prints `<name>\t<path>` per line, or a JSON array with `--json`. `create` opens the
+project's main worktree; with `--branch` it creates a worktree on that branch instead. Either way
+the project's tabs are laid into the new workspace.
+
 ## Configuration
 
-Projects are TOML files, one per project. Each needs a `name` and a `working_dir` pointing at the
-project's Git repository; any other keys are ignored.
+Settings live in a single file at `~/.config/herdr-project/settings.json`. Point
+`HERDR_PROJECT_SETTINGS` elsewhere to override the location. Every field is optional.
 
-```toml
-name = "orc"
-working_dir = "~/Development/orc"
+```json
+{
+  "projectPaths": ["~/Development/*"],
+  "defaultTabs": [
+    { "name": "shell" },
+    { "name": "neovim", "command": "nvim" },
+    { "name": "claude", "command": "claude" }
+  ],
+  "projects": [
+    { "name": "dotfiles", "path": "~/.dotfiles" },
+    { "name": "notes", "path": "~/Notes" }
+  ]
+}
 ```
 
-By default these are read from Herdr Plus's projects directory, so an existing Herdr Plus setup
-works with no changes:
-
-```
-~/.config/herdr/plugins/config/cloudmanic.herdr-plus/projects
-```
-
-Point `HERDR_PROJECTS_DIRECTORY` at another directory to read them from somewhere else.
+- **`projectPaths`**: Globs scanned for Git repositories. Every match becomes a project named after
+  its directory, laid out with `defaultTabs`. This is the reason most projects need no entry of
+  their own.
+- **`defaultTabs`**: The tabs opened for a discovered project, and for any declared project that
+  omits its own. A tab with no `command` is left as a plain shell.
+- **`projects`**: Projects declared explicitly, for repositories outside your project paths or ones
+  that want a different name or layout. Only `path` is required: `name` defaults to the directory's
+  name and `tabs` to `defaultTabs`. A declared project wins over a discovered one at the same path.
 
 ## Development
 

@@ -5,6 +5,11 @@
 # The plugin opens a project and one of its Git worktrees from two pickers: choose the project,
 # then choose which worktree to open. The repository's main checkout leads the worktree list, and a
 # trailing row prompts for a branch name to create a new worktree.
+#
+# The same operations are available non-interactively for agents and scripts:
+#
+#   ./scripts/run.sh list [--json]
+#   ./scripts/run.sh create <project> [--branch <branch>]
 
 id = "landonschropp.herdr-project"
 name = "Herdr Project"

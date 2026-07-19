@@ -1,82 +1,82 @@
-import type { Project } from "./types.ts";
-import { readdir } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { loadSettings } from "./settings.ts";
+import type { Project, Settings } from "./types.ts";
+import { stat } from "node:fs/promises";
+import { basename, join } from "node:path";
 
 /**
- * The directory holding the project definition TOML files. Defaults to the Herdr Plus projects
- * directory, which is where Herdr's project templates already live, and can be pointed elsewhere
- * with `HERDR_PROJECTS_DIRECTORY`.
+ * Reports whether a path exists, whether it is a file or a directory.
  *
- * @returns The absolute path to the projects directory.
+ * @param path The path to check.
+ * @returns Whether the path exists.
  */
-export function projectsDirectory(): string {
-  const override = process.env.HERDR_PROJECTS_DIRECTORY;
-
-  return override
-    ? expandHome(override)
-    : join(homedir(), ".config/herdr/plugins/config/cloudmanic.herdr-plus/projects");
+async function exists(path: string): Promise<boolean> {
+  return stat(path).then(
+    () => true,
+    () => false,
+  );
 }
 
 /**
- * Expands a leading `~/` to the user's home directory, leaving every other path untouched.
+ * Finds the Git repositories matching a glob. A match counts as a repository when it contains a
+ * `.git` entry, which is a directory in a normal checkout and a file in a linked worktree.
  *
- * @param path The path to expand.
- * @returns The expanded path.
+ * @param pattern The absolute glob to scan.
+ * @returns The absolute paths of the matching repositories.
  */
-export function expandHome(path: string): string {
-  return path.startsWith("~/") ? join(homedir(), path.slice(2)) : path;
-}
+export async function scanRepositories(pattern: string): Promise<string[]> {
+  const matches: string[] = [];
 
-/**
- * Parses a project definition TOML into a {@link Project}. Only `name` and `working_dir` are read;
- * the tab and pane tables Herdr Plus uses to lay out a workspace are ignored.
- *
- * @param contents The raw TOML contents.
- * @returns The parsed project, or `null` when the TOML is malformed or missing a required field.
- */
-export function parseProject(contents: string): Project | null {
-  let parsed: unknown;
-
-  try {
-    parsed = Bun.TOML.parse(contents);
-  } catch {
-    return null;
+  for await (const match of new Bun.Glob(pattern).scan({
+    onlyFiles: false,
+    absolute: true,
+    followSymlinks: true,
+  })) {
+    if (await exists(join(match, ".git"))) matches.push(match);
   }
 
-  if (typeof parsed !== "object" || parsed === null) return null;
-
-  const { name, working_dir: workingDirectory } = parsed as Record<string, unknown>;
-
-  if (typeof name !== "string" || typeof workingDirectory !== "string") return null;
-
-  return { name, repositoryRoot: expandHome(workingDirectory) };
+  return matches;
 }
 
 /**
- * Loads every project definition from {@link projectsDirectory}, skipping files that are malformed
- * or missing required fields. A missing directory yields no projects rather than an error, so the
- * picker degrades to an empty list instead of crashing.
+ * Discovers the projects under the settings' project paths. Each repository becomes a project named
+ * after its directory, laid out with the default tabs.
+ *
+ * @param settings The settings to read the project paths and default tabs from.
+ * @returns The discovered projects.
+ */
+export async function discoverProjects(settings: Settings): Promise<Project[]> {
+  const scans = await Promise.all(settings.projectPaths.map(scanRepositories));
+
+  return scans.flat().map((repositoryRoot) => ({
+    name: basename(repositoryRoot),
+    repositoryRoot,
+    tabs: settings.defaultTabs,
+  }));
+}
+
+/**
+ * Combines the declared and discovered projects into the list the picker shows. A declared project
+ * wins over a discovered one at the same path, so declaring a project is how you give a discovered
+ * repository a different name or layout without listing every other repository.
+ *
+ * @param declared The projects declared in the settings.
+ * @param discovered The projects found under the project paths.
+ * @returns The merged projects, sorted by name.
+ */
+export function mergeProjects(declared: Project[], discovered: Project[]): Project[] {
+  const declaredRoots = new Set(declared.map((project) => project.repositoryRoot));
+
+  return [...declared, ...discovered.filter((p) => !declaredRoots.has(p.repositoryRoot))].sort(
+    (first, second) => first.name.localeCompare(second.name),
+  );
+}
+
+/**
+ * Loads every project the picker can open.
  *
  * @returns The projects, sorted by name.
  */
 export async function listProjects(): Promise<Project[]> {
-  const directory = projectsDirectory();
-  let entries: string[];
-
-  try {
-    entries = await readdir(directory);
-  } catch {
-    return [];
-  }
-
-  const projects = await Promise.all(
-    entries
-      .filter((entry) => entry.endsWith(".toml"))
-      .map(async (entry) => parseProject(await Bun.file(join(directory, entry)).text())),
-  );
-
-  return projects
-    .filter((project): project is Project => project !== null)
-    .sort((first, second) => first.name.localeCompare(second.name));
+  const settings = await loadSettings();
+  return mergeProjects(settings.projects, await discoverProjects(settings));
 }

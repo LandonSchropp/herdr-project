@@ -2,13 +2,15 @@
 
 ## Architecture
 
-The code is organized in three layers, lowest to highest:
+The code is organized in layers, lowest to highest:
 
-1. **`src/worktrees.ts`** — a thin wrapper around the `herdr` CLI. Every function shells out to `herdr ... --json` and parses the response. Parsing is split from the shelling out (`parseWorktrees`, `sortWorktrees`) so it can be tested without a running Herdr session.
-2. **`src/projects.ts`** — loads the project definitions that populate the first picker. Projects are TOML files with a `name` and a `working_dir`; everything else is ignored.
-3. **`src/tui/`** — the Ink UI. `app.tsx` owns the flow's state and is the only place that calls the layers below; `components/` holds the modals and the primitives they build on (`Modal`, `Picker`, `Prompt`).
+1. **`src/herdr.ts`** — the `herdr` CLI wrapper. `runHerdr` returns raw output and `runHerdrJson` parses it; not every command prints something, so reach for the raw one when you don't need a response. Response parsing (`parseWorkspace`, `parseRootPaneId`) is separate so it can be tested without a running Herdr session.
+2. **`src/worktrees.ts`** and **`src/layout.ts`** — worktree listing/opening/creating, and laying a project's tabs into a workspace.
+3. **`src/settings.ts`** and **`src/projects.ts`** — the settings file, plus discovering repositories under the project paths and merging them with the declared projects.
+4. **`src/workspaces.ts`** — composes the layers above into the operations both front ends need: open a worktree, create one, or open a project's main checkout, each laying out the project's tabs.
+5. **`src/cli.ts`** and **`src/tui/`** — the two front ends. Both call `workspaces.ts` and nothing lower. `cli.ts` returns a result rather than writing to the process, so it can be tested directly; `app.tsx` owns the picker's state and `components/` holds the modals and their primitives (`Modal`, `Picker`, `Prompt`).
 
-`src/index.tsx` is the entry point Herdr invokes through `scripts/run.sh`.
+`src/index.tsx` dispatches between them: no arguments opens the picker, any arguments run the CLI. Herdr invokes it through `scripts/run.sh`.
 
 Tests live alongside their source as `*.test.ts` / `*.test.tsx`. Shared test infrastructure (`setup.ts`, `helpers/`) lives in `test/`.
 
@@ -22,7 +24,13 @@ IMPORTANT: When the agent first starts, check to see if a local `node_modules` d
 
 ## Talking to Herdr
 
-All Herdr interaction goes through the `herdr` CLI with `--json`, never by reading Herdr's config or state files directly. Read identifiers out of the JSON responses rather than constructing them. The CLI is the authority on its own command syntax — run a command group (e.g. `herdr worktree`) to print its subcommands.
+All Herdr interaction goes through the `herdr` CLI, never by reading Herdr's config or state files directly. Read identifiers out of the JSON responses rather than constructing them. The CLI is the authority on its own command syntax — run a command group (e.g. `herdr worktree`) to print its subcommands.
+
+Not every command prints JSON. `pane run` prints nothing at all, so passing it through `runHerdrJson` fails at runtime while looking fine in tests. Check what a command actually prints before choosing a wrapper.
+
+## CLI Output
+
+Use `process.stdout.write` for command output, not `console.log`. CLI output is program data that should pipe cleanly to other tools. Remember to include the trailing `\n` since `process.stdout.write` does not append one. `runCli` returns the text and exit code rather than writing them, so keep the writing in `src/index.tsx`.
 
 ## Git Workflow
 

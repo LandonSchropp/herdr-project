@@ -1,30 +1,5 @@
-import type { Worktree } from "./types.ts";
-
-/**
- * Runs a `herdr` CLI command that prints JSON and returns the parsed response.
- *
- * @param args The arguments to pass to the `herdr` binary.
- * @returns The parsed JSON response.
- * @throws When the command exits non-zero or prints output that is not JSON.
- */
-async function runHerdr(args: string[]): Promise<unknown> {
-  const process = Bun.spawn(["herdr", ...args], { stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(process.stdout).text(),
-    new Response(process.stderr).text(),
-    process.exited,
-  ]);
-
-  if (exitCode !== 0) {
-    throw new Error(`herdr ${args.join(" ")} failed: ${stderr.trim() || stdout.trim()}`);
-  }
-
-  try {
-    return JSON.parse(stdout);
-  } catch {
-    throw new Error(`herdr ${args.join(" ")} did not print JSON: ${stdout.trim()}`);
-  }
-}
+import { parseWorkspace, runHerdrJson } from "./herdr.ts";
+import type { Workspace, Worktree } from "./types.ts";
 
 /**
  * Extracts the worktrees from a `herdr worktree list --json` response. Detached worktrees have no
@@ -76,7 +51,7 @@ export function sortWorktrees(worktrees: Worktree[]): Worktree[] {
  * @returns The repository's worktrees, main checkout first.
  */
 export async function listWorktrees(repositoryRoot: string): Promise<Worktree[]> {
-  const response = await runHerdr(["worktree", "list", "--cwd", repositoryRoot, "--json"]);
+  const response = await runHerdrJson(["worktree", "list", "--cwd", repositoryRoot, "--json"]);
   return sortWorktrees(parseWorktrees(response));
 }
 
@@ -85,18 +60,21 @@ export async function listWorktrees(repositoryRoot: string): Promise<Worktree[]>
  *
  * @param repositoryRoot The absolute path to the project's repository.
  * @param path The absolute path to the worktree's checkout.
+ * @returns The workspace Herdr opened the worktree into.
  */
-export async function openWorktree(repositoryRoot: string, path: string): Promise<void> {
-  await runHerdr([
-    "worktree",
-    "open",
-    "--cwd",
-    repositoryRoot,
-    "--path",
-    path,
-    "--focus",
-    "--json",
-  ]);
+export async function openWorktree(repositoryRoot: string, path: string): Promise<Workspace> {
+  return parseWorkspace(
+    await runHerdrJson([
+      "worktree",
+      "open",
+      "--cwd",
+      repositoryRoot,
+      "--path",
+      path,
+      "--focus",
+      "--json",
+    ]),
+  );
 }
 
 /**
@@ -104,16 +82,19 @@ export async function openWorktree(repositoryRoot: string, path: string): Promis
  *
  * @param repositoryRoot The absolute path to the project's repository.
  * @param branch The branch to create the worktree on.
+ * @returns The workspace Herdr created for the worktree.
  */
-export async function createWorktree(repositoryRoot: string, branch: string): Promise<void> {
-  await runHerdr([
-    "worktree",
-    "create",
-    "--cwd",
-    repositoryRoot,
-    "--branch",
-    branch,
-    "--focus",
-    "--json",
-  ]);
+export async function createWorktree(repositoryRoot: string, branch: string): Promise<Workspace> {
+  return parseWorkspace(
+    await runHerdrJson([
+      "worktree",
+      "create",
+      "--cwd",
+      repositoryRoot,
+      "--branch",
+      branch,
+      "--focus",
+      "--json",
+    ]),
+  );
 }

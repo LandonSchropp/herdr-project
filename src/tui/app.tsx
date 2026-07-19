@@ -1,6 +1,7 @@
 import { listProjects } from "../projects.ts";
 import type { Project, Worktree } from "../types.ts";
-import { createWorktree, listWorktrees, openWorktree } from "../worktrees.ts";
+import { createProjectWorktree, openProjectWorktree } from "../workspaces.ts";
+import { listWorktrees } from "../worktrees.ts";
 import { ProjectPickerModal } from "./components/project-picker-modal.tsx";
 import { WorktreeNameModal } from "./components/worktree-name-modal.tsx";
 import { WorktreePickerModal } from "./components/worktree-picker-modal.tsx";
@@ -47,13 +48,13 @@ export function App() {
   }
 
   /**
-   * Runs a Herdr action and exits, surfacing any failure instead of closing silently.
+   * Opens a workspace and exits, surfacing any failure instead of closing silently.
    *
-   * @param action The action to run.
+   * @param open The action that opens the workspace and lays the project's tabs into it.
    */
-  async function run(action: () => Promise<void>) {
+  async function run(open: () => Promise<void>) {
     try {
-      await action();
+      await open();
       exit();
     } catch (thrown) {
       setError(thrown instanceof Error ? thrown.message : String(thrown));
@@ -91,7 +92,7 @@ export function App() {
         <WorktreeNameModal
           project={project}
           existingBranches={worktrees.map((worktree) => worktree.branch)}
-          onSubmit={(branch) => void run(() => createWorktree(project.repositoryRoot, branch))}
+          onSubmit={(branch) => void run(() => createProjectWorktree(project, branch))}
           onCancel={() => setStep("worktree")}
         />
       );
@@ -101,7 +102,7 @@ export function App() {
       <WorktreePickerModal
         project={project}
         worktrees={worktrees}
-        onSelect={(worktree) => void run(() => openWorktree(project.repositoryRoot, worktree.path))}
+        onSelect={(worktree) => void run(() => openProjectWorktree(project, worktree.path))}
         onCreate={() => setStep("name")}
         onCancel={() => setStep("project")}
       />

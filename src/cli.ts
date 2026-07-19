@@ -1,0 +1,132 @@
+import { listProjects } from "./projects.ts";
+import type { Project } from "./types.ts";
+import { createProjectWorktree, openProjectMain } from "./workspaces.ts";
+
+/** The CLI's usage text, printed for `--help` and for a malformed invocation. */
+export const HELP = `herdr-project — open a project and one of its Git worktrees.
+
+Usage:
+  herdr-project                                      Open the project picker.
+  herdr-project list [--json]                        List the configured projects.
+  herdr-project create <project> [--branch <branch>] Open a project's workspace.
+  herdr-project --help                               Show this message.
+
+Commands:
+  list    Prints one project per line as "<name>\t<path>", or a JSON array with --json.
+  create  Opens the project's main worktree. With --branch, creates a worktree on that
+          branch instead. Either way the project's tabs are laid into the workspace.
+`;
+
+/** The result of a CLI run: what to print where, and the exit code to use. */
+export type CliResult = {
+  /** Text to write to stdout. */
+  stdout: string;
+  /** Text to write to stderr. */
+  stderr: string;
+  /** The process exit code. */
+  exitCode: number;
+};
+
+/**
+ * Formats the projects for `list`.
+ *
+ * @param projects The projects to format.
+ * @param asJson Whether to format them as JSON rather than one per line.
+ * @returns The formatted text, ending in a newline.
+ */
+export function formatProjects(projects: Project[], asJson: boolean): string {
+  if (asJson) {
+    return `${JSON.stringify(
+      projects.map(({ name, repositoryRoot, tabs }) => ({ name, path: repositoryRoot, tabs })),
+      null,
+      2,
+    )}\n`;
+  }
+
+  return projects.map((project) => `${project.name}\t${project.repositoryRoot}\n`).join("");
+}
+
+/**
+ * Reads the value of a flag from an argument list.
+ *
+ * @param args The arguments to search.
+ * @param flag The flag whose value to read.
+ * @returns The value, or `null` when the flag is absent or has no value.
+ */
+export function flagValue(args: string[], flag: string): string | null {
+  const index = args.indexOf(flag);
+
+  if (index === -1) return null;
+
+  return args[index + 1] ?? null;
+}
+
+/**
+ * Runs the `list` command.
+ *
+ * @param args The arguments following the command name.
+ * @returns The command's result.
+ */
+async function runList(args: string[]): Promise<CliResult> {
+  return {
+    stdout: formatProjects(await listProjects(), args.includes("--json")),
+    stderr: "",
+    exitCode: 0,
+  };
+}
+
+/**
+ * Runs the `create` command.
+ *
+ * @param args The arguments following the command name.
+ * @returns The command's result.
+ */
+async function runCreate(args: string[]): Promise<CliResult> {
+  const name = args[0];
+
+  if (name === undefined || name.startsWith("-")) {
+    return { stdout: "", stderr: "Error: create requires a project name.\n", exitCode: 1 };
+  }
+
+  const project = (await listProjects()).find((entry) => entry.name === name);
+
+  if (project === undefined) {
+    return { stdout: "", stderr: `Error: no project named "${name}".\n`, exitCode: 1 };
+  }
+
+  const branch = flagValue(args, "--branch");
+
+  if (args.includes("--branch") && branch === null) {
+    return { stdout: "", stderr: "Error: --branch requires a branch name.\n", exitCode: 1 };
+  }
+
+  if (branch === null) await openProjectMain(project);
+  else await createProjectWorktree(project, branch);
+
+  return { stdout: "", stderr: "", exitCode: 0 };
+}
+
+/**
+ * Runs the CLI. An empty argument list is the caller's signal to open the picker instead, which it
+ * detects before calling this.
+ *
+ * @param args The arguments, excluding the executable and script path.
+ * @returns The result to print and exit with.
+ */
+export async function runCli(args: string[]): Promise<CliResult> {
+  const [command, ...rest] = args;
+
+  if (command === "--help" || command === "-h") {
+    return { stdout: HELP, stderr: "", exitCode: 0 };
+  }
+
+  try {
+    if (command === "list") return await runList(rest);
+    if (command === "create") return await runCreate(rest);
+  } catch (thrown) {
+    const message = thrown instanceof Error ? thrown.message : String(thrown);
+    return { stdout: "", stderr: `Error: ${message}\n`, exitCode: 1 };
+  }
+
+  return { stdout: "", stderr: `${HELP}\nError: unknown command "${command}".\n`, exitCode: 1 };
+}
