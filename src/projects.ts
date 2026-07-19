@@ -16,9 +16,6 @@ async function exists(path: string): Promise<boolean> {
   );
 }
 
-/** Matches the wildcard characters that make a project path a glob rather than a plain path. */
-const GLOB_CHARACTERS = /[*?[\]{}]/;
-
 /**
  * Reports whether a directory is a Git repository, which is true when it holds a `.git` entry — a
  * directory in a normal checkout, a file in a linked worktree.
@@ -31,29 +28,28 @@ async function isRepository(path: string): Promise<boolean> {
 }
 
 /**
- * Finds the Git repositories a project path refers to. A path containing wildcards is scanned as a
- * glob; one without is taken as a single repository, so a directory can be listed directly rather
- * than contrived into a pattern.
+ * Finds the Git repositories a project path refers to. The path is treated both as a directory and
+ * as a glob, so a plain path resolves to itself and a pattern resolves to everything it matches.
+ * Doing both avoids guessing which was meant: `Bun.Glob` matches nothing for a path with no
+ * wildcards, and a directory's name is allowed to contain wildcard characters.
  *
  * @param pattern The absolute path or glob to scan.
- * @returns The absolute paths of the matching repositories.
+ * @returns The absolute paths of the matching repositories, without duplicates.
  */
 export async function scanRepositories(pattern: string): Promise<string[]> {
-  if (!GLOB_CHARACTERS.test(pattern)) {
-    return (await isRepository(pattern)) ? [pattern] : [];
-  }
+  const matches = new Set<string>();
 
-  const matches: string[] = [];
+  if (await isRepository(pattern)) matches.add(pattern);
 
   for await (const match of new Bun.Glob(pattern).scan({
     onlyFiles: false,
     absolute: true,
     followSymlinks: true,
   })) {
-    if (await isRepository(match)) matches.push(match);
+    if (await isRepository(match)) matches.add(match);
   }
 
-  return matches;
+  return [...matches];
 }
 
 /**

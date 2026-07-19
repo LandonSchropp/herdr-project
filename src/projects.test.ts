@@ -93,6 +93,22 @@ describe("scanRepositories", () => {
       expect(await scanRepositories(join(root, "alpha"))).toEqual([]);
     });
   });
+
+  describe("when the directory's own name contains wildcard characters", () => {
+    it("still resolves it", async () => {
+      const root = await stubRepositories(["weird[1]"]);
+
+      expect(await scanRepositories(join(root, "weird[1]"))).toEqual([join(root, "weird[1]")]);
+    });
+  });
+
+  describe("when a repository matches both the path itself and the glob", () => {
+    it("returns it once", async () => {
+      const root = await stubRepositories(["alpha"]);
+
+      expect(await scanRepositories(join(root, "alpha*"))).toEqual([join(root, "alpha")]);
+    });
+  });
 });
 
 describe("discoverProjects", () => {
