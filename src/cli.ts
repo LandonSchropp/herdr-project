@@ -1,3 +1,4 @@
+import { applyProjectLayout, parseEventWorkspaceId } from "./on-workspace.ts";
 import { listProjects } from "./projects.ts";
 import type { Project } from "./types.ts";
 import { createProjectWorktree, openProjectMain } from "./workspaces.ts";
@@ -107,6 +108,25 @@ async function runCreate(args: string[]): Promise<CliResult> {
 }
 
 /**
+ * Runs the `on-workspace` hook. Herdr invokes this for every workspace it creates, so it reports
+ * what it decided rather than failing when a workspace isn't one the plugin lays out.
+ *
+ * @returns The command's result.
+ */
+async function runOnWorkspace(): Promise<CliResult> {
+  const workspaceId = parseEventWorkspaceId(
+    process.env.HERDR_PLUGIN_EVENT_JSON,
+    process.env.HERDR_WORKSPACE_ID,
+  );
+
+  if (workspaceId === null) {
+    return { stdout: "", stderr: "Error: no workspace id in the event.\n", exitCode: 1 };
+  }
+
+  return { stdout: `${await applyProjectLayout(workspaceId)}\n`, stderr: "", exitCode: 0 };
+}
+
+/**
  * Runs the CLI. An empty argument list is the caller's signal to open the picker instead, which it
  * detects before calling this.
  *
@@ -123,6 +143,7 @@ export async function runCli(args: string[]): Promise<CliResult> {
   try {
     if (command === "list") return await runList(rest);
     if (command === "create") return await runCreate(rest);
+    if (command === "on-workspace") return await runOnWorkspace();
   } catch (thrown) {
     const message = thrown instanceof Error ? thrown.message : String(thrown);
     return { stdout: "", stderr: `Error: ${message}\n`, exitCode: 1 };

@@ -9,12 +9,18 @@ The code is organized in layers, lowest to highest:
 1. **`src/herdr.ts`** — the `herdr` CLI wrapper. `runHerdr` returns raw output and `runHerdrJson` parses it; not every command prints something, so reach for the raw one when you don't need a response. Response parsing (`parseWorkspace`, `parseRootPaneId`) is separate so it can be tested without a running Herdr session.
 2. **`src/worktrees.ts`** and **`src/layout.ts`** — worktree listing/opening/creating, and laying a project's tabs into a workspace.
 3. **`src/settings.ts`** and **`src/projects.ts`** — the settings file, plus discovering repositories under the project paths and merging them with the declared projects. The settings file has one project list; the entry named `default` is pulled out of it to become `Settings.defaultTabs` and never reaches the picker.
-4. **`src/workspaces.ts`** — composes the layers above into the operations both front ends need: open a worktree, create one, or open a project's main checkout, each laying out the project's tabs.
+4. **`src/workspaces.ts`** and **`src/on-workspace.ts`** — the operations both front ends need (open a worktree, create one, open a project's main checkout), plus the `workspace.created` hook that lays a project's tabs into a new workspace.
 5. **`src/cli.ts`** and **`src/tui/`** — the two front ends. Both call `workspaces.ts` and nothing lower. `cli.ts` returns a result rather than writing to the process, so it can be tested directly; `app.tsx` owns the picker's state and `components/` holds the modals and their primitives (`Modal`, `Picker`, `Prompt`).
 
 `src/index.tsx` dispatches between them: no arguments opens the picker, any arguments run the CLI. Herdr invokes it through `scripts/run.sh`.
 
 Tests live alongside their source as `*.test.ts` / `*.test.tsx`. Shared test infrastructure (`setup.ts`, `helpers/`) lives in `test/`.
+
+## Tabs Come From the Hook, Not the Caller
+
+A project's tabs are laid out by the `workspace.created` event hook, never by whoever opened the workspace. That way a workspace gets its tabs no matter how it was created — from this plugin, from Herdr's own UI, or by Herdr opening a worktree's parent on its own. `workspaces.ts` deliberately does not call `applyLayout`; adding it back would lay the tabs in twice.
+
+The hook runs for every new workspace, so it must stay a quiet no-op when the workspace has no worktree, its repository is not a configured project, or it already has more than the one pane a fresh workspace starts with.
 
 ## Modals Need a Sized Parent
 

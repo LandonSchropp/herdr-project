@@ -56,8 +56,15 @@ herdr-project create <project> [--branch <branch>]  # open a project's workspace
 ```
 
 `list` prints `<name>\t<path>` per line, or a JSON array with `--json`. `create` opens the
-project's main worktree; with `--branch` it creates a worktree on that branch instead. Either way
-the project's tabs are laid into the new workspace.
+project's main worktree; with `--branch` it creates a worktree on that branch instead.
+
+## Tabs
+
+A project's tabs are laid out by a `workspace.created` hook rather than by whatever opened the
+workspace, so any workspace whose repository is a configured project gets its tabs — including
+ones created from Herdr's own UI, and ones Herdr opens on its own when grouping a worktree under
+its parent. Workspaces without a worktree, or whose repository isn't a configured project, are
+left alone.
 
 ## Configuration
 

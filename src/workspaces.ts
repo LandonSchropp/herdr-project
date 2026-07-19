@@ -1,5 +1,4 @@
 import { runHerdrJson } from "./herdr.ts";
-import { applyLayout } from "./layout.ts";
 import type { Project } from "./types.ts";
 import { createWorktree, listWorktrees, openWorktree } from "./worktrees.ts";
 
@@ -34,31 +33,35 @@ export async function listOpenCheckoutPaths(): Promise<string[]> {
 }
 
 /**
- * Opens an existing worktree into a Herdr workspace and lays the project's tabs into it.
+ * Opens an existing worktree into a Herdr workspace. The project's tabs are not laid out here:
+ * Herdr emits `workspace.created`, and the plugin's hook lays them in, which covers workspaces
+ * Herdr opens on its own as well as the ones opened from here.
  *
  * @param project The project the worktree belongs to.
  * @param path The absolute path to the worktree's checkout.
+ * @throws When the worktree already has a workspace open.
  */
 export async function openProjectWorktree(project: Project, path: string): Promise<void> {
   if ((await listOpenCheckoutPaths()).includes(path)) {
     throw new Error(`A workspace is already open for ${path}.`);
   }
 
-  await applyLayout(await openWorktree(project.repositoryRoot, path), project.tabs);
+  await openWorktree(project.repositoryRoot, path);
 }
 
 /**
- * Creates a worktree on `branch` and lays the project's tabs into the workspace Herdr opens for it.
+ * Creates a worktree on `branch` and opens it into a Herdr workspace. As with
+ * {@link openProjectWorktree}, the workspace's tabs come from the `workspace.created` hook.
  *
  * @param project The project to create the worktree in.
  * @param branch The branch to create the worktree on.
  */
 export async function createProjectWorktree(project: Project, branch: string): Promise<void> {
-  await applyLayout(await createWorktree(project.repositoryRoot, branch), project.tabs);
+  await createWorktree(project.repositoryRoot, branch);
 }
 
 /**
- * Opens the project's main checkout into a Herdr workspace and lays its tabs into it.
+ * Opens the project's main checkout into a Herdr workspace.
  *
  * @param project The project to open.
  * @throws When the repository reports no main checkout.

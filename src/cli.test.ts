@@ -169,3 +169,35 @@ describe("runCli", () => {
     });
   });
 });
+
+describe("runCli on-workspace", () => {
+  describe("when the event carries a workspace id", () => {
+    it("applies the project layout and reports what it did", async () => {
+      const applyProjectLayout = mock(() => Promise.resolve("applied notes layout to w1."));
+      await mock.module("./on-workspace.ts", () => ({
+        applyProjectLayout,
+        parseEventWorkspaceId: () => "w1",
+      }));
+
+      const result = await runCli(["on-workspace"]);
+
+      expect(applyProjectLayout).toHaveBeenCalledWith("w1");
+      expect(result.stdout).toContain("applied notes layout");
+      expect(result.exitCode).toEqual(0);
+    });
+  });
+
+  describe("when the event carries no workspace id", () => {
+    it("reports the missing id", async () => {
+      await mock.module("./on-workspace.ts", () => ({
+        applyProjectLayout: mock(() => Promise.resolve("")),
+        parseEventWorkspaceId: () => null,
+      }));
+
+      const result = await runCli(["on-workspace"]);
+
+      expect(result.stderr).toContain("no workspace id");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+});

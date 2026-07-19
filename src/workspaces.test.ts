@@ -49,13 +49,13 @@ async function mockHerdrModules(
 }
 
 describe("openProjectWorktree", () => {
-  it("opens the worktree and lays the project's tabs into its workspace", async () => {
+  it("opens the worktree and leaves the tabs to the workspace.created hook", async () => {
     const mocks = await mockHerdrModules([]);
 
     await openProjectWorktree(PROJECT, "/tmp/worktrees/feature");
 
     expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/worktrees/feature");
-    expect(mocks.applyLayout).toHaveBeenCalledWith(WORKSPACE, TABS);
+    expect(mocks.applyLayout).not.toHaveBeenCalled();
   });
 });
 
@@ -75,13 +75,13 @@ describe("openProjectWorktree when the worktree already has a workspace", () => 
 });
 
 describe("createProjectWorktree", () => {
-  it("creates the worktree and lays the project's tabs into its workspace", async () => {
+  it("creates the worktree and leaves the tabs to the workspace.created hook", async () => {
     const mocks = await mockHerdrModules([]);
 
     await createProjectWorktree(PROJECT, "feature");
 
     expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature");
-    expect(mocks.applyLayout).toHaveBeenCalledWith(WORKSPACE, TABS);
+    expect(mocks.applyLayout).not.toHaveBeenCalled();
   });
 });
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-# Runs the herdr-project picker TUI. Herdr invokes this as the plugin's action and pane entry point.
+# Runs herdr-project. With no arguments this opens the picker TUI, which is how Herdr invokes it as
+# the plugin's pane entry point; any arguments are passed through to the CLI, which is how the
+# plugin's event hooks invoke it.
 
 set -euo pipefail
 
@@ -11,4 +13,4 @@ if ! command -v bun >/dev/null 2>&1; then
   exit 1
 fi
 
-exec bun run src/index.tsx
+exec bun run src/index.tsx "$@"
