@@ -1,6 +1,10 @@
 import { listProjects } from "../projects.ts";
 import type { Project, Worktree } from "../types.ts";
-import { createProjectWorktree, openProjectWorktree } from "../workspaces.ts";
+import {
+  createProjectWorktree,
+  listOpenCheckoutPaths,
+  openProjectWorktree,
+} from "../workspaces.ts";
 import { listWorktrees } from "../worktrees.ts";
 import { ProjectPickerModal } from "./components/project-picker-modal.tsx";
 import { WorktreeNameModal } from "./components/worktree-name-modal.tsx";
@@ -21,6 +25,7 @@ export function App() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [worktrees, setWorktrees] = useState<Worktree[] | null>(null);
+  const [openPaths, setOpenPaths] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffectAsync(async () => {
@@ -36,7 +41,13 @@ export function App() {
     setProject(picked);
 
     try {
-      setWorktrees(await listWorktrees(picked.repositoryRoot));
+      const [projectWorktrees, checkoutPaths] = await Promise.all([
+        listWorktrees(picked.repositoryRoot),
+        listOpenCheckoutPaths(),
+      ]);
+
+      setOpenPaths(checkoutPaths);
+      setWorktrees(projectWorktrees);
     } catch (thrown) {
       setError(thrown instanceof Error ? thrown.message : String(thrown));
     }
@@ -100,6 +111,9 @@ export function App() {
       <WorktreeNameModal
         project={project}
         defaultBranch={worktrees.find((worktree) => worktree.isMain)?.branch ?? ""}
+        openBranches={worktrees
+          .filter((worktree) => openPaths.includes(worktree.path))
+          .map((worktree) => worktree.branch)}
         onSubmit={(branch) => void handleSubmit(branch)}
         onCancel={handleCancel}
       />

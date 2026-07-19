@@ -31,7 +31,13 @@ const noop = () => {};
 describe("WorktreeNameModal", () => {
   it("renders the project name", () => {
     const { lastFrame } = renderInViewport(
-      <WorktreeNameModal project={PROJECT} defaultBranch="main" onSubmit={noop} onCancel={noop} />,
+      <WorktreeNameModal
+        project={PROJECT}
+        defaultBranch="main"
+        openBranches={[]}
+        onSubmit={noop}
+        onCancel={noop}
+      />,
     );
 
     expect(lastFrame()).toContain("orc");
@@ -39,7 +45,13 @@ describe("WorktreeNameModal", () => {
 
   it("prefills the default branch", () => {
     const { lastFrame } = renderInViewport(
-      <WorktreeNameModal project={PROJECT} defaultBranch="main" onSubmit={noop} onCancel={noop} />,
+      <WorktreeNameModal
+        project={PROJECT}
+        defaultBranch="main"
+        openBranches={[]}
+        onSubmit={noop}
+        onCancel={noop}
+      />,
     );
 
     expect(lastFrame()).toContain("main");
@@ -53,6 +65,7 @@ describe("WorktreeNameModal", () => {
         <WorktreeNameModal
           project={PROJECT}
           defaultBranch="main"
+          openBranches={[]}
           onSubmit={onSubmit}
           onCancel={noop}
         />,
@@ -72,6 +85,7 @@ describe("WorktreeNameModal", () => {
         <WorktreeNameModal
           project={PROJECT}
           defaultBranch=""
+          openBranches={[]}
           onSubmit={onSubmit}
           onCancel={noop}
         />,
@@ -93,6 +107,7 @@ describe("WorktreeNameModal", () => {
         <WorktreeNameModal
           project={PROJECT}
           defaultBranch=""
+          openBranches={[]}
           onSubmit={onSubmit}
           onCancel={noop}
         />,
@@ -103,5 +118,26 @@ describe("WorktreeNameModal", () => {
 
       expect(onSubmit).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("WorktreeNameModal when the branch already has a workspace", () => {
+  it("shows an error under the input instead of submitting", async () => {
+    const onSubmit = mock(() => {});
+
+    const { stdin, lastFrame } = renderInViewport(
+      <WorktreeNameModal
+        project={PROJECT}
+        defaultBranch="main"
+        openBranches={["main"]}
+        onSubmit={onSubmit}
+        onCancel={noop}
+      />,
+    );
+
+    stdin.write("\r");
+    await waitFor(() => lastFrame()?.includes("Workspace already exists.") ?? false);
+
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

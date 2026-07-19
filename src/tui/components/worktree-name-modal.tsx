@@ -10,6 +10,11 @@ type WorktreeNameModalProps = {
    * accepting the default opens the project where it already sits.
    */
   defaultBranch: string;
+  /**
+   * Branches whose worktree already has a workspace open. Opening one again would lay a second set
+   * of tabs into it, so these are rejected rather than opened.
+   */
+  openBranches: string[];
   /** Fires with the branch name to open, which may or may not already have a worktree. */
   onSubmit: (branch: string) => void;
   /** Fires when the user presses escape. */
@@ -24,6 +29,7 @@ type WorktreeNameModalProps = {
 export function WorktreeNameModal({
   project,
   defaultBranch,
+  openBranches,
   onSubmit,
   onCancel,
 }: WorktreeNameModalProps) {
@@ -37,7 +43,10 @@ export function WorktreeNameModal({
         </>,
       ]}
       defaultValue={defaultBranch}
-      onValidate={(branch) => (branch.trim() === "" ? "Enter a branch name." : null)}
+      onValidate={(branch) => {
+        if (branch.trim() === "") return "Enter a branch name.";
+        return openBranches.includes(branch) ? "Workspace already exists." : null;
+      }}
       onSubmit={onSubmit}
       onCancel={onCancel}
     />
