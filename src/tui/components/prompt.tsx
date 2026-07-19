@@ -31,9 +31,7 @@ type PromptProps = {
   onCancel: () => void;
 };
 
-/**
- * A text-input modal. Enter submits the current value and escape cancels.
- */
+/** A text-input modal. Enter submits the current value and escape cancels. */
 export function Prompt({
   title,
   message,

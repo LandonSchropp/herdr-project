@@ -1,45 +1,33 @@
-import { listProjectSources } from "../../sessions/project-sources.ts";
-import type { ProjectSource } from "../../types.ts";
-import { useEffectAsync } from "../hooks/use-effect-async.ts";
-import { findProjectContaining } from "../state/find-project-containing.ts";
-import { useStore } from "../state/store.tsx";
+import type { Project } from "../../types.ts";
 import { Picker } from "./picker.tsx";
-import { useState } from "react";
 
-/**
- * The project-picker modal. Lets the user fuzzy-search the available projects and pick one by name,
- * then advances the new-session flow to the session-name prompt. Pre-selects the project of the
- * currently selected session.
- */
-export function ProjectPickerModal() {
-  const { selectedSessionId, projects, promptForSession, cancel } = useStore();
-  const [sources, setSources] = useState<ProjectSource[] | null>(null);
+type ProjectPickerModalProps = {
+  /** The projects to choose from, in display order. */
+  projects: Project[];
+  /** Fires with the picked project. */
+  onSelect: (project: Project) => void;
+  /** Fires when the user presses escape. */
+  onCancel: () => void;
+};
 
-  useEffectAsync(async () => {
-    setSources(await listProjectSources());
-  }, []);
-
-  if (sources === null) return null;
-
-  const currentProject = findProjectContaining(projects, selectedSessionId)?.project;
-
+/** The first step of the flow: fuzzy-search the available projects and pick one by name. */
+export function ProjectPickerModal({ projects, onSelect, onCancel }: ProjectPickerModalProps) {
   /**
-   * Advances the flow to the session-name prompt for the picked project name.
+   * Forwards the project matching the picked name.
    *
    * @param name The picked project name.
    */
   function handleSelect(name: string) {
-    const source = sources?.find((entry) => entry.name === name);
-    if (source) promptForSession(source);
+    const project = projects.find((entry) => entry.name === name);
+    if (project) onSelect(project);
   }
 
   return (
     <Picker
       title="Pick a Project"
-      options={sources.map((source) => source.name)}
-      initialSelection={currentProject}
+      options={projects.map((project) => project.name)}
       onSelect={handleSelect}
-      onCancel={cancel}
+      onCancel={onCancel}
     />
   );
 }
