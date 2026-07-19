@@ -66,27 +66,44 @@ Settings live in a single file at `~/.config/herdr-project/settings.json`. Point
 
 ```json
 {
-  "projectPaths": ["~/Development/*"],
-  "defaultTabs": [
-    { "name": "shell" },
-    { "name": "neovim", "command": "nvim" },
-    { "name": "claude", "command": "claude" }
-  ],
+  "projectPaths": ["~/Development/*", "~/.dotfiles", "~/Notes"],
   "projects": [
-    { "name": "dotfiles", "path": "~/.dotfiles" },
-    { "name": "notes", "path": "~/Notes" }
+    {
+      "name": "default",
+      "tabs": [
+        { "name": "shell" },
+        { "name": "neovim", "command": "nvim" },
+        { "name": "claude", "command": "claude" }
+      ]
+    },
+    { "name": "landonschropp", "path": "~/Development/landonschropp.com" }
   ]
 }
 ```
 
-- **`projectPaths`**: Globs scanned for Git repositories. Every match becomes a project named after
-  its directory, laid out with `defaultTabs`. This is the reason most projects need no entry of
-  their own.
-- **`defaultTabs`**: The tabs opened for a discovered project, and for any declared project that
-  omits its own. A tab with no `command` is left as a plain shell.
-- **`projects`**: Projects declared explicitly, for repositories outside your project paths or ones
-  that want a different name or layout. Only `path` is required: `name` defaults to the directory's
-  name and `tabs` to `defaultTabs`. A declared project wins over a discovered one at the same path.
+- **`projectPaths`**: Where to find projects. A path with wildcards is scanned as a glob and every
+  Git repository it matches becomes a project named after its directory; a path without wildcards
+  is taken as a single repository. This is why most projects need no entry of their own.
+- **`projects`**: Project definitions, each merged over the `default` project below.
+
+### The `default` project
+
+The project named `default` is a layout rather than somewhere to open. It has no `path`, never
+appears in the picker, and supplies the tabs every other project inherits. A tab with no `command`
+is left as a plain shell. Without a `default` project, projects get a single shell.
+
+### Declaring a project
+
+Discovery already covers most repositories, so declare a project only when you want to override
+something. The two reasons that come up:
+
+- **A different name**, when the directory's name isn't what you want to see in the picker (say
+  `landonschropp.com` shown as `landonschropp`, or `.dotfiles` as `dotfiles`).
+- **A different layout**, when the project wants tabs other than the default's.
+
+Only `path` is required: `name` defaults to the directory's name and `tabs` to the `default`
+project's. A declared project replaces a discovered one at the same path, which is how an override
+takes effect without having to list every other repository.
 
 ## Development
 

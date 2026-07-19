@@ -49,8 +49,14 @@ export type Settings = {
    * using {@link Settings.defaultTabs}.
    */
   projectPaths: string[];
-  /** The tabs used by discovered projects and by any declared project that omits its own. */
+  /**
+   * The tabs used by discovered projects and by any declared project that omits its own, taken from
+   * the `default` project in the settings file.
+   */
   defaultTabs: Tab[];
-  /** Projects declared explicitly, which win over a discovered project at the same path. */
+  /**
+   * Projects declared explicitly, which win over a discovered project at the same path. The
+   * `default` project is not among them — it contributes {@link Settings.defaultTabs} instead.
+   */
   projects: Project[];
 };

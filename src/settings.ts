@@ -3,10 +3,16 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
 /**
- * The layout used when the settings declare no `defaultTabs`: a single shell, which is what Herdr
- * gives a new workspace anyway.
+ * The layout used when the settings declare no `default` project: a single shell, which is what
+ * Herdr gives a new workspace anyway.
  */
 const FALLBACK_TABS: Tab[] = [{ name: "shell", command: null }];
+
+/**
+ * The name of the project that supplies the tabs every other project inherits. It is a layout
+ * rather than somewhere to open, so it has no path and never appears in the picker.
+ */
+export const DEFAULT_PROJECT_NAME = "default";
 
 /**
  * The path to the plugin's settings file. Override with `HERDR_PROJECT_SETTINGS`.
@@ -94,16 +100,23 @@ export function parseSettings(contents: string): Settings | null {
 
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
 
-  const { projectPaths, defaultTabs, projects } = parsed as Record<string, unknown>;
-  const tabs = parseTabs(defaultTabs);
-  const resolvedTabs = tabs.length > 0 ? tabs : FALLBACK_TABS;
+  const { projectPaths, projects } = parsed as Record<string, unknown>;
+  const entries = Array.isArray(projects) ? projects : [];
+  const isDefault = (entry: unknown) =>
+    (entry as { name?: unknown })?.name === DEFAULT_PROJECT_NAME;
+
+  const declaredTabs = parseTabs((entries.find(isDefault) as { tabs?: unknown })?.tabs);
+  const defaultTabs = declaredTabs.length > 0 ? declaredTabs : FALLBACK_TABS;
 
   return {
     projectPaths: Array.isArray(projectPaths)
       ? projectPaths.filter((path): path is string => typeof path === "string").map(expandHome)
       : [],
-    defaultTabs: resolvedTabs,
-    projects: parseProjects(projects, resolvedTabs),
+    defaultTabs,
+    projects: parseProjects(
+      entries.filter((entry) => !isDefault(entry)),
+      defaultTabs,
+    ),
   };
 }
 

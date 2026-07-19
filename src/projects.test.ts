@@ -77,6 +77,22 @@ describe("scanRepositories", () => {
       expect(await scanRepositories(join(root, "*"))).toEqual([]);
     });
   });
+
+  describe("when the path has no wildcards and is a repository", () => {
+    it("returns that repository", async () => {
+      const root = await stubRepositories(["alpha"]);
+
+      expect(await scanRepositories(join(root, "alpha"))).toEqual([join(root, "alpha")]);
+    });
+  });
+
+  describe("when the path has no wildcards and is not a repository", () => {
+    it("returns an empty list", async () => {
+      const root = await stubRepositories([], { plainDirectories: ["alpha"] });
+
+      expect(await scanRepositories(join(root, "alpha"))).toEqual([]);
+    });
+  });
 });
 
 describe("discoverProjects", () => {

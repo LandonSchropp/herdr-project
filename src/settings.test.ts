@@ -128,8 +128,10 @@ describe("parseSettings", () => {
     it("returns them with paths expanded", () => {
       const contents = JSON.stringify({
         projectPaths: ["~/Development/*"],
-        defaultTabs: [{ name: "neovim", command: "nvim" }],
-        projects: [{ name: "notes", path: "/tmp/notes" }],
+        projects: [
+          { name: "default", tabs: [{ name: "neovim", command: "nvim" }] },
+          { name: "notes", path: "/tmp/notes" },
+        ],
       });
 
       expect(parseSettings(contents)).toEqual({
@@ -143,6 +145,43 @@ describe("parseSettings", () => {
           },
         ],
       });
+    });
+  });
+
+  describe("when a project declares its own tabs", () => {
+    it("uses them instead of the default project's", () => {
+      const contents = JSON.stringify({
+        projects: [
+          { name: "default", tabs: [{ name: "shell" }] },
+          { name: "notes", path: "/tmp/notes", tabs: [{ name: "editor", command: "nvim" }] },
+        ],
+      });
+
+      expect(parseSettings(contents)?.projects[0]?.tabs).toEqual([
+        { name: "editor", command: "nvim" },
+      ]);
+    });
+  });
+
+  describe("when the default project declares a path", () => {
+    it("still treats it as the defaults rather than an openable project", () => {
+      const contents = JSON.stringify({
+        projects: [{ name: "default", path: "/tmp/nowhere", tabs: [{ name: "editor" }] }],
+      });
+
+      expect(parseSettings(contents)).toEqual({
+        projectPaths: [],
+        defaultTabs: [{ name: "editor", command: null }],
+        projects: [],
+      });
+    });
+  });
+
+  describe("when there is no default project", () => {
+    it("falls back to a single shell", () => {
+      const contents = JSON.stringify({ projects: [{ name: "notes", path: "/tmp/notes" }] });
+
+      expect(parseSettings(contents)?.defaultTabs).toEqual([SHELL_TAB]);
     });
   });
 
