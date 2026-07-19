@@ -1,5 +1,7 @@
 # Agent Instructions
 
+**REQUIRED:** Read `README.md` before doing anything else. It documents the project's purpose, setup, and commands.
+
 ## Architecture
 
 The code is organized in layers, lowest to highest:
