@@ -1,51 +1,39 @@
-import type { Project } from "../../types.ts";
 import { Prompt } from "./prompt.tsx";
 import { Text } from "ink";
 
 type WorktreeNameModalProps = {
-  /** The project the worktree belongs to. */
-  project: Project;
-  /**
-   * The branch the input is prefilled with, which is the repository's main checkout so that
-   * accepting the default opens the project where it already sits.
-   */
-  defaultBranch: string;
-  /**
-   * Branches whose worktree already has a workspace open. Opening one again would lay a second set
-   * of tabs into it, so these are rejected rather than opened.
-   */
-  openBranches: string[];
-  /** Fires with the branch name to open, which may or may not already have a worktree. */
+  /** The name of the project the worktree is created in. */
+  projectName: string;
+  /** Branches that already have a worktree, rejected rather than created a second time. */
+  existingBranches: string[];
+  /** Fires with the validated branch name. */
   onSubmit: (branch: string) => void;
   /** Fires when the user presses escape. */
   onCancel: () => void;
 };
 
 /**
- * The second step of the flow: name the branch to open the project on. The input is prefilled with
- * the repository's main checkout, so pressing enter opens the project as-is; typing another name
- * opens that branch's worktree, creating it when it doesn't exist yet.
+ * The new-worktree prompt. The input starts empty: unlike the project picker there is no sensible
+ * default, since every worktree is a new branch the user is naming.
  */
 export function WorktreeNameModal({
-  project,
-  defaultBranch,
-  openBranches,
+  projectName,
+  existingBranches,
   onSubmit,
   onCancel,
 }: WorktreeNameModalProps) {
   return (
     <Prompt
-      title="Open Worktree"
+      title="New Worktree"
       message={[
-        "Which worktree would you like to",
+        "What would you like to name the",
         <>
-          open in <Text color="blue">{project.name}</Text>?
+          <Text color="blue">{projectName}</Text> worktree?
         </>,
       ]}
-      defaultValue={defaultBranch}
       onValidate={(branch) => {
         if (branch.trim() === "") return "Enter a branch name.";
-        return openBranches.includes(branch) ? "Workspace already exists." : null;
+        return existingBranches.includes(branch) ? "That worktree already exists." : null;
       }}
       onSubmit={onSubmit}
       onCancel={onCancel}

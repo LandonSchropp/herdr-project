@@ -1,5 +1,4 @@
 import { waitFor } from "../../../test/helpers/wait-for.ts";
-import type { Project } from "../../types.ts";
 import { WorktreeNameModal } from "./worktree-name-modal.tsx";
 import { describe, expect, it, mock } from "bun:test";
 import { Box } from "ink";
@@ -20,94 +19,25 @@ function renderInViewport(children: ReactNode) {
   );
 }
 
-const PROJECT: Project = {
-  name: "orc",
-  repositoryRoot: "/home/user/Development/orc",
-  tabs: [],
-};
-
 const noop = () => {};
 
 describe("WorktreeNameModal", () => {
   it("renders the project name", () => {
     const { lastFrame } = renderInViewport(
-      <WorktreeNameModal
-        project={PROJECT}
-        defaultBranch="main"
-        openBranches={[]}
-        onSubmit={noop}
-        onCancel={noop}
-      />,
+      <WorktreeNameModal projectName="orc" existingBranches={[]} onSubmit={noop} onCancel={noop} />,
     );
 
     expect(lastFrame()).toContain("orc");
   });
 
-  it("prefills the default branch", () => {
-    const { lastFrame } = renderInViewport(
-      <WorktreeNameModal
-        project={PROJECT}
-        defaultBranch="main"
-        openBranches={[]}
-        onSubmit={noop}
-        onCancel={noop}
-      />,
-    );
-
-    expect(lastFrame()).toContain("main");
-  });
-
-  describe("when the prefilled default is accepted", () => {
-    it("submits it without any typing", () => {
-      const onSubmit = mock(() => {});
-
-      const { stdin } = renderInViewport(
-        <WorktreeNameModal
-          project={PROJECT}
-          defaultBranch="main"
-          openBranches={[]}
-          onSubmit={onSubmit}
-          onCancel={noop}
-        />,
-      );
-
-      stdin.write("\r");
-
-      expect(onSubmit).toHaveBeenCalledWith("main");
-    });
-  });
-
-  describe("when a branch that already has a worktree is submitted", () => {
-    it("submits it rather than rejecting it, so the worktree can be opened", async () => {
+  describe("when the prompt first opens", () => {
+    it("starts empty rather than proposing a name", async () => {
       const onSubmit = mock(() => {});
 
       const { stdin, lastFrame } = renderInViewport(
         <WorktreeNameModal
-          project={PROJECT}
-          defaultBranch=""
-          openBranches={[]}
-          onSubmit={onSubmit}
-          onCancel={noop}
-        />,
-      );
-
-      stdin.write("existing-branch");
-      await waitFor(() => lastFrame()?.includes("existing-branch") ?? false);
-      stdin.write("\r");
-
-      expect(onSubmit).toHaveBeenCalledWith("existing-branch");
-    });
-  });
-
-  describe("when the name is blank", () => {
-    it("rejects it instead of submitting", async () => {
-      const onSubmit = mock(() => {});
-
-      const { stdin, lastFrame } = renderInViewport(
-        <WorktreeNameModal
-          project={PROJECT}
-          defaultBranch=""
-          openBranches={[]}
+          projectName="orc"
+          existingBranches={[]}
           onSubmit={onSubmit}
           onCancel={noop}
         />,
@@ -119,25 +49,47 @@ describe("WorktreeNameModal", () => {
       expect(onSubmit).not.toHaveBeenCalled();
     });
   });
-});
 
-describe("WorktreeNameModal when the branch already has a workspace", () => {
-  it("shows an error under the input instead of submitting", async () => {
-    const onSubmit = mock(() => {});
+  describe("when a fresh branch name is submitted", () => {
+    it("calls onSubmit with the name", async () => {
+      const onSubmit = mock(() => {});
 
-    const { stdin, lastFrame } = renderInViewport(
-      <WorktreeNameModal
-        project={PROJECT}
-        defaultBranch="main"
-        openBranches={["main"]}
-        onSubmit={onSubmit}
-        onCancel={noop}
-      />,
-    );
+      const { stdin, lastFrame } = renderInViewport(
+        <WorktreeNameModal
+          projectName="orc"
+          existingBranches={["main"]}
+          onSubmit={onSubmit}
+          onCancel={noop}
+        />,
+      );
 
-    stdin.write("\r");
-    await waitFor(() => lastFrame()?.includes("Workspace already exists.") ?? false);
+      stdin.write("feature");
+      await waitFor(() => lastFrame()?.includes("feature") ?? false);
+      stdin.write("\r");
 
-    expect(onSubmit).not.toHaveBeenCalled();
+      expect(onSubmit).toHaveBeenCalledWith("feature");
+    });
+  });
+
+  describe("when the branch already has a worktree", () => {
+    it("rejects it instead of submitting", async () => {
+      const onSubmit = mock(() => {});
+
+      const { stdin, lastFrame } = renderInViewport(
+        <WorktreeNameModal
+          projectName="orc"
+          existingBranches={["main"]}
+          onSubmit={onSubmit}
+          onCancel={noop}
+        />,
+      );
+
+      stdin.write("main");
+      await waitFor(() => lastFrame()?.includes("main") ?? false);
+      stdin.write("\r");
+      await waitFor(() => lastFrame()?.includes("already exists") ?? false);
+
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
   });
 });

@@ -60,9 +60,14 @@ export async function listWorktrees(repositoryRoot: string): Promise<Worktree[]>
  *
  * @param repositoryRoot The absolute path to the project's repository.
  * @param path The absolute path to the worktree's checkout.
+ * @param label The workspace's name. Omit to let Herdr name it after the repository.
  * @returns The workspace Herdr opened the worktree into.
  */
-export async function openWorktree(repositoryRoot: string, path: string): Promise<Workspace> {
+export async function openWorktree(
+  repositoryRoot: string,
+  path: string,
+  label?: string,
+): Promise<Workspace> {
   return parseWorkspace(
     await runHerdrJson([
       "worktree",
@@ -71,6 +76,7 @@ export async function openWorktree(repositoryRoot: string, path: string): Promis
       repositoryRoot,
       "--path",
       path,
+      ...(label === undefined ? [] : ["--label", label]),
       "--focus",
       "--json",
     ]),

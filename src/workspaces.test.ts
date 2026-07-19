@@ -4,6 +4,7 @@ import {
   openProjectMain,
   openProjectWorktree,
   parseOpenCheckoutPaths,
+  workspaceRepositoryRoot,
 } from "./workspaces.ts";
 import { describe, expect, it, mock } from "bun:test";
 
@@ -54,7 +55,11 @@ describe("openProjectWorktree", () => {
 
     await openProjectWorktree(PROJECT, "/tmp/worktrees/feature");
 
-    expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/worktrees/feature");
+    expect(mocks.openWorktree).toHaveBeenCalledWith(
+      "/tmp/orc",
+      "/tmp/worktrees/feature",
+      undefined,
+    );
     expect(mocks.applyLayout).not.toHaveBeenCalled();
   });
 });
@@ -87,7 +92,7 @@ describe("createProjectWorktree", () => {
 
 describe("openProjectMain", () => {
   describe("when the repository has a main worktree", () => {
-    it("opens it", async () => {
+    it("opens it, naming the workspace after the project", async () => {
       const mocks = await mockHerdrModules([
         { branch: "feature", path: "/tmp/feature", isMain: false },
         { branch: "main", path: "/tmp/orc", isMain: true },
@@ -95,7 +100,7 @@ describe("openProjectMain", () => {
 
       await openProjectMain(PROJECT);
 
-      expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc");
+      expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "orc");
     });
   });
 
@@ -139,6 +144,32 @@ describe("parseOpenCheckoutPaths", () => {
   describe("when the response is not a workspace listing", () => {
     it("returns an empty list", () => {
       expect(parseOpenCheckoutPaths({ nonsense: true })).toEqual([]);
+    });
+  });
+});
+
+describe("workspaceRepositoryRoot", () => {
+  describe("when the workspace has a worktree", () => {
+    it("returns its repository root", async () => {
+      await mock.module("./herdr.ts", () => ({
+        runHerdrJson: mock(() =>
+          Promise.resolve({
+            result: { workspace: { worktree: { repo_root: "/home/user/Notes" } } },
+          }),
+        ),
+      }));
+
+      expect(await workspaceRepositoryRoot("w1")).toEqual("/home/user/Notes");
+    });
+  });
+
+  describe("when the workspace has no worktree", () => {
+    it("returns null", async () => {
+      await mock.module("./herdr.ts", () => ({
+        runHerdrJson: mock(() => Promise.resolve({ result: { workspace: {} } })),
+      }));
+
+      expect(await workspaceRepositoryRoot("w1")).toBeNull();
     });
   });
 });

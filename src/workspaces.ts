@@ -41,12 +41,16 @@ export async function listOpenCheckoutPaths(): Promise<string[]> {
  * @param path The absolute path to the worktree's checkout.
  * @throws When the worktree already has a workspace open.
  */
-export async function openProjectWorktree(project: Project, path: string): Promise<void> {
+export async function openProjectWorktree(
+  project: Project,
+  path: string,
+  label?: string,
+): Promise<void> {
   if ((await listOpenCheckoutPaths()).includes(path)) {
     throw new Error(`A workspace is already open for ${path}.`);
   }
 
-  await openWorktree(project.repositoryRoot, path);
+  await openWorktree(project.repositoryRoot, path, label);
 }
 
 /**
@@ -61,7 +65,9 @@ export async function createProjectWorktree(project: Project, branch: string): P
 }
 
 /**
- * Opens the project's main checkout into a Herdr workspace.
+ * Opens the project's main checkout into a Herdr workspace, named after the project. Only the main
+ * checkout takes the project's name; a linked worktree keeps the branch name Herdr gives it, which
+ * is what distinguishes it in the sidebar.
  *
  * @param project The project to open.
  * @throws When the repository reports no main checkout.
@@ -71,5 +77,22 @@ export async function openProjectMain(project: Project): Promise<void> {
 
   if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
 
-  await openProjectWorktree(project, main.path);
+  await openProjectWorktree(project, main.path, project.name);
+}
+
+/**
+ * Finds the repository behind a workspace, which is how the new-worktree prompt knows which project
+ * it is creating a worktree in.
+ *
+ * @param workspaceId The workspace to look up.
+ * @returns The absolute path to the workspace's repository, or `null` when it has no worktree.
+ */
+export async function workspaceRepositoryRoot(workspaceId: string): Promise<string | null> {
+  const repositoryRoot = (await runHerdrJson(["workspace", "get", workspaceId])) as {
+    result?: { workspace?: { worktree?: { repo_root?: unknown } } };
+  };
+
+  const root = repositoryRoot?.result?.workspace?.worktree?.repo_root;
+
+  return typeof root === "string" ? root : null;
 }
