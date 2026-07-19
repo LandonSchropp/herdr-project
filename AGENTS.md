@@ -4,53 +4,25 @@
 
 The code is organized in three layers, lowest to highest:
 
-1. **`src/commands/`** — thin wrappers around external CLI tools (`tmux`, `git`, `tmuxinator`) and a generic shell utility (`runCommand`, `runAttachedCommand`). Functions in this layer are tool-specific and keep the tool name in their identifier (e.g. `isTmuxInstalled`, `listTmuxSessions`, `switchTmuxSession`).
-2. **`src/sessions/`** — orc-specific logic that composes the low-level commands into operations on the orc domain. Functions here drop the tool qualifier (e.g. `getCurrentSession`, `findMatchingSession`, `switchSession`).
-3. **`src/cli/`** — high-level CLI commands defined with citty (`new`, `list`, `switch`, `detach`, `delete`). These wire arguments to the mid-layer functions.
+1. **`src/worktrees.ts`** — a thin wrapper around the `herdr` CLI. Every function shells out to `herdr ... --json` and parses the response. Parsing is split from the shelling out (`parseWorktrees`, `sortWorktrees`) so it can be tested without a running Herdr session.
+2. **`src/projects.ts`** — loads the project definitions that populate the first picker. Projects are TOML files with a `name` and a `working_dir`; everything else is ignored.
+3. **`src/tui/`** — the Ink UI. `app.tsx` owns the flow's state and is the only place that calls the layers below; `components/` holds the modals and the primitives they build on (`Modal`, `Picker`, `Prompt`).
 
-Tests live alongside their source as `*.test.ts`. Shared test infrastructure (`setup.ts`, `factories/`, `helpers/`) lives in `test/`.
+`src/index.tsx` is the entry point Herdr invokes through `scripts/run.sh`.
+
+Tests live alongside their source as `*.test.ts` / `*.test.tsx`. Shared test infrastructure (`setup.ts`, `helpers/`) lives in `test/`.
+
+## Modals Need a Sized Parent
+
+`Modal` positions itself absolutely and fills its parent, so it collapses to nothing without a parent that has a width and height. `App` wraps every step in a full-screen `Box` sized from `useWindowSize`, and component tests wrap the modal under test in a fixed-size `Box`. A modal rendered bare will silently render nothing.
 
 ## Dependencies
 
 IMPORTANT: When the agent first starts, check to see if a local `node_modules` directory exists. If it doesn't, run `bun install`. This will happen when a session is created in a fresh Git worktree.
 
-## On-Disk Paths
+## Talking to Herdr
 
-Orc follows the XDG Base Directory Specification for all on-disk data:
-
-- **Config**: `$XDG_CONFIG_HOME` (fallback `~/.config`). Used to locate Tmuxinator project files.
-- **Cache / state**: `$XDG_CACHE_HOME` (fallback `~/.cache`). Used for worktrees and any orc-managed runtime state.
-
-When reading or writing new on-disk paths, always go through `process.env.XDG_*` with the specified fallback rather than hardcoding `~/.cache` or `~/.config`. See `src/commands/tmuxinator.ts` for the pattern.
-
-## CLI vs TUI
-
-Orc has two interaction modes:
-
-- **CLI**: every subcommand (`orc <subcommand>`) is non-interactive. All required arguments must be supplied; missing arguments produce an error rather than a prompt or interactive picker. This keeps subcommands predictable for agents and scripts.
-- **TUI**: launched by running `orc` with no subcommand. All interactive flows (session selection, confirmations, browsing) live here.
-
-Subcommands never fall back to interactive prompts. If a user needs interaction, they launch the TUI.
-
-## Stale TUI Session
-
-The TUI runs inside a hidden tmux session named `_tui` (the control session, see `src/sessions/control-session.ts`). That session launches orc once and keeps the same process alive, so it goes on running whatever binary it started with. When you change TUI code, a running `_tui` session is stale and will not reflect your edits until it is killed and recreated.
-
-When modifying the TUI, kill the stale control session before re-running orc:
-
-```bash
-tmux kill-session -t _tui
-```
-
-Orc kills and recreates the whole `_tui` session on every switch into it, rather than reusing the running process. This is an intentional design decision, not something to "fix":
-
-- Fresh state: there is no good way to communicate with the orc process running inside the session, so we can't ask it to refresh. Nuking it and forcing a reload guarantees the TUI always starts from a clean state instead of whatever stale state the old process was holding.
-- Easier changes: with no old process lingering, code changes always take effect on the next switch.
-- No error recovery: we never have to restart a process that's sitting in a bad or errored state — every switch begins fresh.
-
-## CLI Output
-
-Use `process.stdout.write` for command output, not `console.log`. CLI output is program data that should pipe cleanly to other tools — `console.log` is for diagnostics and goes through Node's console formatting layer. Remember to include the trailing `\n` since `process.stdout.write` does not append one.
+All Herdr interaction goes through the `herdr` CLI with `--json`, never by reading Herdr's config or state files directly. Read identifiers out of the JSON responses rather than constructing them. The CLI is the authority on its own command syntax — run a command group (e.g. `herdr worktree`) to print its subcommands.
 
 ## Git Workflow
 
@@ -60,11 +32,11 @@ Use `process.stdout.write` for command output, not `console.log`. CLI output is 
 
 ## Naming
 
-Avoid unnecessary abbreviations in code identifiers and prose. The test: would you say it aloud when talking to someone? You'd say `config`, `repo`, `id` — those are fine. You wouldn't say `dir`, `func`, or `args` — write `directory`, `function`, and `arguments`. Well-known acronyms like CLI, TUI, XDG, JSON, YAML stay as acronyms.
+Avoid unnecessary abbreviations in code identifiers and prose. The test: would you say it aloud when talking to someone? You'd say `config`, `repo`, `id` — those are fine. You wouldn't say `dir`, `func`, or `args` — write `directory`, `function`, and `arguments`. Well-known acronyms like CLI, TUI, JSON, TOML stay as acronyms.
 
 ## File Names
 
-All source and test files use kebab-case (e.g. `agent-status.tsx`, `use-interval.ts`, `session-list.test.tsx`). React component and hook exports keep their conventional casing (`AgentStatus`, `useInterval`); only the filename is kebab-case.
+All source and test files use kebab-case (e.g. `worktree-picker-modal.tsx`, `use-effect-async.ts`). React component and hook exports keep their conventional casing (`WorktreePickerModal`, `useEffectAsync`); only the filename is kebab-case.
 
 ## Documentation
 

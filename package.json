@@ -1,13 +1,13 @@
 {
-  "name": "orc",
-  "description": "CLI orchestrator for parallel agents using Git worktrees, tmux and Tmuxinator.",
+  "name": "herdr-project",
+  "description": "A Herdr plugin that opens a project and one of its Git worktrees from two pickers.",
   "author": "Landon Schropp <schroppl@gmail.com>",
-  "repository": "https://github.com/LandonSchropp/orc",
+  "repository": "https://github.com/LandonSchropp/herdr-project",
   "license": "MIT",
   "private": true,
   "type": "module",
   "bin": {
-    "orc": "./src/index.ts"
+    "herdr-project": "./src/index.tsx"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
@@ -27,7 +27,6 @@
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsdoc": "^63.0.0",
-    "fishery": "^2.4.0",
     "globals": "^17.6.0",
     "happy-dom": "^20.9.0",
     "husky": "^9.1.7",
@@ -41,13 +40,10 @@
     "typescript-eslint": "^8.59.2"
   },
   "dependencies": {
-    "citty": "^0.2.2",
     "fuzzysort": "^3.1.0",
     "ink": "^7.0.3",
     "ink-text-input": "^6.0.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "ts-dedent": "^2.2.0",
-    "zod": "^4.4.3"
+    "react-dom": "^19.2.6"
   }
 }
