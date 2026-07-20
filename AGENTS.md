@@ -44,7 +44,7 @@ Use `process.stdout.write` for command output, not `console.log`. CLI output is 
 
 - REQUIRED: invoke the `git-atomic-commit` skill at the start of every session.
 - Each commit captures one logical change. Before presenting work, evaluate whether the diff could be split into atomic commits and propose the split.
-- Code under review must be unstaged. The unstaged diff should reflect exactly what will be committed — never present a staged diff for review.
+- This project is vibe coded and its changes are never reviewed. Skip the review process in `references/reviews.md` — do not invoke the `interactive-review` skill or present changes for sign-off. Commit once the tests, types, and lint pass.
 
 ## Naming
 
