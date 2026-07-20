@@ -63,3 +63,12 @@ command = ["./scripts/run.sh", "worktree"]
 [[events]]
 on = "workspace.created"
 command = ["./scripts/run.sh", "on-workspace"]
+
+# worktree.created — copies the untracked files a repository's `.worktreeinclude` matches from its
+# main checkout into every worktree Herdr creates, whether it came from this plugin or from Herdr's
+# own UI. It is a quiet no-op for a checkout with no include file, no matching files, or a file the
+# worktree already has. Herdr runs this for you — never invoke it by hand. Output is captured in
+# `herdr plugin log list --plugin landonschropp.herdr-project`.
+[[events]]
+on = "worktree.created"
+command = ["./scripts/run.sh", "on-worktree"]

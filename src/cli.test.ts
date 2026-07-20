@@ -201,3 +201,35 @@ describe("runCli on-workspace", () => {
     });
   });
 });
+
+describe("runCli on-worktree", () => {
+  describe("when the event carries a worktree path", () => {
+    it("copies the repository's included files and reports what it did", async () => {
+      const copyWorktreeIncludes = mock(() => Promise.resolve("copied 1 path(s) into /tmp/topic."));
+      await mock.module("./on-worktree.ts", () => ({
+        copyWorktreeIncludes,
+        parseEventWorktreePath: () => "/tmp/topic",
+      }));
+
+      const result = await runCli(["on-worktree"]);
+
+      expect(copyWorktreeIncludes).toHaveBeenCalledWith("/tmp/topic");
+      expect(result.stdout).toContain("copied 1 path(s)");
+      expect(result.exitCode).toEqual(0);
+    });
+  });
+
+  describe("when the event carries no worktree path", () => {
+    it("reports the missing path", async () => {
+      await mock.module("./on-worktree.ts", () => ({
+        copyWorktreeIncludes: mock(() => Promise.resolve("")),
+        parseEventWorktreePath: () => null,
+      }));
+
+      const result = await runCli(["on-worktree"]);
+
+      expect(result.stderr).toContain("no worktree path");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+});

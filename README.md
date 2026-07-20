@@ -66,6 +66,29 @@ ones created from Herdr's own UI, and ones Herdr opens on its own when grouping 
 its parent. Workspaces without a worktree, or whose repository isn't a configured project, are
 left alone.
 
+## Untracked Files
+
+Git leaves untracked files behind when it creates a worktree, so a fresh checkout has no `.env` and
+nothing else Git was told to ignore. A `worktree.created` hook copies them in, from the
+repository's main checkout into the new worktree, for any repository — configured project or not.
+
+Which files come along is decided by two include files, both optional and both written in
+`.gitignore` syntax:
+
+- **`~/.config/git/worktreeinclude`** (or `$XDG_CONFIG_HOME/git/worktreeinclude`): the patterns
+  every repository gets, which is where something like `.env*` belongs.
+- **`.worktreeinclude`** in a repository's main checkout: that repository's own patterns.
+
+The two are layered the way Git layers its own ignore files: the global patterns apply first and the
+repository's apply over them, so a repository wins where the two disagree and can cancel a global
+pattern by negating it (`!.env`). The file lives in the main checkout and is read from there — it
+isn't committed, so a new worktree never has one of its own.
+
+Only untracked files are copied, since a tracked one is already in the worktree, and a path the
+worktree already has is left alone rather than overwritten. A matched directory is copied whole,
+which is worth remembering before matching something like `node_modules`: the copy happens while
+the workspace is opening.
+
 ## Configuration
 
 Settings live in a single file at `~/.config/herdr-project/settings.json`. Point

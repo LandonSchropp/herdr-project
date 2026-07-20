@@ -1,4 +1,5 @@
 import { applyProjectLayout, parseEventWorkspaceId } from "./on-workspace.ts";
+import { copyWorktreeIncludes, parseEventWorktreePath } from "./on-worktree.ts";
 import { listProjects } from "./projects.ts";
 import type { Project } from "./types.ts";
 import { createProjectWorktree, openProjectMain } from "./workspaces.ts";
@@ -127,6 +128,22 @@ async function runOnWorkspace(): Promise<CliResult> {
 }
 
 /**
+ * Runs the `on-worktree` hook. Herdr invokes this for every worktree it creates, so it reports what
+ * it decided rather than failing when a worktree has nothing to copy.
+ *
+ * @returns The command's result.
+ */
+async function runOnWorktree(): Promise<CliResult> {
+  const worktree = parseEventWorktreePath(process.env.HERDR_PLUGIN_EVENT_JSON);
+
+  if (worktree === null) {
+    return { stdout: "", stderr: "Error: no worktree path in the event.\n", exitCode: 1 };
+  }
+
+  return { stdout: `${await copyWorktreeIncludes(worktree)}\n`, stderr: "", exitCode: 0 };
+}
+
+/**
  * Runs the CLI. An empty argument list is the caller's signal to open the picker instead, which it
  * detects before calling this.
  *
@@ -144,6 +161,7 @@ export async function runCli(args: string[]): Promise<CliResult> {
     if (command === "list") return await runList(rest);
     if (command === "create") return await runCreate(rest);
     if (command === "on-workspace") return await runOnWorkspace();
+    if (command === "on-worktree") return await runOnWorktree();
   } catch (thrown) {
     const message = thrown instanceof Error ? thrown.message : String(thrown);
     return { stdout: "", stderr: `Error: ${message}\n`, exitCode: 1 };
