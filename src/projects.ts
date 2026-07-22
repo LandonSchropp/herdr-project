@@ -54,9 +54,10 @@ export async function scanRepositories(pattern: string): Promise<string[]> {
 
 /**
  * Discovers the projects under the settings' project paths. Each repository becomes a project named
- * after its directory, laid out with the default tabs.
+ * after its directory, laid out with the default tabs and default focused tab.
  *
- * @param settings The settings to read the project paths and default tabs from.
+ * @param settings The settings to read the project paths, default tabs, and default focused tab
+ *   from.
  * @returns The discovered projects.
  */
 export async function discoverProjects(settings: Settings): Promise<Project[]> {
@@ -66,6 +67,7 @@ export async function discoverProjects(settings: Settings): Promise<Project[]> {
     name: basename(repositoryRoot),
     repositoryRoot,
     tabs: settings.defaultTabs,
+    focusedTab: settings.defaultFocusedTab,
   }));
 }
 

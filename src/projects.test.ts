@@ -49,7 +49,13 @@ async function stubRepositories(
  * @returns The settings.
  */
 function buildSettings(overrides: Partial<Settings> = {}): Settings {
-  return { projectPaths: [], defaultTabs: [SHELL_TAB], projects: [], ...overrides };
+  return {
+    projectPaths: [],
+    defaultTabs: [SHELL_TAB],
+    defaultFocusedTab: null,
+    projects: [],
+    ...overrides,
+  };
 }
 
 describe("scanRepositories", () => {
@@ -122,8 +128,25 @@ describe("discoverProjects", () => {
       );
 
       expect(projects).toEqual([
-        { name: "widgets", repositoryRoot: join(root, "widgets"), tabs: defaultTabs },
+        {
+          name: "widgets",
+          repositoryRoot: join(root, "widgets"),
+          tabs: defaultTabs,
+          focusedTab: null,
+        },
       ]);
+    });
+  });
+
+  describe("when a default focused tab is set", () => {
+    it("gives each project the default focused tab", async () => {
+      const root = await stubRepositories(["widgets"]);
+
+      const projects = await discoverProjects(
+        buildSettings({ projectPaths: [join(root, "*")], defaultFocusedTab: "claude" }),
+      );
+
+      expect(projects[0]?.focusedTab).toEqual("claude");
     });
   });
 
@@ -139,6 +162,7 @@ describe("mergeProjects", () => {
     name: "custom",
     repositoryRoot: "/tmp/widgets",
     tabs: [{ name: "editor", command: "nvim" }],
+    focusedTab: null,
   };
 
   describe("when a discovered project shares a declared project's path", () => {
@@ -147,6 +171,7 @@ describe("mergeProjects", () => {
         name: "widgets",
         repositoryRoot: "/tmp/widgets",
         tabs: [SHELL_TAB],
+        focusedTab: null,
       };
 
       expect(mergeProjects([declared], [discovered])).toEqual([declared]);
@@ -159,6 +184,7 @@ describe("mergeProjects", () => {
         name: "apple",
         repositoryRoot: "/tmp/apple",
         tabs: [SHELL_TAB],
+        focusedTab: null,
       };
 
       expect(mergeProjects([declared], [discovered]).map((project) => project.name)).toEqual([

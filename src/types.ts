@@ -17,6 +17,11 @@ export type Project = {
   repositoryRoot: string;
   /** The tabs to open in the project's workspace. */
   tabs: Tab[];
+  /**
+   * The label of the tab to focus when the workspace opens, or `null` to leave the first tab
+   * focused. A name that matches none of the project's tabs is ignored.
+   */
+  focusedTab: string | null;
 };
 
 /** A Git worktree belonging to a project's repository. */
@@ -54,6 +59,11 @@ export type Settings = {
    * the `default` project in the settings file.
    */
   defaultTabs: Tab[];
+  /**
+   * The tab focused by discovered projects and by any declared project that omits its own, taken
+   * from the `default` project's `focusedTab`. `null` when the default project declares none.
+   */
+  defaultFocusedTab: string | null;
   /**
    * Projects declared explicitly, which win over a discovered project at the same path. The
    * `default` project is not among them — it contributes {@link Settings.defaultTabs} instead.

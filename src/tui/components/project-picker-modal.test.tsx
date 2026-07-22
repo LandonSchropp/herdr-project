@@ -19,9 +19,19 @@ function renderInViewport(children: ReactNode) {
   );
 }
 
-const ORC: Project = { name: "orc", repositoryRoot: "/home/user/Development/orc", tabs: [] };
+const ORC: Project = {
+  name: "orc",
+  repositoryRoot: "/home/user/Development/orc",
+  tabs: [],
+  focusedTab: null,
+};
 
-const NOTES: Project = { name: "notes", repositoryRoot: "/home/user/Notes", tabs: [] };
+const NOTES: Project = {
+  name: "notes",
+  repositoryRoot: "/home/user/Notes",
+  tabs: [],
+  focusedTab: null,
+};
 
 const noop = () => {};
 

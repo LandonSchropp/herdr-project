@@ -10,6 +10,7 @@ const PROJECT: Project = {
   name: "orc",
   repositoryRoot: "/tmp/orc",
   tabs: [{ name: "shell", command: null }],
+  focusedTab: null,
 };
 
 /**

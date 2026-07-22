@@ -88,6 +88,7 @@ describe("parseProjects", () => {
       const projects = parseProjects(
         [{ name: "notes", path: "~/Notes", tabs: [{ name: "editor", command: "nvim" }] }],
         [SHELL_TAB],
+        null,
       );
 
       expect(projects).toEqual([
@@ -95,6 +96,7 @@ describe("parseProjects", () => {
           name: "notes",
           repositoryRoot: `${homedir()}/Notes`,
           tabs: [{ name: "editor", command: "nvim" }],
+          focusedTab: null,
         },
       ]);
     });
@@ -102,8 +104,13 @@ describe("parseProjects", () => {
 
   describe("when a project omits its name", () => {
     it("names it after the directory", () => {
-      expect(parseProjects([{ path: "/tmp/repos/widgets" }], [SHELL_TAB])).toEqual([
-        { name: "widgets", repositoryRoot: "/tmp/repos/widgets", tabs: [SHELL_TAB] },
+      expect(parseProjects([{ path: "/tmp/repos/widgets" }], [SHELL_TAB], null)).toEqual([
+        {
+          name: "widgets",
+          repositoryRoot: "/tmp/repos/widgets",
+          tabs: [SHELL_TAB],
+          focusedTab: null,
+        },
       ]);
     });
   });
@@ -112,13 +119,33 @@ describe("parseProjects", () => {
     it("uses the default tabs", () => {
       const defaults = [{ name: "editor", command: "nvim" }];
 
-      expect(parseProjects([{ path: "/tmp/widgets" }], defaults)[0]?.tabs).toEqual(defaults);
+      expect(parseProjects([{ path: "/tmp/widgets" }], defaults, null)[0]?.tabs).toEqual(defaults);
+    });
+  });
+
+  describe("when a project declares a focusedTab", () => {
+    it("returns it", () => {
+      const projects = parseProjects(
+        [{ path: "/tmp/widgets", focusedTab: "claude" }],
+        [SHELL_TAB],
+        null,
+      );
+
+      expect(projects[0]?.focusedTab).toEqual("claude");
+    });
+  });
+
+  describe("when a project omits its focusedTab", () => {
+    it("uses the default focused tab", () => {
+      const projects = parseProjects([{ path: "/tmp/widgets" }], [SHELL_TAB], "claude");
+
+      expect(projects[0]?.focusedTab).toEqual("claude");
     });
   });
 
   describe("when a project has no path", () => {
     it("skips it", () => {
-      expect(parseProjects([{ name: "nowhere" }], [SHELL_TAB])).toEqual([]);
+      expect(parseProjects([{ name: "nowhere" }], [SHELL_TAB], null)).toEqual([]);
     });
   });
 });
@@ -137,11 +164,13 @@ describe("parseSettings", () => {
       expect(parseSettings(contents)).toEqual({
         projectPaths: [`${homedir()}/Development/*`],
         defaultTabs: [{ name: "neovim", command: "nvim" }],
+        defaultFocusedTab: null,
         projects: [
           {
             name: "notes",
             repositoryRoot: "/tmp/notes",
             tabs: [{ name: "neovim", command: "nvim" }],
+            focusedTab: null,
           },
         ],
       });
@@ -172,6 +201,7 @@ describe("parseSettings", () => {
       expect(parseSettings(contents)).toEqual({
         projectPaths: [],
         defaultTabs: [{ name: "editor", command: null }],
+        defaultFocusedTab: null,
         projects: [],
       });
     });
@@ -185,11 +215,50 @@ describe("parseSettings", () => {
     });
   });
 
+  describe("when the default project declares a focusedTab", () => {
+    it("uses it as the default focused tab", () => {
+      const contents = JSON.stringify({ projects: [{ name: "default", focusedTab: "claude" }] });
+
+      expect(parseSettings(contents)?.defaultFocusedTab).toEqual("claude");
+    });
+
+    it("applies it to a project that omits its own", () => {
+      const contents = JSON.stringify({
+        projects: [
+          { name: "default", focusedTab: "claude" },
+          { name: "notes", path: "/tmp/notes" },
+        ],
+      });
+
+      expect(parseSettings(contents)?.projects[0]?.focusedTab).toEqual("claude");
+    });
+  });
+
+  describe("when a project declares its own focusedTab", () => {
+    it("uses it instead of the default project's", () => {
+      const contents = JSON.stringify({
+        projects: [
+          { name: "default", focusedTab: "claude" },
+          { name: "notes", path: "/tmp/notes", focusedTab: "neovim" },
+        ],
+      });
+
+      expect(parseSettings(contents)?.projects[0]?.focusedTab).toEqual("neovim");
+    });
+  });
+
+  describe("when there is no default focusedTab", () => {
+    it("defaults it to null", () => {
+      expect(parseSettings("{}")?.defaultFocusedTab).toBeNull();
+    });
+  });
+
   describe("when the settings are empty", () => {
     it("returns the defaults", () => {
       expect(parseSettings("{}")).toEqual({
         projectPaths: [],
         defaultTabs: [SHELL_TAB],
+        defaultFocusedTab: null,
         projects: [],
       });
     });
@@ -224,6 +293,7 @@ describe("loadSettings", () => {
       expect(await loadSettings()).toEqual({
         projectPaths: [],
         defaultTabs: [SHELL_TAB],
+        defaultFocusedTab: null,
         projects: [],
       });
     });

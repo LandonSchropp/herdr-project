@@ -10,7 +10,7 @@ import { describe, expect, it, mock } from "bun:test";
 
 const TABS = [{ name: "shell", command: null }];
 
-const PROJECT: Project = { name: "orc", repositoryRoot: "/tmp/orc", tabs: TABS };
+const PROJECT: Project = { name: "orc", repositoryRoot: "/tmp/orc", tabs: TABS, focusedTab: null };
 
 const WORKSPACE = { workspaceId: "wG", rootTabId: "wG:t1", rootPaneId: "wG:p1" };
 

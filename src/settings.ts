@@ -55,17 +55,27 @@ export function parseTabs(value: unknown): Tab[] {
 
 /**
  * Reads the explicitly declared projects. An entry needs a `path`; its `name` defaults to the
- * directory's name and its `tabs` to `defaultTabs`.
+ * directory's name, its `tabs` to `defaultTabs`, and its `focusedTab` to `defaultFocusedTab`.
  *
  * @param value The value to read the projects from.
  * @param defaultTabs The tabs to use for a project that declares none.
+ * @param defaultFocusedTab The tab to focus for a project that declares none.
  * @returns The projects, which is empty when the value is not a list of objects.
  */
-export function parseProjects(value: unknown, defaultTabs: Tab[]): Project[] {
+export function parseProjects(
+  value: unknown,
+  defaultTabs: Tab[],
+  defaultFocusedTab: string | null,
+): Project[] {
   if (!Array.isArray(value)) return [];
 
   return value.flatMap((entry: unknown) => {
-    const project = entry as { name?: unknown; path?: unknown; tabs?: unknown };
+    const project = entry as {
+      name?: unknown;
+      path?: unknown;
+      tabs?: unknown;
+      focusedTab?: unknown;
+    };
 
     if (typeof project.path !== "string") return [];
 
@@ -77,6 +87,7 @@ export function parseProjects(value: unknown, defaultTabs: Tab[]): Project[] {
         name: typeof project.name === "string" ? project.name : basename(repositoryRoot),
         repositoryRoot,
         tabs: tabs.length > 0 ? tabs : defaultTabs,
+        focusedTab: typeof project.focusedTab === "string" ? project.focusedTab : defaultFocusedTab,
       },
     ];
   });
@@ -105,17 +116,24 @@ export function parseSettings(contents: string): Settings | null {
   const isDefault = (entry: unknown) =>
     (entry as { name?: unknown })?.name === DEFAULT_PROJECT_NAME;
 
-  const declaredTabs = parseTabs((entries.find(isDefault) as { tabs?: unknown })?.tabs);
+  const defaultEntry = entries.find(isDefault) as
+    | { tabs?: unknown; focusedTab?: unknown }
+    | undefined;
+  const declaredTabs = parseTabs(defaultEntry?.tabs);
   const defaultTabs = declaredTabs.length > 0 ? declaredTabs : FALLBACK_TABS;
+  const defaultFocusedTab =
+    typeof defaultEntry?.focusedTab === "string" ? defaultEntry.focusedTab : null;
 
   return {
     projectPaths: Array.isArray(projectPaths)
       ? projectPaths.filter((path): path is string => typeof path === "string").map(expandHome)
       : [],
     defaultTabs,
+    defaultFocusedTab,
     projects: parseProjects(
       entries.filter((entry) => !isDefault(entry)),
       defaultTabs,
+      defaultFocusedTab,
     ),
   };
 }
