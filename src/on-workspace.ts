@@ -132,6 +132,7 @@ export async function applyProjectLayout(workspaceId: string): Promise<string> {
   await applyLayout(
     { workspaceId, rootTabId: details.activeTabId, rootPaneId: paneId },
     project.tabs,
+    project.focusedTab,
   );
 
   return `applied ${project.name} layout to ${workspaceId}: ${project.tabs.length} tab(s).`;

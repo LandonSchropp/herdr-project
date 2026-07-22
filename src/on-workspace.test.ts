@@ -146,7 +146,12 @@ describe("parseTabPaneId", () => {
 async function mockLayoutModules(options: {
   workspace: unknown;
   panes?: unknown;
-  projects?: { name: string; repositoryRoot: string; tabs: { name: string; command: null }[] }[];
+  projects?: {
+    name: string;
+    repositoryRoot: string;
+    tabs: { name: string; command: null }[];
+    focusedTab: string | null;
+  }[];
 }) {
   const { workspace, panes = { result: { panes: [] } }, projects = [] } = options;
 
@@ -165,7 +170,12 @@ async function mockLayoutModules(options: {
 
 const TABS = [{ name: "shell", command: null }];
 
-const PROJECT = { name: "notes", repositoryRoot: "/home/user/Notes", tabs: TABS };
+const PROJECT = {
+  name: "notes",
+  repositoryRoot: "/home/user/Notes",
+  tabs: TABS,
+  focusedTab: "shell",
+};
 
 const FRESH_WORKSPACE = {
   result: {
@@ -193,6 +203,7 @@ describe("applyProjectLayout", () => {
       expect(mocks.applyLayout).toHaveBeenCalledWith(
         { workspaceId: "w1", rootTabId: "w1:t1", rootPaneId: "w1:p1" },
         TABS,
+        "shell",
       );
       expect(message).toContain("applied notes layout");
     });

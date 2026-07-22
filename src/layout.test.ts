@@ -44,7 +44,7 @@ describe("applyLayout", () => {
     it("does nothing", async () => {
       const spawn = mockSpawn("{}");
 
-      await applyLayout(WORKSPACE, []);
+      await applyLayout(WORKSPACE, [], null);
 
       expect(spawn).not.toHaveBeenCalled();
     });
@@ -54,7 +54,7 @@ describe("applyLayout", () => {
     it("renames the workspace's existing tab and runs the command in its pane", async () => {
       const spawn = mockSpawnSequence(["{}", "{}"]);
 
-      await applyLayout(WORKSPACE, [{ name: "neovim", command: "nvim" }]);
+      await applyLayout(WORKSPACE, [{ name: "neovim", command: "nvim" }], null);
 
       expect(callsOf(spawn)).toEqual([
         ["tab", "rename", "wG:t1", "neovim"],
@@ -67,7 +67,7 @@ describe("applyLayout", () => {
     it("leaves it as a plain shell", async () => {
       const spawn = mockSpawnSequence(["{}"]);
 
-      await applyLayout(WORKSPACE, [{ name: "shell", command: null }]);
+      await applyLayout(WORKSPACE, [{ name: "shell", command: null }], null);
 
       expect(callsOf(spawn)).toEqual([["tab", "rename", "wG:t1", "shell"]]);
     });
@@ -81,15 +81,64 @@ describe("applyLayout", () => {
         "{}",
       ]);
 
-      await applyLayout(WORKSPACE, [
-        { name: "shell", command: null },
-        { name: "neovim", command: "nvim" },
-      ]);
+      await applyLayout(
+        WORKSPACE,
+        [
+          { name: "shell", command: null },
+          { name: "neovim", command: "nvim" },
+        ],
+        null,
+      );
 
       expect(callsOf(spawn)).toEqual([
         ["tab", "rename", "wG:t1", "shell"],
         ["tab", "create", "--workspace", "wG", "--label", "neovim", "--no-focus"],
         ["pane", "run", "wG:p2", "nvim"],
+      ]);
+    });
+  });
+
+  describe("when a later tab is the focused tab", () => {
+    it("creates it focused", async () => {
+      const spawn = mockSpawnSequence([
+        "{}",
+        JSON.stringify({ result: { root_pane: { pane_id: "wG:p2" } } }),
+        "{}",
+      ]);
+
+      await applyLayout(
+        WORKSPACE,
+        [
+          { name: "shell", command: null },
+          { name: "neovim", command: "nvim" },
+        ],
+        "neovim",
+      );
+
+      expect(callsOf(spawn)).toEqual([
+        ["tab", "rename", "wG:t1", "shell"],
+        ["tab", "create", "--workspace", "wG", "--label", "neovim", "--focus"],
+        ["pane", "run", "wG:p2", "nvim"],
+      ]);
+    });
+  });
+
+  describe("when the first tab is the focused tab", () => {
+    it("leaves the root tab focused and creates the rest unfocused", async () => {
+      const spawn = mockSpawnSequence(["{}", "{}"]);
+
+      await applyLayout(
+        WORKSPACE,
+        [
+          { name: "shell", command: null },
+          { name: "neovim", command: null },
+        ],
+        "shell",
+      );
+
+      expect(callsOf(spawn)).toEqual([
+        ["tab", "rename", "wG:t1", "shell"],
+        ["tab", "create", "--workspace", "wG", "--label", "neovim", "--no-focus"],
       ]);
     });
   });

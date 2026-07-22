@@ -4,12 +4,18 @@ import type { Tab, Workspace } from "./types.ts";
 /**
  * Lays a project's tabs into a workspace Herdr has just created. The workspace already has one tab,
  * so the first tab reuses it and the rest are created alongside it. A tab with no command is left
- * as a plain shell.
+ * as a plain shell. The tab named by `focusedTab` is focused when it opens; the first tab, which
+ * reuses the workspace's existing tab, is focused when `focusedTab` matches it or matches no tab.
  *
  * @param workspace The workspace to lay the tabs into.
  * @param tabs The tabs to open, in display order.
+ * @param focusedTab The label of the tab to focus, or `null` to leave the first tab focused.
  */
-export async function applyLayout(workspace: Workspace, tabs: Tab[]): Promise<void> {
+export async function applyLayout(
+  workspace: Workspace,
+  tabs: Tab[],
+  focusedTab: string | null,
+): Promise<void> {
   const [first, ...rest] = tabs;
 
   if (first === undefined) return;
@@ -28,7 +34,7 @@ export async function applyLayout(workspace: Workspace, tabs: Tab[]): Promise<vo
       workspace.workspaceId,
       "--label",
       tab.name,
-      "--no-focus",
+      tab.name === focusedTab ? "--focus" : "--no-focus",
     ]);
 
     if (tab.command !== null) {
