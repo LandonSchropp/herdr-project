@@ -1,3 +1,4 @@
+import { stubModule } from "../test/helpers/module.ts";
 import {
   applyProjectLayout,
   parseEventWorkspaceId,
@@ -161,9 +162,11 @@ async function mockLayoutModules(options: {
     runHerdrJson: mock((args: string[]) => Promise.resolve(args[0] === "pane" ? panes : workspace)),
   };
 
-  await mock.module("./layout.ts", () => ({ applyLayout: mocks.applyLayout }));
-  await mock.module("./projects.ts", () => ({ listProjects: mocks.listProjects }));
-  await mock.module("./herdr.ts", () => ({ runHerdrJson: mocks.runHerdrJson }));
+  await stubModule(import.meta.resolve("./layout.ts"), () => ({ applyLayout: mocks.applyLayout }));
+  await stubModule(import.meta.resolve("./projects.ts"), () => ({
+    listProjects: mocks.listProjects,
+  }));
+  await stubModule(import.meta.resolve("./herdr.ts"), () => ({ runHerdrJson: mocks.runHerdrJson }));
 
   return mocks;
 }

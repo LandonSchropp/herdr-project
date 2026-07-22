@@ -1,3 +1,4 @@
+import { stubModule } from "../test/helpers/module.ts";
 import type { Project } from "./types.ts";
 import {
   createProjectWorktree,
@@ -38,9 +39,9 @@ async function mockHerdrModules(
     ),
   };
 
-  await mock.module("./layout.ts", () => ({ applyLayout: mocks.applyLayout }));
-  await mock.module("./herdr.ts", () => ({ runHerdrJson: mocks.runHerdrJson }));
-  await mock.module("./worktrees.ts", () => ({
+  await stubModule(import.meta.resolve("./layout.ts"), () => ({ applyLayout: mocks.applyLayout }));
+  await stubModule(import.meta.resolve("./herdr.ts"), () => ({ runHerdrJson: mocks.runHerdrJson }));
+  await stubModule(import.meta.resolve("./worktrees.ts"), () => ({
     openWorktree: mocks.openWorktree,
     createWorktree: mocks.createWorktree,
     listWorktrees: mocks.listWorktrees,
@@ -151,7 +152,7 @@ describe("parseOpenCheckoutPaths", () => {
 describe("workspaceRepositoryRoot", () => {
   describe("when the workspace has a worktree", () => {
     it("returns its repository root", async () => {
-      await mock.module("./herdr.ts", () => ({
+      await stubModule(import.meta.resolve("./herdr.ts"), () => ({
         runHerdrJson: mock(() =>
           Promise.resolve({
             result: { workspace: { worktree: { repo_root: "/home/user/Notes" } } },
@@ -165,7 +166,7 @@ describe("workspaceRepositoryRoot", () => {
 
   describe("when the workspace has no worktree", () => {
     it("returns null", async () => {
-      await mock.module("./herdr.ts", () => ({
+      await stubModule(import.meta.resolve("./herdr.ts"), () => ({
         runHerdrJson: mock(() => Promise.resolve({ result: { workspace: {} } })),
       }));
 

@@ -1,4 +1,5 @@
 import { stubEnv } from "../test/helpers/env.ts";
+import { stubModule } from "../test/helpers/module.ts";
 import { flagValue, formatProjects, runCli } from "./cli.ts";
 import type { Project } from "./types.ts";
 import { describe, expect, it, mock } from "bun:test";
@@ -140,7 +141,7 @@ describe("runCli", () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
       const createProjectWorktree = mock(() => Promise.resolve());
-      await mock.module("./workspaces.ts", () => ({
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
         createProjectWorktree,
         openProjectMain: mock(() => Promise.resolve()),
         openProjectWorktree: mock(() => Promise.resolve()),
@@ -157,7 +158,7 @@ describe("runCli", () => {
     it("reports the failure", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      await mock.module("./workspaces.ts", () => ({
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
         createProjectWorktree: mock(() => Promise.reject(new Error("herdr is not running"))),
         openProjectMain: mock(() => Promise.reject(new Error("herdr is not running"))),
         openProjectWorktree: mock(() => Promise.resolve()),
@@ -175,7 +176,7 @@ describe("runCli on-workspace", () => {
   describe("when the event carries a workspace id", () => {
     it("applies the project layout and reports what it did", async () => {
       const applyProjectLayout = mock(() => Promise.resolve("applied notes layout to w1."));
-      await mock.module("./on-workspace.ts", () => ({
+      await stubModule(import.meta.resolve("./on-workspace.ts"), () => ({
         applyProjectLayout,
         parseEventWorkspaceId: () => "w1",
       }));
@@ -190,7 +191,7 @@ describe("runCli on-workspace", () => {
 
   describe("when the event carries no workspace id", () => {
     it("reports the missing id", async () => {
-      await mock.module("./on-workspace.ts", () => ({
+      await stubModule(import.meta.resolve("./on-workspace.ts"), () => ({
         applyProjectLayout: mock(() => Promise.resolve("")),
         parseEventWorkspaceId: () => null,
       }));
@@ -207,7 +208,7 @@ describe("runCli on-worktree", () => {
   describe("when the event carries a worktree path", () => {
     it("copies the repository's included files and reports what it did", async () => {
       const copyWorktreeIncludes = mock(() => Promise.resolve("copied 1 path(s) into /tmp/topic."));
-      await mock.module("./on-worktree.ts", () => ({
+      await stubModule(import.meta.resolve("./on-worktree.ts"), () => ({
         copyWorktreeIncludes,
         parseEventWorktreePath: () => "/tmp/topic",
       }));
@@ -222,7 +223,7 @@ describe("runCli on-worktree", () => {
 
   describe("when the event carries no worktree path", () => {
     it("reports the missing path", async () => {
-      await mock.module("./on-worktree.ts", () => ({
+      await stubModule(import.meta.resolve("./on-worktree.ts"), () => ({
         copyWorktreeIncludes: mock(() => Promise.resolve("")),
         parseEventWorktreePath: () => null,
       }));

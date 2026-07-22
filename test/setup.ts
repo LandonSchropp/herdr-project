@@ -1,4 +1,5 @@
 import { unstubAllEnvs } from "./helpers/env.ts";
+import { unstubAllModules } from "./helpers/module.ts";
 import "./helpers/process.ts";
 import { afterEach, beforeEach, mock } from "bun:test";
 import * as ink from "ink";
@@ -16,9 +17,13 @@ await mock.module("ink", () => ({
 }));
 
 beforeEach(() => {
-  mock.clearAllMocks();
+  // `mock.restore()` clears mock state like `mock.clearAllMocks()`, but also restores every
+  // `spyOn` (e.g. `spyOn(Bun, "spawn")`) to its real implementation — without it, a spy left behind
+  // by an earlier test file's `spyOn` can shadow real calls a later file expects to actually run.
+  mock.restore();
 });
 
-afterEach(() => {
+afterEach(async () => {
   unstubAllEnvs();
+  await unstubAllModules();
 });

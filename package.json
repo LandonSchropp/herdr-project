@@ -13,7 +13,7 @@
     "check-types": "tsc --noEmit",
     "lint": "bun --bun eslint .",
     "prepare": "husky",
-    "test": "bun test --isolate"
+    "test": "bun test"
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.0",
