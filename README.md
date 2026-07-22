@@ -100,6 +100,7 @@ Settings live in a single file at `~/.config/herdr-project/settings.json`. Point
   "projects": [
     {
       "name": "default",
+      "focusedTab": "claude",
       "tabs": [
         { "name": "shell" },
         { "name": "neovim", "command": "nvim" },
@@ -122,6 +123,11 @@ The project named `default` is a layout rather than somewhere to open. It has no
 appears in the picker, and supplies the tabs every other project inherits. A tab with no `command`
 is left as a plain shell. Without a `default` project, projects get a single shell.
 
+Its `focusedTab` names the tab to focus when a workspace opens. A name that matches none of a
+project's tabs is ignored, so pointing it at a tab like `claude` that most but not all projects
+declare is safe: the projects that have it open focused there, and the rest open on their first
+tab.
+
 ### Declaring a project
 
 Discovery already covers most repositories, so declare a project only when you want to override
@@ -131,9 +137,9 @@ something. The two reasons that come up:
   `landonschropp.com` shown as `landonschropp`, or `.dotfiles` as `dotfiles`).
 - **A different layout**, when the project wants tabs other than the default's.
 
-Only `path` is required: `name` defaults to the directory's name and `tabs` to the `default`
-project's. A declared project replaces a discovered one at the same path, which is how an override
-takes effect without having to list every other repository.
+Only `path` is required: `name` defaults to the directory's name, and `tabs` and `focusedTab`
+default to the `default` project's. A declared project replaces a discovered one at the same path,
+which is how an override takes effect without having to list every other repository.
 
 ## Development
 
