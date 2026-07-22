@@ -130,7 +130,12 @@ export async function applyProjectLayout(workspaceId: string): Promise<string> {
   }
 
   await applyLayout(
-    { workspaceId, rootTabId: details.activeTabId, rootPaneId: paneId },
+    {
+      workspaceId,
+      rootTabId: details.activeTabId,
+      rootPaneId: paneId,
+      repositoryRoot: details.repositoryRoot,
+    },
     project.tabs,
     project.focusedTab,
   );

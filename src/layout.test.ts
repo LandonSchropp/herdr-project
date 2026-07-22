@@ -1,9 +1,14 @@
 import { mockSpawn } from "./herdr.test.ts";
 import { applyLayout } from "./layout.ts";
-import type { Workspace } from "./types.ts";
+import type { WorkspaceLayout } from "./types.ts";
 import { describe, expect, it, spyOn } from "bun:test";
 
-const WORKSPACE: Workspace = { workspaceId: "wG", rootTabId: "wG:t1", rootPaneId: "wG:p1" };
+const WORKSPACE: WorkspaceLayout = {
+  workspaceId: "wG",
+  rootTabId: "wG:t1",
+  rootPaneId: "wG:p1",
+  repositoryRoot: "/repo",
+};
 
 /**
  * Mocks `Bun.spawn` so each call returns the next queued response, letting a multi-step layout be
@@ -92,7 +97,7 @@ describe("applyLayout", () => {
 
       expect(callsOf(spawn)).toEqual([
         ["tab", "rename", "wG:t1", "shell"],
-        ["tab", "create", "--workspace", "wG", "--label", "neovim", "--no-focus"],
+        ["tab", "create", "--workspace", "wG", "--cwd", "/repo", "--label", "neovim", "--no-focus"],
         ["pane", "run", "wG:p2", "nvim"],
       ]);
     });
@@ -117,7 +122,7 @@ describe("applyLayout", () => {
 
       expect(callsOf(spawn)).toEqual([
         ["tab", "rename", "wG:t1", "shell"],
-        ["tab", "create", "--workspace", "wG", "--label", "neovim", "--focus"],
+        ["tab", "create", "--workspace", "wG", "--cwd", "/repo", "--label", "neovim", "--focus"],
         ["pane", "run", "wG:p2", "nvim"],
       ]);
     });
@@ -138,7 +143,7 @@ describe("applyLayout", () => {
 
       expect(callsOf(spawn)).toEqual([
         ["tab", "rename", "wG:t1", "shell"],
-        ["tab", "create", "--workspace", "wG", "--label", "neovim", "--no-focus"],
+        ["tab", "create", "--workspace", "wG", "--cwd", "/repo", "--label", "neovim", "--no-focus"],
       ]);
     });
   });

@@ -1,5 +1,5 @@
 import { parseRootPaneId, runHerdr, runHerdrJson } from "./herdr.ts";
-import type { Tab, Workspace } from "./types.ts";
+import type { Tab, WorkspaceLayout } from "./types.ts";
 
 /**
  * Lays a project's tabs into a workspace Herdr has just created. The workspace already has one tab,
@@ -12,7 +12,7 @@ import type { Tab, Workspace } from "./types.ts";
  * @param focusedTab The label of the tab to focus, or `null` to leave the first tab focused.
  */
 export async function applyLayout(
-  workspace: Workspace,
+  workspace: WorkspaceLayout,
   tabs: Tab[],
   focusedTab: string | null,
 ): Promise<void> {
@@ -32,6 +32,8 @@ export async function applyLayout(
       "create",
       "--workspace",
       workspace.workspaceId,
+      "--cwd",
+      workspace.repositoryRoot,
       "--label",
       tab.name,
       tab.name === focusedTab ? "--focus" : "--no-focus",

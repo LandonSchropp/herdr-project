@@ -47,6 +47,12 @@ export type Workspace = {
   rootPaneId: string;
 };
 
+/** A workspace to lay a project's tabs into. */
+export type WorkspaceLayout = Workspace & {
+  /** The absolute path to the worktree's checkout, where new tabs should start. */
+  repositoryRoot: string;
+};
+
 /** The plugin's settings. */
 export type Settings = {
   /**

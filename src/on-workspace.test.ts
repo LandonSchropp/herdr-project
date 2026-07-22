@@ -204,7 +204,12 @@ describe("applyProjectLayout", () => {
       const message = await applyProjectLayout("w1");
 
       expect(mocks.applyLayout).toHaveBeenCalledWith(
-        { workspaceId: "w1", rootTabId: "w1:t1", rootPaneId: "w1:p1" },
+        {
+          workspaceId: "w1",
+          rootTabId: "w1:t1",
+          rootPaneId: "w1:p1",
+          repositoryRoot: "/home/user/Notes",
+        },
         TABS,
         "shell",
       );
