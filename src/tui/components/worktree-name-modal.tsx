@@ -1,6 +1,9 @@
 import { Prompt } from "./prompt.tsx";
 import { Text } from "ink";
 
+/** Lower kebab case: lowercase letters and digits, separated by single hyphens. */
+const KEBAB_CASE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 type WorktreeNameModalProps = {
   /** The name of the project the worktree is created in. */
   projectName: string;
@@ -33,6 +36,7 @@ export function WorktreeNameModal({
       ]}
       onValidate={(branch) => {
         if (branch.trim() === "") return "Enter a branch name.";
+        if (!KEBAB_CASE.test(branch)) return "Use lower kebab case, like new-feature.";
         return existingBranches.includes(branch) ? "That worktree already exists." : null;
       }}
       onSubmit={onSubmit}

@@ -71,6 +71,28 @@ describe("WorktreeNameModal", () => {
     });
   });
 
+  describe("when the branch name is not lower kebab case", () => {
+    it("rejects it instead of submitting", async () => {
+      const onSubmit = mock(() => {});
+
+      const { stdin, lastFrame } = renderInViewport(
+        <WorktreeNameModal
+          projectName="orc"
+          existingBranches={[]}
+          onSubmit={onSubmit}
+          onCancel={noop}
+        />,
+      );
+
+      stdin.write("cheat sheet");
+      await waitFor(() => lastFrame()?.includes("cheat sheet") ?? false);
+      stdin.write("\r");
+      await waitFor(() => lastFrame()?.includes("lower kebab case") ?? false);
+
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+  });
+
   describe("when the branch already has a worktree", () => {
     it("rejects it instead of submitting", async () => {
       const onSubmit = mock(() => {});
