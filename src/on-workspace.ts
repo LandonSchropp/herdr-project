@@ -1,5 +1,6 @@
 import { runHerdrJson } from "./herdr.ts";
 import { applyLayout } from "./layout.ts";
+import { takePendingPrompt } from "./pending-prompt.ts";
 import { listProjects } from "./projects.ts";
 
 /** What a newly created workspace looks like, as far as laying a project's tabs into it goes. */
@@ -10,6 +11,8 @@ export type WorkspaceDetails = {
   paneCount: number;
   /** The workspace's active tab, which for a fresh workspace is its only tab. */
   activeTabId: string | null;
+  /** The absolute path to the worktree's checkout, or `null` when it has no worktree. */
+  checkoutPath: string | null;
 };
 
 /**
@@ -41,7 +44,7 @@ export function parseEventWorkspaceId(
  * Extracts what a `workspace get` response says about a workspace.
  *
  * @param response The parsed JSON response.
- * @returns The workspace's repository, pane count, and active tab.
+ * @returns The workspace's repository, pane count, active tab, and checkout path.
  */
 export function parseWorkspaceDetails(response: unknown): WorkspaceDetails {
   const workspace = (
@@ -49,7 +52,7 @@ export function parseWorkspaceDetails(response: unknown): WorkspaceDetails {
       | {
           result?: {
             workspace?: {
-              worktree?: { repo_root?: unknown };
+              worktree?: { repo_root?: unknown; checkout_path?: unknown };
               pane_count?: unknown;
               active_tab_id?: unknown;
             };
@@ -61,11 +64,13 @@ export function parseWorkspaceDetails(response: unknown): WorkspaceDetails {
   const repositoryRoot = workspace?.worktree?.repo_root;
   const paneCount = workspace?.pane_count;
   const activeTabId = workspace?.active_tab_id;
+  const checkoutPath = workspace?.worktree?.checkout_path;
 
   return {
     repositoryRoot: typeof repositoryRoot === "string" ? repositoryRoot : null,
     paneCount: typeof paneCount === "number" ? paneCount : 0,
     activeTabId: typeof activeTabId === "string" ? activeTabId : null,
+    checkoutPath: typeof checkoutPath === "string" ? checkoutPath : null,
   };
 }
 
@@ -82,8 +87,7 @@ export function parseTabPaneId(response: unknown, tabId: string): string | null 
   if (!Array.isArray(panes)) return null;
 
   const pane = panes.find((entry: unknown) => (entry as { tab_id?: unknown })?.tab_id === tabId) as
-    | { pane_id?: unknown }
-    | undefined;
+    { pane_id?: unknown } | undefined;
 
   return typeof pane?.pane_id === "string" ? pane.pane_id : null;
 }
@@ -129,6 +133,9 @@ export async function applyProjectLayout(workspaceId: string): Promise<string> {
     return `tab ${details.activeTabId} reported no pane; nothing to do.`;
   }
 
+  const prompt =
+    details.checkoutPath === null ? null : await takePendingPrompt(details.checkoutPath);
+
   await applyLayout(
     {
       workspaceId,
@@ -138,6 +145,7 @@ export async function applyProjectLayout(workspaceId: string): Promise<string> {
     },
     project.tabs,
     project.focusedTab,
+    prompt,
   );
 
   return `applied ${project.name} layout to ${workspaceId}: ${project.tabs.length} tab(s).`;

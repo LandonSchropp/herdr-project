@@ -9,7 +9,7 @@ The code is organized in layers, lowest to highest:
 1. **`src/herdr.ts`** — the `herdr` CLI wrapper. `runHerdr` returns raw output and `runHerdrJson` parses it; not every command prints something, so reach for the raw one when you don't need a response. Response parsing (`parseWorkspace`, `parseRootPaneId`) is separate so it can be tested without a running Herdr session.
 2. **`src/worktrees.ts`** and **`src/layout.ts`** — worktree listing/opening/creating, and laying a project's tabs into a workspace.
 3. **`src/settings.ts`** and **`src/projects.ts`** — the settings file, plus discovering repositories under the project paths and merging them with the declared projects. The settings file has one project list; the entry named `default` is pulled out of it to become `Settings.defaultTabs` and never reaches the picker.
-4. **`src/workspaces.ts`**, **`src/on-workspace.ts`**, and **`src/on-worktree.ts`** — the operations both front ends need (open a worktree, create one, open a project's main checkout), plus the two event hooks: `workspace.created` lays a project's tabs into a new workspace, and `worktree.created` copies a repository's untracked include files into a new worktree. `src/worktree-include.ts` sits beside `worktrees.ts` and holds the include-file matching and copying, which is Git's work rather than Herdr's.
+4. **`src/workspaces.ts`**, **`src/on-workspace.ts`**, and **`src/on-worktree.ts`** — the operations both front ends need (open a worktree, create one, open a project's main checkout), plus the two event hooks: `workspace.created` lays a project's tabs into a new workspace, and `worktree.created` copies a repository's untracked include files into a new worktree. `src/worktree-include.ts` sits beside `worktrees.ts` and holds the include-file matching and copying, which is Git's work rather than Herdr's. `src/pending-prompt.ts` sits beside `workspaces.ts` and relays a `--prompt` across the process boundary described below.
 5. **`src/cli.ts`** and **`src/tui/`** — the two front ends. Both call `workspaces.ts` and nothing lower. `cli.ts` returns a result rather than writing to the process, so it can be tested directly; `app.tsx` owns the picker's state and `components/` holds the modals and their primitives (`Modal`, `Picker`, `Prompt`).
 
 `src/index.tsx` dispatches between them: no arguments opens the picker, any arguments run the CLI. Herdr invokes it through `scripts/run.sh`.
@@ -21,6 +21,12 @@ Tests live alongside their source as `*.test.ts` / `*.test.tsx`. Shared test inf
 A project's tabs are laid out by the `workspace.created` event hook, never by whoever opened the workspace. That way a workspace gets its tabs no matter how it was created — from this plugin, from Herdr's own UI, or by Herdr opening a worktree's parent on its own. `workspaces.ts` deliberately does not call `applyLayout`; adding it back would lay the tabs in twice.
 
 The hook runs for every new workspace, so it must stay a quiet no-op when the workspace has no worktree, its repository is not a configured project, or it already has more than the one pane a fresh workspace starts with.
+
+## The Prompt Relay Crosses a Process Boundary
+
+`create --prompt` and the `workspace.created` hook are different process invocations — Herdr spawns the hook itself, so it never inherits `create`'s environment. `pending-prompt.ts` bridges the gap with a file keyed by checkout path: `workspaces.ts` writes it once the checkout path is known, and `on-workspace.ts` takes it (reads and deletes) when laying out that same checkout's tabs. For an existing worktree the path is known before Herdr is asked to open it, so the write always lands first; for a newly created worktree the path is only known from `worktree create`'s response, so there is a real (currently unaddressed) race between that write and the hook.
+
+`applyLayout` hands the prompt to the tab named by the project's `focusedTab`, via the `AGENT_PROMPT` environment variable — `--env` on `tab create` for any tab but the first, and a shell-quoted prefix on the `pane run` command for the first tab, since Herdr has no `--env` on `worktree open`/`create` or on `pane run` ([herdrdev/herdr#1518](https://github.com/herdrdev/herdr/issues/1518), unresolved).
 
 ## Modals Need a Sized Parent
 

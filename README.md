@@ -51,12 +51,15 @@ Every step the picker takes is also available non-interactively, so agents and s
 it. Herdr's own commands cover everything else (switching, closing, listing worktrees).
 
 ```sh
-herdr-project list [--json]                         # list the configured projects
-herdr-project create <project> [--worktree <branch>]  # open a project's workspace
+herdr-project list [--json]                                          # list the configured projects
+herdr-project create <project> [--worktree <branch>] [--prompt <text>] # open a project's workspace
 ```
 
 `list` prints `<name>\t<path>` per line, or a JSON array with `--json`. `create` opens the
-project's main worktree; with `--worktree` it creates a worktree on that branch instead.
+project's main worktree; with `--worktree` it creates a worktree on that branch instead. With
+`--prompt`, the text is handed to the project's `focusedTab` through the `AGENT_PROMPT`
+environment variable once that tab opens; if `focusedTab` is unset or matches no tab, the prompt
+is dropped.
 
 ## Tabs
 

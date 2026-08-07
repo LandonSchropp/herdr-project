@@ -1,4 +1,5 @@
 import { runHerdrJson } from "./herdr.ts";
+import { writePendingPrompt } from "./pending-prompt.ts";
 import type { Project } from "./types.ts";
 import { createWorktree, listWorktrees, openWorktree } from "./worktrees.ts";
 
@@ -39,16 +40,22 @@ export async function listOpenCheckoutPaths(): Promise<string[]> {
  *
  * @param project The project the worktree belongs to.
  * @param path The absolute path to the worktree's checkout.
+ * @param label The workspace's name. Omit to let Herdr name it after the repository.
+ * @param prompt A prompt for the `workspace.created` hook to hand to the project's agent tab, or
+ *   `undefined` to leave its tabs unprompted.
  * @throws When the worktree already has a workspace open.
  */
 export async function openProjectWorktree(
   project: Project,
   path: string,
   label?: string,
+  prompt?: string,
 ): Promise<void> {
   if ((await listOpenCheckoutPaths()).includes(path)) {
     throw new Error(`A workspace is already open for ${path}.`);
   }
+
+  if (prompt !== undefined) await writePendingPrompt(path, prompt);
 
   await openWorktree(project.repositoryRoot, path, label);
 }
@@ -59,9 +66,17 @@ export async function openProjectWorktree(
  *
  * @param project The project to create the worktree in.
  * @param branch The branch to create the worktree on.
+ * @param prompt A prompt for the `workspace.created` hook to hand to the project's agent tab, or
+ *   `undefined` to leave its tabs unprompted.
  */
-export async function createProjectWorktree(project: Project, branch: string): Promise<void> {
-  await createWorktree(project.repositoryRoot, branch);
+export async function createProjectWorktree(
+  project: Project,
+  branch: string,
+  prompt?: string,
+): Promise<void> {
+  const { checkoutPath } = await createWorktree(project.repositoryRoot, branch);
+
+  if (prompt !== undefined) await writePendingPrompt(checkoutPath, prompt);
 }
 
 /**
@@ -70,14 +85,16 @@ export async function createProjectWorktree(project: Project, branch: string): P
  * is what distinguishes it in the sidebar.
  *
  * @param project The project to open.
+ * @param prompt A prompt for the `workspace.created` hook to hand to the project's agent tab, or
+ *   `undefined` to leave its tabs unprompted.
  * @throws When the repository reports no main checkout.
  */
-export async function openProjectMain(project: Project): Promise<void> {
+export async function openProjectMain(project: Project, prompt?: string): Promise<void> {
   const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);
 
   if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
 
-  await openProjectWorktree(project, main.path, project.name);
+  await openProjectWorktree(project, main.path, project.name, prompt);
 }
 
 /**
