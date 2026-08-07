@@ -30,19 +30,21 @@ async function stubProjects(projects: { name: string; path: string }[]): Promise
 describe("flagValue", () => {
   describe("when the flag has a value", () => {
     it("returns it", () => {
-      expect(flagValue(["create", "orc", "--branch", "feature"], "--branch")).toEqual("feature");
+      expect(flagValue(["create", "orc", "--worktree", "feature"], "--worktree")).toEqual(
+        "feature",
+      );
     });
   });
 
   describe("when the flag is absent", () => {
     it("returns null", () => {
-      expect(flagValue(["create", "orc"], "--branch")).toBeNull();
+      expect(flagValue(["create", "orc"], "--worktree")).toBeNull();
     });
   });
 
   describe("when the flag is last with no value", () => {
     it("returns null", () => {
-      expect(flagValue(["create", "orc", "--branch"], "--branch")).toBeNull();
+      expect(flagValue(["create", "orc", "--worktree"], "--worktree")).toBeNull();
     });
   });
 });
@@ -125,13 +127,13 @@ describe("runCli", () => {
     });
   });
 
-  describe("when --branch is passed with no value", () => {
+  describe("when --worktree is passed with no value", () => {
     it("reports the missing branch", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      const result = await runCli(["create", "orc", "--branch"]);
+      const result = await runCli(["create", "orc", "--worktree"]);
 
-      expect(result.stderr).toContain("--branch requires a branch name");
+      expect(result.stderr).toContain("--worktree requires a branch name");
       expect(result.exitCode).toEqual(1);
     });
   });
@@ -147,7 +149,7 @@ describe("runCli", () => {
         openProjectWorktree: mock(() => Promise.resolve()),
       }));
 
-      const result = await runCli(["create", "orc", "--branch", "feature"]);
+      const result = await runCli(["create", "orc", "--worktree", "feature"]);
 
       expect(result.exitCode).toEqual(0);
       expect(createProjectWorktree).toHaveBeenCalled();

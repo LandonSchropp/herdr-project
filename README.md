@@ -52,11 +52,11 @@ it. Herdr's own commands cover everything else (switching, closing, listing work
 
 ```sh
 herdr-project list [--json]                         # list the configured projects
-herdr-project create <project> [--branch <branch>]  # open a project's workspace
+herdr-project create <project> [--worktree <branch>]  # open a project's workspace
 ```
 
 `list` prints `<name>\t<path>` per line, or a JSON array with `--json`. `create` opens the
-project's main worktree; with `--branch` it creates a worktree on that branch instead.
+project's main worktree; with `--worktree` it creates a worktree on that branch instead.
 
 ## Tabs
 

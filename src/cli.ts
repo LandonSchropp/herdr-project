@@ -10,12 +10,12 @@ export const HELP = `herdr-project — open a project and one of its Git worktre
 Usage:
   herdr-project                                      Open the project picker.
   herdr-project list [--json]                        List the configured projects.
-  herdr-project create <project> [--branch <branch>] Open a project's workspace.
-  herdr-project --help                               Show this message.
+  herdr-project create <project> [--worktree <branch>] Open a project's workspace.
+  herdr-project --help                                 Show this message.
 
 Commands:
   list    Prints one project per line as "<name>\t<path>", or a JSON array with --json.
-  create  Opens the project's main worktree. With --branch, creates a worktree on that
+  create  Opens the project's main worktree. With --worktree, creates a worktree on that
           branch instead. Either way the project's tabs are laid into the workspace.
 `;
 
@@ -96,10 +96,10 @@ async function runCreate(args: string[]): Promise<CliResult> {
     return { stdout: "", stderr: `Error: no project named "${name}".\n`, exitCode: 1 };
   }
 
-  const branch = flagValue(args, "--branch");
+  const branch = flagValue(args, "--worktree");
 
-  if (args.includes("--branch") && branch === null) {
-    return { stdout: "", stderr: "Error: --branch requires a branch name.\n", exitCode: 1 };
+  if (args.includes("--worktree") && branch === null) {
+    return { stdout: "", stderr: "Error: --worktree requires a branch name.\n", exitCode: 1 };
   }
 
   if (branch === null) await openProjectMain(project);

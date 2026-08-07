@@ -9,7 +9,7 @@
 # The same operations are available non-interactively for agents and scripts:
 #
 #   ./scripts/run.sh list [--json]
-#   ./scripts/run.sh create <project> [--branch <branch>]
+#   ./scripts/run.sh create <project> [--worktree <branch>]
 
 id = "landonschropp.herdr-project"
 name = "Herdr Project"
