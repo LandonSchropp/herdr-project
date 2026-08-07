@@ -1,4 +1,10 @@
-import { parseRootPaneId, parseWorkspace, runHerdr, runHerdrJson } from "./herdr.ts";
+import {
+  parseCheckoutPath,
+  parseRootPaneId,
+  parseWorkspace,
+  runHerdr,
+  runHerdrJson,
+} from "./herdr.ts";
 import { describe, expect, it, spyOn } from "bun:test";
 
 const WORKSPACE_RESPONSE = {
@@ -112,6 +118,30 @@ describe("parseWorkspace", () => {
       expect(() => parseWorkspace({ result: { root_pane: { pane_id: "wG:p1" } } })).toThrow(
         "did not report a workspace",
       );
+    });
+  });
+});
+
+describe("parseCheckoutPath", () => {
+  describe("when the response describes a worktree", () => {
+    it("returns its checkout path", () => {
+      const response = {
+        result: { workspace: { worktree: { checkout_path: "/tmp/orc" } } },
+      };
+
+      expect(parseCheckoutPath(response)).toEqual("/tmp/orc");
+    });
+  });
+
+  describe("when the response describes no worktree", () => {
+    it("returns null", () => {
+      expect(parseCheckoutPath({ result: { workspace: {} } })).toBeNull();
+    });
+  });
+
+  describe("when the response describes no workspace", () => {
+    it("returns null", () => {
+      expect(parseCheckoutPath({ nonsense: true })).toBeNull();
     });
   });
 });

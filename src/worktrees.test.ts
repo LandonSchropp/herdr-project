@@ -31,7 +31,10 @@ const WORKSPACE_RESPONSE = JSON.stringify({
   result: {
     root_pane: { pane_id: "wG:p1" },
     tab: { tab_id: "wG:t1" },
-    workspace: { workspace_id: "wG" },
+    workspace: {
+      workspace_id: "wG",
+      worktree: { checkout_path: "/tmp/worktrees/feature" },
+    },
   },
 });
 
@@ -152,13 +155,14 @@ describe("openWorktree", () => {
 });
 
 describe("createWorktree", () => {
-  it("creates the worktree on the given branch and returns its workspace", async () => {
+  it("creates the worktree on the given branch and returns its workspace and checkout path", async () => {
     const spawn = mockSpawn(WORKSPACE_RESPONSE);
 
     expect(await createWorktree("/tmp/repo", "feature")).toEqual({
       workspaceId: "wG",
       rootTabId: "wG:t1",
       rootPaneId: "wG:p1",
+      checkoutPath: "/tmp/worktrees/feature",
     });
 
     expect(spawn).toHaveBeenCalledWith(
@@ -175,5 +179,24 @@ describe("createWorktree", () => {
       ],
       expect.anything(),
     );
+  });
+
+  describe("when the response reports no checkout path", () => {
+    it("throws", async () => {
+      mockSpawn(
+        JSON.stringify({
+          result: {
+            root_pane: { pane_id: "wG:p1" },
+            tab: { tab_id: "wG:t1" },
+            workspace: { workspace_id: "wG" },
+          },
+        }),
+      );
+
+      const thrown = await createWorktree("/tmp/repo", "feature").catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toContain("did not report a checkout path");
+    });
   });
 });

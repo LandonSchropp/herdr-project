@@ -1,4 +1,4 @@
-import { parseWorkspace, runHerdrJson } from "./herdr.ts";
+import { parseCheckoutPath, parseWorkspace, runHerdrJson } from "./herdr.ts";
 import type { Workspace, Worktree } from "./types.ts";
 
 /**
@@ -88,19 +88,27 @@ export async function openWorktree(
  *
  * @param repositoryRoot The absolute path to the project's repository.
  * @param branch The branch to create the worktree on.
- * @returns The workspace Herdr created for the worktree.
+ * @returns The workspace Herdr created for the worktree, and the checkout path it was created at.
+ * @throws When the response reports no checkout path.
  */
-export async function createWorktree(repositoryRoot: string, branch: string): Promise<Workspace> {
-  return parseWorkspace(
-    await runHerdrJson([
-      "worktree",
-      "create",
-      "--cwd",
-      repositoryRoot,
-      "--branch",
-      branch,
-      "--focus",
-      "--json",
-    ]),
-  );
+export async function createWorktree(
+  repositoryRoot: string,
+  branch: string,
+): Promise<Workspace & { checkoutPath: string }> {
+  const response = await runHerdrJson([
+    "worktree",
+    "create",
+    "--cwd",
+    repositoryRoot,
+    "--branch",
+    branch,
+    "--focus",
+    "--json",
+  ]);
+
+  const checkoutPath = parseCheckoutPath(response);
+
+  if (checkoutPath === null) throw new Error("herdr did not report a checkout path");
+
+  return { ...parseWorkspace(response), checkoutPath };
 }

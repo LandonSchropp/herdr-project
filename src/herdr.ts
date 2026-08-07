@@ -79,3 +79,18 @@ export function parseWorkspace(response: unknown): Workspace {
 
   return { workspaceId, rootTabId, rootPaneId: parseRootPaneId(response) };
 }
+
+/**
+ * Extracts the checkout path of the worktree a `worktree create`/`worktree open` response
+ * describes.
+ *
+ * @param response The parsed JSON response.
+ * @returns The absolute path to the checkout, or `null` when the response describes no worktree.
+ */
+export function parseCheckoutPath(response: unknown): string | null {
+  const checkoutPath = (
+    response as { result?: { workspace?: { worktree?: { checkout_path?: unknown } } } } | undefined
+  )?.result?.workspace?.worktree?.checkout_path;
+
+  return typeof checkoutPath === "string" ? checkoutPath : null;
+}
