@@ -115,6 +115,37 @@ describe("createProjectWorktree", () => {
     expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature");
     expect(mocks.applyLayout).not.toHaveBeenCalled();
   });
+
+  describe("when the branch already has a worktree", () => {
+    it("opens it instead of creating a second one", async () => {
+      const mocks = await mockHerdrModules([
+        { branch: "feature", path: "/tmp/worktrees/feature", isMain: false },
+      ]);
+
+      await createProjectWorktree(PROJECT, "feature");
+
+      expect(mocks.createWorktree).not.toHaveBeenCalled();
+      expect(mocks.openWorktree).toHaveBeenCalledWith(
+        "/tmp/orc",
+        "/tmp/worktrees/feature",
+        undefined,
+      );
+    });
+  });
+
+  describe("when the branch's worktree already has a workspace", () => {
+    it("refuses rather than laying a second set of tabs into it", async () => {
+      const mocks = await mockHerdrModules(
+        [{ branch: "feature", path: "/tmp/worktrees/feature", isMain: false }],
+        ["/tmp/worktrees/feature"],
+      );
+
+      const thrown = await createProjectWorktree(PROJECT, "feature").catch((error: Error) => error);
+
+      expect((thrown as Error).message).toContain("already open");
+      expect(mocks.createWorktree).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe("createProjectWorktree with a prompt", () => {
@@ -124,6 +155,21 @@ describe("createProjectWorktree with a prompt", () => {
     await createProjectWorktree(PROJECT, "feature", "fix the bug");
 
     expect(mocks.writePendingPrompt).toHaveBeenCalledWith("/tmp/worktrees/feature", "fix the bug");
+  });
+
+  describe("when the branch already has a worktree", () => {
+    it("records the prompt for that worktree's checkout path", async () => {
+      const mocks = await mockHerdrModules([
+        { branch: "feature", path: "/tmp/worktrees/feature", isMain: false },
+      ]);
+
+      await createProjectWorktree(PROJECT, "feature", "fix the bug");
+
+      expect(mocks.writePendingPrompt).toHaveBeenCalledWith(
+        "/tmp/worktrees/feature",
+        "fix the bug",
+      );
+    });
   });
 });
 

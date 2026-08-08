@@ -61,19 +61,30 @@ export async function openProjectWorktree(
 }
 
 /**
- * Creates a worktree on `branch` and opens it into a Herdr workspace. As with
+ * Creates a worktree on `branch` and opens it into a Herdr workspace. When the branch already has a
+ * worktree, that worktree is opened instead of a second one being created. As with
  * {@link openProjectWorktree}, the workspace's tabs come from the `workspace.created` hook.
  *
  * @param project The project to create the worktree in.
  * @param branch The branch to create the worktree on.
  * @param prompt A prompt for the `workspace.created` hook to hand to the project's agent tab, or
  *   `undefined` to leave its tabs unprompted.
+ * @throws When the branch's existing worktree already has a workspace open.
  */
 export async function createProjectWorktree(
   project: Project,
   branch: string,
   prompt?: string,
 ): Promise<void> {
+  const existing = (await listWorktrees(project.repositoryRoot)).find(
+    (worktree) => worktree.branch === branch,
+  );
+
+  if (existing !== undefined) {
+    await openProjectWorktree(project, existing.path, undefined, prompt);
+    return;
+  }
+
   const { checkoutPath } = await createWorktree(project.repositoryRoot, branch);
 
   if (prompt !== undefined) await writePendingPrompt(checkoutPath, prompt);
