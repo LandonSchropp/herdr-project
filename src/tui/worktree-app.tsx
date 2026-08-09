@@ -1,20 +1,11 @@
 import { listProjects } from "../projects.ts";
-import type { Project, Worktree } from "../types.ts";
+import type { Project } from "../types.ts";
 import { createProjectWorktree, workspaceRepositoryRoot } from "../workspaces.ts";
-import { listWorktrees } from "../worktrees.ts";
 import { WorktreeNameModal } from "./components/worktree-name-modal.tsx";
 import { useEffectAsync } from "./hooks/use-effect-async.ts";
 import { Box, Text, useApp, useWindowSize } from "ink";
 import type { ReactNode } from "react";
 import { useState } from "react";
-
-/** What the prompt needs to know about the workspace it was opened from. */
-type Context = {
-  /** The project the current workspace belongs to. */
-  project: Project;
-  /** The project's existing worktrees, so a duplicate branch can be rejected. */
-  worktrees: Worktree[];
-};
 
 /**
  * The new-worktree prompt, opened from a workspace. It creates a worktree in that workspace's
@@ -23,7 +14,7 @@ type Context = {
 export function WorktreeApp() {
   const { exit } = useApp();
   const { columns, rows } = useWindowSize();
-  const [context, setContext] = useState<Context | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffectAsync(async () => {
@@ -42,16 +33,14 @@ export function WorktreeApp() {
         return;
       }
 
-      const project = (await listProjects()).find(
-        (entry) => entry.repositoryRoot === repositoryRoot,
-      );
+      const found = (await listProjects()).find((entry) => entry.repositoryRoot === repositoryRoot);
 
-      if (project === undefined) {
+      if (found === undefined) {
         setError(`No project is configured for ${repositoryRoot}.`);
         return;
       }
 
-      setContext({ project, worktrees: await listWorktrees(repositoryRoot) });
+      setProject(found);
     } catch (thrown) {
       setError(thrown instanceof Error ? thrown.message : String(thrown));
     }
@@ -63,10 +52,10 @@ export function WorktreeApp() {
    * @param branch The branch to create the worktree on.
    */
   async function handleSubmit(branch: string) {
-    if (context === null) return;
+    if (project === null) return;
 
     try {
-      await createProjectWorktree(context.project, branch);
+      await createProjectWorktree(project, branch);
       exit();
     } catch (thrown) {
       setError(thrown instanceof Error ? thrown.message : String(thrown));
@@ -81,12 +70,11 @@ export function WorktreeApp() {
    */
   function content(): ReactNode {
     if (error !== null) return <Text color="red">{error}</Text>;
-    if (context === null) return null;
+    if (project === null) return null;
 
     return (
       <WorktreeNameModal
-        projectName={context.project.name}
-        existingBranches={context.worktrees.map((worktree) => worktree.branch)}
+        projectName={project.name}
         onSubmit={(branch) => void handleSubmit(branch)}
         onCancel={exit}
       />
