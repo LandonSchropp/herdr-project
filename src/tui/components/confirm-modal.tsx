@@ -33,6 +33,13 @@ const BUTTON_PADDING = 2;
 const MIN_BUTTON_WIDTH = 8;
 
 /**
+ * Space between the two buttons. Kept even so the row's total width — twice the (even) shared
+ * button width, plus this gap — is also even: against the modal's own even interior width, that
+ * splits into equal left/right padding instead of being off by one column.
+ */
+const BUTTON_GAP = 2;
+
+/**
  * Resolves a button's shortcut key, defaulting to the first letter of its name.
  *
  * @param button The button to resolve a shortcut for.
@@ -124,7 +131,7 @@ export function ConfirmModal({ title, description, confirm, deny, onAnswer }: Co
     <Modal title={title}>
       <Box flexDirection="column" alignItems="center" paddingTop={1}>
         <Text>{description}</Text>
-        <Box marginTop={1} gap={1}>
+        <Box marginTop={1} gap={BUTTON_GAP}>
           <ButtonLabel
             button={confirm}
             shortcut={confirmShortcut}
