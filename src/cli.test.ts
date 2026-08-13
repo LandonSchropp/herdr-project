@@ -291,8 +291,9 @@ describe("runCli", () => {
           closeProjectMain,
           closeProjectWorktree: mock(() => Promise.resolve()),
         }));
-        await stubModule(import.meta.resolve("./confirm.ts"), () => ({
+        await stubModule(import.meta.resolve("./confirm.tsx"), () => ({
           confirm: mock(() => Promise.resolve(true)),
+          isInteractive: mock(() => true),
         }));
 
         const result = await runCli(["close", "orc"]);
@@ -311,8 +312,9 @@ describe("runCli", () => {
           closeProjectMain,
           closeProjectWorktree: mock(() => Promise.resolve()),
         }));
-        await stubModule(import.meta.resolve("./confirm.ts"), () => ({
+        await stubModule(import.meta.resolve("./confirm.tsx"), () => ({
           confirm: mock(() => Promise.resolve(false)),
+          isInteractive: mock(() => true),
         }));
 
         const result = await runCli(["close", "orc"]);
@@ -333,7 +335,7 @@ describe("runCli", () => {
           closeProjectMain,
           closeProjectWorktree: mock(() => Promise.resolve()),
         }));
-        await stubModule(import.meta.resolve("./confirm.ts"), () => ({ confirm }));
+        await stubModule(import.meta.resolve("./confirm.tsx"), () => ({ confirm }));
 
         const result = await runCli(["close", "orc", "--yes"]);
 
@@ -355,7 +357,10 @@ describe("runCli", () => {
           closeProjectMain: mock(() => Promise.resolve()),
           closeProjectWorktree,
         }));
-        await stubModule(import.meta.resolve("./confirm.ts"), () => ({ confirm }));
+        await stubModule(import.meta.resolve("./confirm.tsx"), () => ({
+          confirm,
+          isInteractive: mock(() => true),
+        }));
 
         const result = await runCli(["close", "orc", "--worktree", "feature"]);
 
@@ -377,8 +382,9 @@ describe("runCli", () => {
           closeProjectMain: mock(() => Promise.resolve()),
           closeProjectWorktree,
         }));
-        await stubModule(import.meta.resolve("./confirm.ts"), () => ({
+        await stubModule(import.meta.resolve("./confirm.tsx"), () => ({
           confirm: mock(() => Promise.resolve(false)),
+          isInteractive: mock(() => true),
         }));
 
         const result = await runCli(["close", "orc", "--worktree", "feature"]);
@@ -398,13 +404,62 @@ describe("runCli", () => {
         closeProjectMain: mock(() => Promise.reject(new Error("herdr is not running"))),
         closeProjectWorktree: mock(() => Promise.resolve()),
       }));
-      await stubModule(import.meta.resolve("./confirm.ts"), () => ({
+      await stubModule(import.meta.resolve("./confirm.tsx"), () => ({
         confirm: mock(() => Promise.resolve(true)),
+        isInteractive: mock(() => true),
       }));
 
       const result = await runCli(["close", "orc"]);
 
       expect(result.stderr).toContain("herdr is not running");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+
+  describe("when closing a project's main workspace without --yes in a non-interactive environment", () => {
+    it("reports the missing flag rather than asking", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const closeProjectMain = mock(() => Promise.resolve());
+      const confirm = mock(() => Promise.resolve(true));
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+        closeProjectMain,
+        closeProjectWorktree: mock(() => Promise.resolve()),
+      }));
+      await stubModule(import.meta.resolve("./confirm.tsx"), () => ({
+        confirm,
+        isInteractive: mock(() => false),
+      }));
+
+      const result = await runCli(["close", "orc"]);
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(closeProjectMain).not.toHaveBeenCalled();
+      expect(result.stderr).toContain("requires --yes");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+
+  describe("when closing a project's worktree without --yes in a non-interactive environment", () => {
+    it("reports the missing flag rather than asking", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const closeProjectWorktree = mock(() => Promise.resolve());
+      const confirm = mock(() => Promise.resolve(true));
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+        closeProjectMain: mock(() => Promise.resolve()),
+        closeProjectWorktree,
+      }));
+      await stubModule(import.meta.resolve("./confirm.tsx"), () => ({
+        confirm,
+        isInteractive: mock(() => false),
+      }));
+
+      const result = await runCli(["close", "orc", "--worktree", "feature"]);
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(closeProjectWorktree).not.toHaveBeenCalled();
+      expect(result.stderr).toContain("requires --yes");
       expect(result.exitCode).toEqual(1);
     });
   });

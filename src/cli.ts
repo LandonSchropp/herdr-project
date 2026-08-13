@@ -1,4 +1,4 @@
-import { confirm } from "./confirm.ts";
+import { confirm, isInteractive } from "./confirm.tsx";
 import { applyProjectLayout, parseEventWorkspaceId } from "./on-workspace.ts";
 import { copyWorktreeIncludes, parseEventWorktreePath } from "./on-worktree.ts";
 import { listProjects } from "./projects.ts";
@@ -31,7 +31,8 @@ Commands:
          environment variable.
   close  Closes the project's main workspace, after confirming. With --worktree, removes
          that branch's worktree instead, after confirming its deletion. --yes skips the
-         confirmation, for running from a script.
+         confirmation, for running from a script; without it, close requires an interactive
+         terminal and errors otherwise.
 `;
 
 /** The result of a CLI run: what to print where, and the exit code to use. */
@@ -172,9 +173,19 @@ async function runClose(args: string[]): Promise<CliResult> {
     return { stdout: "", stderr: "Error: --worktree requires a branch name.\n", exitCode: 1 };
   }
 
+  const skipConfirmation = args.includes("--yes");
+
+  if (!skipConfirmation && !isInteractive()) {
+    return {
+      stdout: "",
+      stderr: "Error: close requires --yes when not running interactively.\n",
+      exitCode: 1,
+    };
+  }
+
   const question = branch === null ? `Close ${project.name}?` : `Delete the "${branch}" worktree?`;
 
-  if (!args.includes("--yes") && !(await confirm(question))) {
+  if (!skipConfirmation && !(await confirm(question))) {
     return { stdout: "Cancelled.\n", stderr: "", exitCode: 0 };
   }
 
