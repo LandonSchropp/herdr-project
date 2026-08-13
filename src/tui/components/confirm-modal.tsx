@@ -26,6 +26,12 @@ type ConfirmModalProps = {
   onAnswer: (confirmed: boolean) => void;
 };
 
+/** Horizontal padding inside a button, on each side of its label. */
+const BUTTON_PADDING = 2;
+
+/** The minimum interior width of a button, so a short label like "Yes" still gets some heft. */
+const MIN_BUTTON_WIDTH = 8;
+
 /**
  * Resolves a button's shortcut key, defaulting to the first letter of its name.
  *
@@ -43,6 +49,22 @@ export function resolveShortcut(button: ConfirmButton): string {
   return shortcut;
 }
 
+/**
+ * Computes the width both buttons share, padded on each side by {@link BUTTON_PADDING} and never
+ * below {@link MIN_BUTTON_WIDTH}, so neither button renders narrower than the other.
+ *
+ * @param confirm The confirming button.
+ * @param deny The declining button.
+ * @returns The shared button width, in columns.
+ */
+export function resolveButtonWidth(confirm: ConfirmButton, deny: ConfirmButton): number {
+  return Math.max(
+    MIN_BUTTON_WIDTH,
+    confirm.name.length + BUTTON_PADDING * 2,
+    deny.name.length + BUTTON_PADDING * 2,
+  );
+}
+
 type ButtonLabelProps = {
   /** The button to render. */
   button: ConfirmButton;
@@ -50,21 +72,24 @@ type ButtonLabelProps = {
   shortcut: string;
   /** Whether the button currently has focus. */
   selected: boolean;
+  /** The width every button shares, from {@link resolveButtonWidth}. */
+  width: number;
 };
 
 /**
- * A button's label with its shortcut letter underlined, inverted when it has focus. Falls back to a
- * plain label when the shortcut isn't actually one of its letters.
+ * A button's label with its shortcut letter underlined, always on a background — inverted when it
+ * has focus, dimmer otherwise. Falls back to a plain label when the shortcut isn't actually one of
+ * its letters.
  */
-function ButtonLabel({ button, shortcut, selected }: ButtonLabelProps) {
+function ButtonLabel({ button, shortcut, selected, width }: ButtonLabelProps) {
   const index = button.name.toLowerCase().indexOf(shortcut);
   const before = index === -1 ? button.name : button.name.slice(0, index);
   const letter = index === -1 ? "" : button.name[index];
   const after = index === -1 ? "" : button.name.slice(index + 1);
 
   return (
-    <Box paddingX={1} backgroundColor={selected ? "white" : undefined}>
-      <Text color={selected ? "black" : undefined}>
+    <Box width={width} justifyContent="center" backgroundColor={selected ? "white" : "gray"}>
+      <Text color={selected ? "black" : "white"}>
         {before}
         <Text underline>{letter}</Text>
         {after}
@@ -81,6 +106,7 @@ function ButtonLabel({ button, shortcut, selected }: ButtonLabelProps) {
 export function ConfirmModal({ title, description, confirm, deny, onAnswer }: ConfirmModalProps) {
   const confirmShortcut = resolveShortcut(confirm);
   const denyShortcut = resolveShortcut(deny);
+  const buttonWidth = resolveButtonWidth(confirm, deny);
   const [selected, setSelected] = useState<"confirm" | "deny">("deny");
 
   useInput((input, key) => {
@@ -103,8 +129,14 @@ export function ConfirmModal({ title, description, confirm, deny, onAnswer }: Co
             button={confirm}
             shortcut={confirmShortcut}
             selected={selected === "confirm"}
+            width={buttonWidth}
           />
-          <ButtonLabel button={deny} shortcut={denyShortcut} selected={selected === "deny"} />
+          <ButtonLabel
+            button={deny}
+            shortcut={denyShortcut}
+            selected={selected === "deny"}
+            width={buttonWidth}
+          />
         </Box>
       </Box>
     </Modal>

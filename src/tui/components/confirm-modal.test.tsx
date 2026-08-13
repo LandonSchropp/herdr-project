@@ -1,4 +1,4 @@
-import { ConfirmModal, resolveShortcut } from "./confirm-modal.tsx";
+import { ConfirmModal, resolveButtonWidth, resolveShortcut } from "./confirm-modal.tsx";
 import { describe, expect, it, mock } from "bun:test";
 import { Box } from "ink";
 import { render } from "ink-testing-library";
@@ -62,6 +62,34 @@ describe("resolveShortcut", () => {
   describe("when the shortcut is 'l'", () => {
     it("throws", () => {
       expect(() => resolveShortcut({ name: "Leave", shortcut: "L" })).toThrow(/h\/l/);
+    });
+  });
+});
+
+describe("resolveButtonWidth", () => {
+  describe("when both labels are shorter than the minimum", () => {
+    it("returns the minimum", () => {
+      const width = resolveButtonWidth({ name: "Yes" }, { name: "No" });
+      expect(width).toEqual(resolveButtonWidth({ name: "Yes" }, { name: "Yes" }));
+      expect(width).toBeGreaterThanOrEqual("Yes".length);
+    });
+  });
+
+  describe("when one label is longer than the minimum", () => {
+    it("grows to fit it, with padding", () => {
+      const short = resolveButtonWidth({ name: "Yes" }, { name: "No" });
+      const long = resolveButtonWidth({ name: "Yes" }, { name: "Cancel Everything" });
+
+      expect(long).toBeGreaterThan(short);
+      expect(long).toBeGreaterThan("Cancel Everything".length);
+    });
+  });
+
+  describe("regardless of argument order", () => {
+    it("returns the same width", () => {
+      expect(resolveButtonWidth({ name: "Yes" }, { name: "Cancel" })).toEqual(
+        resolveButtonWidth({ name: "Cancel" }, { name: "Yes" }),
+      );
     });
   });
 });
