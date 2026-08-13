@@ -10,7 +10,7 @@ type ProjectPickerModalProps = {
   onCancel: () => void;
 };
 
-/** The first step of the flow: fuzzy-search the available projects and pick one by name. */
+/** Fuzzy-search the available projects and pick one by name. */
 export function ProjectPickerModal({ projects, onSelect, onCancel }: ProjectPickerModalProps) {
   /**
    * Forwards the project matching the picked name.

@@ -7,21 +7,22 @@ pickers.
 
 ## Why?
 
-Herdr's project picker opens a project on whatever checkout it happens to be on, and creating a
-worktree is a separate, optional detour. This plugin makes the worktree an explicit second step:
-pick a project, then pick which of its worktrees to open, with the repository's main checkout
-leading the list.
+Two things come up often enough to be worth a dedicated key each: jumping straight to a project's
+main checkout, and creating a worktree for whatever project the current workspace belongs to. This
+plugin is those two actions — a project picker and a new-worktree prompt — plus CLI equivalents so
+a script or agent can drive them without a terminal UI.
 
 ## How It Works
 
-Running the plugin opens a two-step flow:
+Two independent actions, each its own picker:
 
-1. **Pick a project.** Fuzzy-search the projects you've defined and pick one.
-2. **Name the worktree.** The input is prefilled with the repository's main checkout, so pressing
-   enter opens the project where it already sits. Type another branch name to open that branch's
-   worktree, creating one if it doesn't exist yet.
+- **Open a project.** Fuzzy-search the projects you've defined and pick one; it opens on its main
+  checkout. Escape cancels.
+- **New worktree.** Run from inside an already-open workspace. Type a branch name and it creates
+  that worktree for the current workspace's project — or opens it, if it already exists. Escape
+  cancels.
 
-Escape steps back, and escape from the first step exits.
+Either way, the project's tabs are laid into the workspace afterward; see [Tabs](#tabs).
 
 ## Installation
 
@@ -35,7 +36,7 @@ Escape steps back, and escape from the first step exits.
    herdr plugin link .
    ```
 
-3. Bind it to a key in `~/.config/herdr/config.toml`:
+3. Bind each action to a key in `~/.config/herdr/config.toml`:
 
    ```toml
    [[keys.command]]
@@ -43,6 +44,12 @@ Escape steps back, and escape from the first step exits.
    type = "plugin_action"
    command = "landonschropp.herdr-project.project"
    description = "open a project"
+
+   [[keys.command]]
+   key = "cmd+shift+n"
+   type = "plugin_action"
+   command = "landonschropp.herdr-project.worktree"
+   description = "create a worktree"
    ```
 
 ## CLI
