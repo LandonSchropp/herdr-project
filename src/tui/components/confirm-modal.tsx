@@ -30,7 +30,7 @@ type ConfirmModalProps = {
 const BUTTON_PADDING = 2;
 
 /** The minimum interior width of a button, so a short label like "Yes" still gets some heft. */
-const MIN_BUTTON_WIDTH = 8;
+const MIN_BUTTON_WIDTH = 9;
 
 /**
  * Space between the two buttons. Kept even so the row's total width — twice the (even) shared
@@ -130,7 +130,7 @@ export function ConfirmModal({ title, description, confirm, deny, onAnswer }: Co
   return (
     <Modal title={title}>
       <Box flexDirection="column" alignItems="center" paddingTop={1}>
-        <Text>{description}</Text>
+        <Text color="gray">{description}</Text>
         <Box marginTop={1} gap={BUTTON_GAP}>
           <ButtonLabel
             button={confirm}
