@@ -1,25 +1,25 @@
 import { confirm, isInteractive } from "./confirm.tsx";
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import { render } from "ink-testing-library";
 import type { ReactElement } from "react";
 
 /**
  * Wraps ink-testing-library's render, capturing every instance it creates so a test can drive its
- * stdin — {@link confirm} calls this internally and only exposes the resolved answer.
+ * stdin, and every call so a test can assert on the options {@link confirm} passed — it calls this
+ * internally and only exposes the resolved answer.
  *
- * @returns The wrapped render function, and the instances it has created so far.
+ * @returns The wrapped render mock, and the instances it has created so far.
  */
 function spyRender() {
   const instances: ReturnType<typeof render>[] = [];
 
-  return {
-    render: (element: ReactElement) => {
-      const instance = render(element);
-      instances.push(instance);
-      return instance;
-    },
-    instances,
-  };
+  const renderMock = mock((element: ReactElement) => {
+    const instance = render(element);
+    instances.push(instance);
+    return instance;
+  });
+
+  return { render: renderMock, instances };
 }
 
 /**
@@ -77,6 +77,16 @@ describe("confirm", () => {
       const frame = spy.instances[0]?.lastFrame();
       expect(frame).toContain("Close Workspace");
       expect(frame).toContain("Close orc?");
+    });
+  });
+
+  describe("when mounting", () => {
+    it("requests the alternate screen, so the previous content reappears once answered", () => {
+      const spy = spyRender();
+
+      void confirm("Close Workspace", "Close orc?", spy.render);
+
+      expect(spy.render).toHaveBeenCalledWith(expect.anything(), { alternateScreen: true });
     });
   });
 });

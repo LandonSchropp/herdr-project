@@ -28,13 +28,20 @@ function ConfirmScreen({ title, description, onAnswer }: ConfirmScreenProps) {
   );
 }
 
-/** Mounts a React element and returns a handle to unmount it, matching Ink's own `render`. */
-type Render = (element: ReactElement) => { unmount: () => void };
+/**
+ * Mounts a React element and returns a handle to unmount it, matching Ink's own `render`. The
+ * options parameter is ignored by any override that doesn't need it — e.g. a test double.
+ */
+type Render = (
+  element: ReactElement,
+  options?: { alternateScreen?: boolean },
+) => { unmount: () => void };
 
 /**
- * Asks a yes/no question in the terminal, as an Ink modal with Yes/No buttons. Requires an
- * interactive terminal — check {@link isInteractive} first, since this has no fallback for a
- * non-interactive one.
+ * Asks a yes/no question in the terminal, as an Ink modal with Yes/No buttons. Renders on the
+ * terminal's alternate screen, so the previous screen content reappears once answered, with nothing
+ * left behind. Requires an interactive terminal — check {@link isInteractive} first, since this has
+ * no fallback for a non-interactive one.
  *
  * @param title The title rendered at the top of the modal.
  * @param description The question to ask, shown above the buttons.
@@ -56,6 +63,7 @@ export async function confirm(
           resolve(confirmed);
         }}
       />,
+      { alternateScreen: true },
     );
   });
 }
