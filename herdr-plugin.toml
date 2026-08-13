@@ -10,6 +10,7 @@
 #
 #   ./scripts/run.sh list [--json]
 #   ./scripts/run.sh open <project> [--worktree <branch>] [--prompt <text>]
+#   ./scripts/run.sh close <project> [--worktree <branch>] [--yes]
 
 id = "landonschropp.herdr-project"
 name = "Herdr Project"

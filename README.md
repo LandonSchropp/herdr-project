@@ -48,18 +48,27 @@ Escape steps back, and escape from the first step exits.
 ## CLI
 
 Every step the picker takes is also available non-interactively, so agents and scripts can drive
-it. Herdr's own commands cover everything else (switching, closing, listing worktrees).
+it.
 
 ```sh
-herdr-project list [--json]                                          # list the configured projects
-herdr-project open <project> [--worktree <branch>] [--prompt <text>] # open a project's workspace
+herdr-project list [--json]
+herdr-project open <project> [--worktree <branch>] [--prompt <text>]
+herdr-project close <project> [--worktree <branch>] [--yes]
 ```
 
-`list` prints `<name>\t<path>` per line, or a JSON array with `--json`. `create` opens the
-project's main worktree; with `--worktree` it creates a worktree on that branch instead. With
-`--prompt`, the text is handed to the project's `focusedTab` through the `AGENT_PROMPT`
-environment variable once that tab opens; if `focusedTab` is unset or matches no tab, the prompt
-is dropped.
+**`list`** prints a table with each project's name, the branch of each of its open worktrees, and
+its checkout path — `N/A` for a project with nothing open. A project with several open worktrees
+gets one row per worktree. Pass `--json` for the same rows as a JSON array instead of a table.
+
+**`open`** opens the project's main worktree; with `--worktree`, it creates a worktree on that
+branch instead (or opens it, if one already exists). Either way the project's tabs are laid into
+the workspace. With `--prompt`, the text is handed to the project's `focusedTab` through the
+`AGENT_PROMPT` environment variable once that tab opens; if `focusedTab` is unset or matches no
+tab, the prompt is dropped.
+
+**`close`** closes the project's main workspace; with `--worktree`, it removes that branch's
+worktree instead. Either way it asks for confirmation first — closing a worktree deletes its
+checkout, not just the workspace. `--yes` skips the confirmation, for running from a script.
 
 ## Tabs
 
