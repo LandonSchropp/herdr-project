@@ -2,11 +2,12 @@ import { confirm } from "./confirm.ts";
 import { applyProjectLayout, parseEventWorkspaceId } from "./on-workspace.ts";
 import { copyWorktreeIncludes, parseEventWorktreePath } from "./on-worktree.ts";
 import { listProjects } from "./projects.ts";
-import type { Project } from "./types.ts";
+import type { ProjectRow } from "./types.ts";
 import {
   closeProjectMain,
   closeProjectWorktree,
   createProjectWorktree,
+  listProjectRows,
   openProjectMain,
 } from "./workspaces.ts";
 
@@ -15,13 +16,15 @@ export const HELP = `herdr-project — open a project and one of its Git worktre
 
 Usage:
   herdr-project                                    Open the project picker.
-  herdr-project list [--json]                      List the configured projects.
+  herdr-project list [--json]                      List the projects and their open worktrees.
   herdr-project open <project> [--worktree <branch>] [--prompt <text>] Open a project's workspace.
   herdr-project close <project> [--worktree <branch>] [--yes]          Close a workspace.
   herdr-project --help                                                Show this message.
 
 Commands:
-  list   Prints one project per line as "<name>\t<path>", or a JSON array with --json.
+  list   Prints a table with each project's name, the branch of each of its open worktrees, and
+         its checkout path — "N/A" for a project with nothing open. A JSON array of the same rows
+         with --json.
   open   Opens the project's main worktree. With --worktree, creates a worktree on that
          branch instead. Either way the project's tabs are laid into the workspace. With
          --prompt, hands the text to the project's agent tab through the AGENT_PROMPT
@@ -42,22 +45,40 @@ export type CliResult = {
 };
 
 /**
- * Formats the projects for `list`.
+ * Formats project rows for `list`.
  *
- * @param projects The projects to format.
- * @param asJson Whether to format them as JSON rather than one per line.
+ * @param rows The rows to format.
+ * @param asJson Whether to format them as a JSON array rather than a table.
+ * @param isTTY Whether stdout is a terminal, which decides whether "N/A" cells are colored gray.
  * @returns The formatted text, ending in a newline.
  */
-export function formatProjects(projects: Project[], asJson: boolean): string {
-  if (asJson) {
-    return `${JSON.stringify(
-      projects.map(({ name, repositoryRoot, tabs }) => ({ name, path: repositoryRoot, tabs })),
-      null,
-      2,
-    )}\n`;
-  }
+export function formatProjectRows(
+  rows: ProjectRow[],
+  asJson: boolean,
+  isTTY: boolean = process.stdout.isTTY,
+): string {
+  if (asJson) return `${JSON.stringify(rows, null, 2)}\n`;
 
-  return projects.map((project) => `${project.name}\t${project.repositoryRoot}\n`).join("");
+  const header = ["NAME", "WORKTREE", "PATH"];
+  const cells = rows.map((row) => [row.name, row.worktree ?? "N/A", row.path ?? "N/A"]);
+  const widths = header.map((title, index) =>
+    Math.max(title.length, ...cells.map((cell) => cell[index]?.length ?? 0)),
+  );
+
+  const formatRow = (values: string[], gray: boolean): string =>
+    values
+      .map((value, index) => {
+        const padded = index === values.length - 1 ? value : value.padEnd(widths[index] ?? 0);
+        return gray && index > 0 && isTTY ? `\x1b[90m${padded}\x1b[0m` : padded;
+      })
+      .join("  ");
+
+  const lines = [
+    formatRow(header, false),
+    ...rows.map((row, index) => formatRow(cells[index] ?? [], row.worktree === null)),
+  ];
+
+  return `${lines.join("\n")}\n`;
 }
 
 /**
@@ -83,7 +104,7 @@ export function flagValue(args: string[], flag: string): string | null {
  */
 async function runList(args: string[]): Promise<CliResult> {
   return {
-    stdout: formatProjects(await listProjects(), args.includes("--json")),
+    stdout: formatProjectRows(await listProjectRows(), args.includes("--json")),
     stderr: "",
     exitCode: 0,
   };

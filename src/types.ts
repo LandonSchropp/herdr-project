@@ -37,6 +37,22 @@ export type Worktree = {
   isMain: boolean;
 };
 
+/** A row in the `list` command's output: a project, and one of its open worktrees, if any. */
+export type ProjectRow = {
+  /** The project's name. */
+  name: string;
+  /**
+   * The branch of the open worktree this row describes, or `null` when none of its worktrees are
+   * open.
+   */
+  worktree: string | null;
+  /**
+   * The absolute path to the open worktree's checkout, or `null` when none of its worktrees are
+   * open.
+   */
+  path: string | null;
+};
+
 /** The Herdr workspace a worktree was opened into, and the tab and pane Herdr created with it. */
 export type Workspace = {
   /** The workspace's id. */

@@ -1,18 +1,11 @@
 import { stubEnv } from "../test/helpers/env.ts";
 import { stubModule } from "../test/helpers/module.ts";
-import { flagValue, formatProjects, runCli } from "./cli.ts";
-import type { Project } from "./types.ts";
+import { flagValue, formatProjectRows, runCli } from "./cli.ts";
+import type { ProjectRow } from "./types.ts";
 import { describe, expect, it, mock } from "bun:test";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-const PROJECT: Project = {
-  name: "orc",
-  repositoryRoot: "/tmp/orc",
-  tabs: [{ name: "shell", command: null }],
-  focusedTab: null,
-};
 
 /**
  * Writes a settings file declaring the given projects and points `HERDR_PROJECT_SETTINGS` at it.
@@ -47,18 +40,38 @@ describe("flagValue", () => {
   });
 });
 
-describe("formatProjects", () => {
-  describe("when formatting as lines", () => {
-    it("prints the name and path separated by a tab", () => {
-      expect(formatProjects([PROJECT], false)).toEqual("orc\t/tmp/orc\n");
+describe("formatProjectRows", () => {
+  const ROWS: ProjectRow[] = [
+    { name: "orc", worktree: "main", path: "/tmp/orc" },
+    { name: "notes", worktree: null, path: null },
+  ];
+
+  describe("when formatting as a table", () => {
+    it("prints an aligned header and one row per entry", () => {
+      const lines = formatProjectRows(ROWS, false, false).split("\n");
+
+      expect(lines[0]?.split(/\s{2,}/)).toEqual(["NAME", "WORKTREE", "PATH"]);
+      expect(lines[1]?.split(/\s{2,}/)).toEqual(["orc", "main", "/tmp/orc"]);
+      expect(lines[2]?.split(/\s{2,}/)).toEqual(["notes", "N/A", "N/A"]);
+      expect(lines[3]).toEqual("");
+    });
+  });
+
+  describe("when a row has nothing open and stdout is a TTY", () => {
+    it("colors the N/A cells gray", () => {
+      expect(formatProjectRows(ROWS, false, true)).toContain("\x1b[90mN/A\x1b[0m");
+    });
+  });
+
+  describe("when a row has nothing open and stdout is not a TTY", () => {
+    it("prints plain text", () => {
+      expect(formatProjectRows(ROWS, false, false)).not.toContain("\x1b[");
     });
   });
 
   describe("when formatting as JSON", () => {
-    it("prints the name, path, and tabs", () => {
-      expect(JSON.parse(formatProjects([PROJECT], true))).toEqual([
-        { name: "orc", path: "/tmp/orc", tabs: [{ name: "shell", command: null }] },
-      ]);
+    it("prints the rows", () => {
+      expect(JSON.parse(formatProjectRows(ROWS, true, false))).toEqual(ROWS);
     });
   });
 });
@@ -83,24 +96,29 @@ describe("runCli", () => {
   });
 
   describe("when listing projects", () => {
-    it("prints one per line", async () => {
-      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+    it("prints a table of the projects and their open worktrees", async () => {
+      const rows: ProjectRow[] = [{ name: "orc", worktree: "main", path: "/tmp/orc" }];
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+        listProjectRows: mock(() => Promise.resolve(rows)),
+      }));
 
       const result = await runCli(["list"]);
 
-      expect(result.stdout).toEqual("orc\t/tmp/orc\n");
+      expect(result.stdout).toContain("orc");
+      expect(result.stdout).toContain("/tmp/orc");
       expect(result.exitCode).toEqual(0);
     });
 
     describe("when --json is passed", () => {
       it("prints JSON", async () => {
-        await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+        const rows: ProjectRow[] = [{ name: "orc", worktree: "main", path: "/tmp/orc" }];
+        await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+          listProjectRows: mock(() => Promise.resolve(rows)),
+        }));
 
         const result = await runCli(["list", "--json"]);
 
-        expect(JSON.parse(result.stdout)).toEqual([
-          { name: "orc", path: "/tmp/orc", tabs: [{ name: "shell", command: null }] },
-        ]);
+        expect(JSON.parse(result.stdout)).toEqual(rows);
       });
     });
   });
