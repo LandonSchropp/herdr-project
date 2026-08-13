@@ -67,8 +67,10 @@ the workspace. With `--prompt`, the text is handed to the project's `focusedTab`
 tab, the prompt is dropped.
 
 **`close`** closes the project's main workspace; with `--worktree`, it removes that branch's
-worktree instead. Either way it asks for confirmation first — closing a worktree deletes its
-checkout, not just the workspace. `--yes` skips the confirmation, for running from a script.
+worktree instead. Either way it asks for confirmation first, as an Ink modal — closing a worktree
+deletes its checkout, not just the workspace. `--yes` skips the confirmation, for running from a
+script; without it, `close` requires an interactive terminal and errors immediately otherwise,
+rather than hanging.
 
 ## Tabs
 
