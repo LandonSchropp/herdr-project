@@ -52,7 +52,7 @@ it. Herdr's own commands cover everything else (switching, closing, listing work
 
 ```sh
 herdr-project list [--json]                                          # list the configured projects
-herdr-project create <project> [--worktree <branch>] [--prompt <text>] # open a project's workspace
+herdr-project open <project> [--worktree <branch>] [--prompt <text>] # open a project's workspace
 ```
 
 `list` prints `<name>\t<path>` per line, or a JSON array with `--json`. `create` opens the

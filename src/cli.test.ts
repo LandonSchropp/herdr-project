@@ -30,21 +30,19 @@ async function stubProjects(projects: { name: string; path: string }[]): Promise
 describe("flagValue", () => {
   describe("when the flag has a value", () => {
     it("returns it", () => {
-      expect(flagValue(["create", "orc", "--worktree", "feature"], "--worktree")).toEqual(
-        "feature",
-      );
+      expect(flagValue(["open", "orc", "--worktree", "feature"], "--worktree")).toEqual("feature");
     });
   });
 
   describe("when the flag is absent", () => {
     it("returns null", () => {
-      expect(flagValue(["create", "orc"], "--worktree")).toBeNull();
+      expect(flagValue(["open", "orc"], "--worktree")).toBeNull();
     });
   });
 
   describe("when the flag is last with no value", () => {
     it("returns null", () => {
-      expect(flagValue(["create", "orc", "--worktree"], "--worktree")).toBeNull();
+      expect(flagValue(["open", "orc", "--worktree"], "--worktree")).toBeNull();
     });
   });
 });
@@ -107,20 +105,20 @@ describe("runCli", () => {
     });
   });
 
-  describe("when creating without a project name", () => {
+  describe("when opening without a project name", () => {
     it("reports the missing name", async () => {
-      const result = await runCli(["create"]);
+      const result = await runCli(["open"]);
 
-      expect(result.stderr).toContain("create requires a project name");
+      expect(result.stderr).toContain("open requires a project name");
       expect(result.exitCode).toEqual(1);
     });
   });
 
-  describe("when creating a project that is not configured", () => {
+  describe("when opening a project that is not configured", () => {
     it("reports the unknown project", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      const result = await runCli(["create", "missing"]);
+      const result = await runCli(["open", "missing"]);
 
       expect(result.stderr).toContain('no project named "missing"');
       expect(result.exitCode).toEqual(1);
@@ -131,14 +129,14 @@ describe("runCli", () => {
     it("reports the missing branch", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      const result = await runCli(["create", "orc", "--worktree"]);
+      const result = await runCli(["open", "orc", "--worktree"]);
 
       expect(result.stderr).toContain("--worktree requires a branch name");
       expect(result.exitCode).toEqual(1);
     });
   });
 
-  describe("when creating a project with a branch", () => {
+  describe("when opening a project with a branch", () => {
     it("creates the worktree", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
@@ -149,7 +147,7 @@ describe("runCli", () => {
         openProjectWorktree: mock(() => Promise.resolve()),
       }));
 
-      const result = await runCli(["create", "orc", "--worktree", "feature"]);
+      const result = await runCli(["open", "orc", "--worktree", "feature"]);
 
       expect(result.exitCode).toEqual(0);
       expect(createProjectWorktree).toHaveBeenCalled();
@@ -160,14 +158,14 @@ describe("runCli", () => {
     it("reports the missing value", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      const result = await runCli(["create", "orc", "--prompt"]);
+      const result = await runCli(["open", "orc", "--prompt"]);
 
       expect(result.stderr).toContain("--prompt requires a value");
       expect(result.exitCode).toEqual(1);
     });
   });
 
-  describe("when creating with a prompt", () => {
+  describe("when opening with a prompt", () => {
     it("passes it to openProjectMain", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
@@ -178,7 +176,7 @@ describe("runCli", () => {
         openProjectWorktree: mock(() => Promise.resolve()),
       }));
 
-      const result = await runCli(["create", "orc", "--prompt", "fix the bug"]);
+      const result = await runCli(["open", "orc", "--prompt", "fix the bug"]);
 
       expect(result.exitCode).toEqual(0);
       expect(openProjectMain).toHaveBeenCalledWith(
@@ -188,7 +186,7 @@ describe("runCli", () => {
     });
   });
 
-  describe("when creating a worktree with a prompt", () => {
+  describe("when opening a worktree with a prompt", () => {
     it("passes it to createProjectWorktree", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
@@ -200,7 +198,7 @@ describe("runCli", () => {
       }));
 
       const result = await runCli([
-        "create",
+        "open",
         "orc",
         "--worktree",
         "feature",
@@ -227,7 +225,7 @@ describe("runCli", () => {
         openProjectWorktree: mock(() => Promise.resolve()),
       }));
 
-      const result = await runCli(["create", "orc"]);
+      const result = await runCli(["open", "orc"]);
 
       expect(result.stderr).toContain("herdr is not running");
       expect(result.exitCode).toEqual(1);

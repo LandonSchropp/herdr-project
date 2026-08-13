@@ -8,17 +8,17 @@ import { createProjectWorktree, openProjectMain } from "./workspaces.ts";
 export const HELP = `herdr-project — open a project and one of its Git worktrees.
 
 Usage:
-  herdr-project                                      Open the project picker.
-  herdr-project list [--json]                        List the configured projects.
-  herdr-project create <project> [--worktree <branch>] [--prompt <text>] Open a project's workspace.
-  herdr-project --help                                                  Show this message.
+  herdr-project                                    Open the project picker.
+  herdr-project list [--json]                      List the configured projects.
+  herdr-project open <project> [--worktree <branch>] [--prompt <text>] Open a project's workspace.
+  herdr-project --help                                                Show this message.
 
 Commands:
-  list    Prints one project per line as "<name>\t<path>", or a JSON array with --json.
-  create  Opens the project's main worktree. With --worktree, creates a worktree on that
-          branch instead. Either way the project's tabs are laid into the workspace. With
-          --prompt, hands the text to the project's agent tab through the AGENT_PROMPT
-          environment variable.
+  list  Prints one project per line as "<name>\t<path>", or a JSON array with --json.
+  open  Opens the project's main worktree. With --worktree, creates a worktree on that
+        branch instead. Either way the project's tabs are laid into the workspace. With
+        --prompt, hands the text to the project's agent tab through the AGENT_PROMPT
+        environment variable.
 `;
 
 /** The result of a CLI run: what to print where, and the exit code to use. */
@@ -80,16 +80,16 @@ async function runList(args: string[]): Promise<CliResult> {
 }
 
 /**
- * Runs the `create` command.
+ * Runs the `open` command.
  *
  * @param args The arguments following the command name.
  * @returns The command's result.
  */
-async function runCreate(args: string[]): Promise<CliResult> {
+async function runOpen(args: string[]): Promise<CliResult> {
   const name = args[0];
 
   if (name === undefined || name.startsWith("-")) {
-    return { stdout: "", stderr: "Error: create requires a project name.\n", exitCode: 1 };
+    return { stdout: "", stderr: "Error: open requires a project name.\n", exitCode: 1 };
   }
 
   const project = (await listProjects()).find((entry) => entry.name === name);
@@ -167,7 +167,7 @@ export async function runCli(args: string[]): Promise<CliResult> {
 
   try {
     if (command === "list") return await runList(rest);
-    if (command === "create") return await runCreate(rest);
+    if (command === "open") return await runOpen(rest);
     if (command === "on-workspace") return await runOnWorkspace();
     if (command === "on-worktree") return await runOnWorktree();
   } catch (thrown) {
