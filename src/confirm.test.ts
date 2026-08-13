@@ -49,7 +49,7 @@ describe("confirm", () => {
   describe("when the user presses 'y'", () => {
     it("resolves true", async () => {
       const spy = spyRender();
-      const promise = confirm("Close orc?", spy.render);
+      const promise = confirm("Close Workspace", "Close orc?", spy.render);
 
       spy.instances[0]?.stdin.write("y");
 
@@ -60,11 +60,23 @@ describe("confirm", () => {
   describe("when the user presses enter", () => {
     it("resolves false", async () => {
       const spy = spyRender();
-      const promise = confirm("Close orc?", spy.render);
+      const promise = confirm("Close Workspace", "Close orc?", spy.render);
 
       spy.instances[0]?.stdin.write("\r");
 
       expect(await promise).toBe(false);
+    });
+  });
+
+  describe("when the title and description are rendered", () => {
+    it("shows both", () => {
+      const spy = spyRender();
+
+      void confirm("Close Workspace", "Close orc?", spy.render);
+
+      const frame = spy.instances[0]?.lastFrame();
+      expect(frame).toContain("Close Workspace");
+      expect(frame).toContain("Close orc?");
     });
   });
 });

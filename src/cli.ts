@@ -183,9 +183,11 @@ async function runClose(args: string[]): Promise<CliResult> {
     };
   }
 
-  const question = branch === null ? `Close ${project.name}?` : `Delete the "${branch}" worktree?`;
+  const title = branch === null ? "Close Workspace" : "Delete Worktree";
+  const description =
+    branch === null ? `Close ${project.name}?` : `Delete the "${branch}" worktree?`;
 
-  if (!skipConfirmation && !(await confirm(question))) {
+  if (!skipConfirmation && !(await confirm(title, description))) {
     return { stdout: "Cancelled.\n", stderr: "", exitCode: 0 };
   }
 

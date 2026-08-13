@@ -364,7 +364,10 @@ describe("runCli", () => {
 
         const result = await runCli(["close", "orc", "--worktree", "feature"]);
 
-        expect(confirm).toHaveBeenCalledWith(expect.stringContaining("feature"));
+        expect(confirm).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.stringContaining("feature"),
+        );
         expect(closeProjectWorktree).toHaveBeenCalledWith(
           expect.objectContaining({ name: "orc" }),
           "feature",

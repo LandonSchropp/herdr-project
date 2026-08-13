@@ -3,19 +3,27 @@ import { Box, render as inkRender, useWindowSize } from "ink";
 import type { ReactElement } from "react";
 
 type ConfirmScreenProps = {
-  /** The yes/no question to ask. */
-  message: string;
+  /** Title rendered at the top of the modal. */
+  title: string;
+  /** Description shown above the buttons. */
+  description: string;
   /** Fires once the user answers, with whether they confirmed. */
   onAnswer: (confirmed: boolean) => void;
 };
 
 /** Full-screen shell for {@link ConfirmModal}, which needs a sized parent to anchor to. */
-function ConfirmScreen({ message, onAnswer }: ConfirmScreenProps) {
+function ConfirmScreen({ title, description, onAnswer }: ConfirmScreenProps) {
   const { columns, rows } = useWindowSize();
 
   return (
     <Box width={columns} height={rows}>
-      <ConfirmModal message={message} onAnswer={onAnswer} />
+      <ConfirmModal
+        title={title}
+        description={description}
+        confirm={{ name: "Yes" }}
+        deny={{ name: "No" }}
+        onAnswer={onAnswer}
+      />
     </Box>
   );
 }
@@ -24,18 +32,25 @@ function ConfirmScreen({ message, onAnswer }: ConfirmScreenProps) {
 type Render = (element: ReactElement) => { unmount: () => void };
 
 /**
- * Asks a yes/no question in the terminal, as an Ink modal. Requires an interactive terminal — check
- * {@link isInteractive} first, since this has no fallback for a non-interactive one.
+ * Asks a yes/no question in the terminal, as an Ink modal with Yes/No buttons. Requires an
+ * interactive terminal — check {@link isInteractive} first, since this has no fallback for a
+ * non-interactive one.
  *
- * @param message The question to ask.
+ * @param title The title rendered at the top of the modal.
+ * @param description The question to ask, shown above the buttons.
  * @param render Mounts the confirm screen. Defaults to Ink's own `render`; overridable in tests.
  * @returns Whether the answer was yes.
  */
-export async function confirm(message: string, render: Render = inkRender): Promise<boolean> {
+export async function confirm(
+  title: string,
+  description: string,
+  render: Render = inkRender,
+): Promise<boolean> {
   return new Promise((resolve) => {
     const { unmount } = render(
       <ConfirmScreen
-        message={message}
+        title={title}
+        description={description}
         onAnswer={(confirmed) => {
           unmount();
           resolve(confirmed);
