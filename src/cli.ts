@@ -1,8 +1,14 @@
+import { confirm } from "./confirm.ts";
 import { applyProjectLayout, parseEventWorkspaceId } from "./on-workspace.ts";
 import { copyWorktreeIncludes, parseEventWorktreePath } from "./on-worktree.ts";
 import { listProjects } from "./projects.ts";
 import type { Project } from "./types.ts";
-import { createProjectWorktree, openProjectMain } from "./workspaces.ts";
+import {
+  closeProjectMain,
+  closeProjectWorktree,
+  createProjectWorktree,
+  openProjectMain,
+} from "./workspaces.ts";
 
 /** The CLI's usage text, printed for `--help` and for a malformed invocation. */
 export const HELP = `herdr-project — open a project and one of its Git worktrees.
@@ -11,14 +17,18 @@ Usage:
   herdr-project                                    Open the project picker.
   herdr-project list [--json]                      List the configured projects.
   herdr-project open <project> [--worktree <branch>] [--prompt <text>] Open a project's workspace.
+  herdr-project close <project> [--worktree <branch>] [--yes]          Close a workspace.
   herdr-project --help                                                Show this message.
 
 Commands:
-  list  Prints one project per line as "<name>\t<path>", or a JSON array with --json.
-  open  Opens the project's main worktree. With --worktree, creates a worktree on that
-        branch instead. Either way the project's tabs are laid into the workspace. With
-        --prompt, hands the text to the project's agent tab through the AGENT_PROMPT
-        environment variable.
+  list   Prints one project per line as "<name>\t<path>", or a JSON array with --json.
+  open   Opens the project's main worktree. With --worktree, creates a worktree on that
+         branch instead. Either way the project's tabs are laid into the workspace. With
+         --prompt, hands the text to the project's agent tab through the AGENT_PROMPT
+         environment variable.
+  close  Closes the project's main workspace, after confirming. With --worktree, removes
+         that branch's worktree instead, after confirming its deletion. --yes skips the
+         confirmation, for running from a script.
 `;
 
 /** The result of a CLI run: what to print where, and the exit code to use. */
@@ -117,6 +127,43 @@ async function runOpen(args: string[]): Promise<CliResult> {
 }
 
 /**
+ * Runs the `close` command.
+ *
+ * @param args The arguments following the command name.
+ * @returns The command's result.
+ */
+async function runClose(args: string[]): Promise<CliResult> {
+  const name = args[0];
+
+  if (name === undefined || name.startsWith("-")) {
+    return { stdout: "", stderr: "Error: close requires a project name.\n", exitCode: 1 };
+  }
+
+  const project = (await listProjects()).find((entry) => entry.name === name);
+
+  if (project === undefined) {
+    return { stdout: "", stderr: `Error: no project named "${name}".\n`, exitCode: 1 };
+  }
+
+  const branch = flagValue(args, "--worktree");
+
+  if (args.includes("--worktree") && branch === null) {
+    return { stdout: "", stderr: "Error: --worktree requires a branch name.\n", exitCode: 1 };
+  }
+
+  const question = branch === null ? `Close ${project.name}?` : `Delete the "${branch}" worktree?`;
+
+  if (!args.includes("--yes") && !(await confirm(question))) {
+    return { stdout: "Cancelled.\n", stderr: "", exitCode: 0 };
+  }
+
+  if (branch === null) await closeProjectMain(project);
+  else await closeProjectWorktree(project, branch);
+
+  return { stdout: "", stderr: "", exitCode: 0 };
+}
+
+/**
  * Runs the `on-workspace` hook. Herdr invokes this for every workspace it creates, so it reports
  * what it decided rather than failing when a workspace isn't one the plugin lays out.
  *
@@ -168,6 +215,7 @@ export async function runCli(args: string[]): Promise<CliResult> {
   try {
     if (command === "list") return await runList(rest);
     if (command === "open") return await runOpen(rest);
+    if (command === "close") return await runClose(rest);
     if (command === "on-workspace") return await runOnWorkspace();
     if (command === "on-worktree") return await runOnWorktree();
   } catch (thrown) {

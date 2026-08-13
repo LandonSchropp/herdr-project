@@ -231,6 +231,165 @@ describe("runCli", () => {
       expect(result.exitCode).toEqual(1);
     });
   });
+
+  describe("when closing without a project name", () => {
+    it("reports the missing name", async () => {
+      const result = await runCli(["close"]);
+
+      expect(result.stderr).toContain("close requires a project name");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+
+  describe("when closing a project that is not configured", () => {
+    it("reports the unknown project", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const result = await runCli(["close", "missing"]);
+
+      expect(result.stderr).toContain('no project named "missing"');
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+
+  describe("when --worktree is passed to close with no value", () => {
+    it("reports the missing branch", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const result = await runCli(["close", "orc", "--worktree"]);
+
+      expect(result.stderr).toContain("--worktree requires a branch name");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+
+  describe("when closing a project's main workspace", () => {
+    describe("when confirmed", () => {
+      it("closes it", async () => {
+        await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+        const closeProjectMain = mock(() => Promise.resolve());
+        await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+          closeProjectMain,
+          closeProjectWorktree: mock(() => Promise.resolve()),
+        }));
+        await stubModule(import.meta.resolve("./confirm.ts"), () => ({
+          confirm: mock(() => Promise.resolve(true)),
+        }));
+
+        const result = await runCli(["close", "orc"]);
+
+        expect(closeProjectMain).toHaveBeenCalledWith(expect.objectContaining({ name: "orc" }));
+        expect(result.exitCode).toEqual(0);
+      });
+    });
+
+    describe("when declined", () => {
+      it("cancels without closing anything", async () => {
+        await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+        const closeProjectMain = mock(() => Promise.resolve());
+        await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+          closeProjectMain,
+          closeProjectWorktree: mock(() => Promise.resolve()),
+        }));
+        await stubModule(import.meta.resolve("./confirm.ts"), () => ({
+          confirm: mock(() => Promise.resolve(false)),
+        }));
+
+        const result = await runCli(["close", "orc"]);
+
+        expect(closeProjectMain).not.toHaveBeenCalled();
+        expect(result.stdout).toContain("Cancelled");
+        expect(result.exitCode).toEqual(0);
+      });
+    });
+
+    describe("when --yes is passed", () => {
+      it("closes it without asking", async () => {
+        await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+        const closeProjectMain = mock(() => Promise.resolve());
+        const confirm = mock(() => Promise.resolve(false));
+        await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+          closeProjectMain,
+          closeProjectWorktree: mock(() => Promise.resolve()),
+        }));
+        await stubModule(import.meta.resolve("./confirm.ts"), () => ({ confirm }));
+
+        const result = await runCli(["close", "orc", "--yes"]);
+
+        expect(confirm).not.toHaveBeenCalled();
+        expect(closeProjectMain).toHaveBeenCalled();
+        expect(result.exitCode).toEqual(0);
+      });
+    });
+  });
+
+  describe("when closing a project's worktree", () => {
+    describe("when confirmed", () => {
+      it("removes it", async () => {
+        await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+        const closeProjectWorktree = mock(() => Promise.resolve());
+        const confirm = mock(() => Promise.resolve(true));
+        await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+          closeProjectMain: mock(() => Promise.resolve()),
+          closeProjectWorktree,
+        }));
+        await stubModule(import.meta.resolve("./confirm.ts"), () => ({ confirm }));
+
+        const result = await runCli(["close", "orc", "--worktree", "feature"]);
+
+        expect(confirm).toHaveBeenCalledWith(expect.stringContaining("feature"));
+        expect(closeProjectWorktree).toHaveBeenCalledWith(
+          expect.objectContaining({ name: "orc" }),
+          "feature",
+        );
+        expect(result.exitCode).toEqual(0);
+      });
+    });
+
+    describe("when declined", () => {
+      it("cancels without removing anything", async () => {
+        await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+        const closeProjectWorktree = mock(() => Promise.resolve());
+        await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+          closeProjectMain: mock(() => Promise.resolve()),
+          closeProjectWorktree,
+        }));
+        await stubModule(import.meta.resolve("./confirm.ts"), () => ({
+          confirm: mock(() => Promise.resolve(false)),
+        }));
+
+        const result = await runCli(["close", "orc", "--worktree", "feature"]);
+
+        expect(closeProjectWorktree).not.toHaveBeenCalled();
+        expect(result.stdout).toContain("Cancelled");
+        expect(result.exitCode).toEqual(0);
+      });
+    });
+  });
+
+  describe("when closing fails", () => {
+    it("reports the failure", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+        closeProjectMain: mock(() => Promise.reject(new Error("herdr is not running"))),
+        closeProjectWorktree: mock(() => Promise.resolve()),
+      }));
+      await stubModule(import.meta.resolve("./confirm.ts"), () => ({
+        confirm: mock(() => Promise.resolve(true)),
+      }));
+
+      const result = await runCli(["close", "orc"]);
+
+      expect(result.stderr).toContain("herdr is not running");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
 });
 
 describe("runCli on-workspace", () => {
