@@ -1,4 +1,4 @@
-import { runHerdrJson } from "./herdr.ts";
+import { runHerdr, runHerdrJson } from "./herdr.ts";
 import { writePendingPrompt } from "./pending-prompt.ts";
 import type { Project } from "./types.ts";
 import { createWorktree, listWorktrees, openWorktree } from "./worktrees.ts";
@@ -31,6 +31,77 @@ export function parseOpenCheckoutPaths(response: unknown): string[] {
  */
 export async function listOpenCheckoutPaths(): Promise<string[]> {
   return parseOpenCheckoutPaths(await runHerdrJson(["workspace", "list"]));
+}
+
+/**
+ * Extracts the id of the workspace open for a checkout path.
+ *
+ * @param response The parsed JSON response from a workspace listing.
+ * @param path The checkout path to find an open workspace for.
+ * @returns The workspace's id, or `null` when no open workspace is backed by that path.
+ */
+export function parseOpenWorkspaceId(response: unknown, path: string): string | null {
+  const workspaces = (response as { result?: { workspaces?: unknown } })?.result?.workspaces;
+
+  if (!Array.isArray(workspaces)) return null;
+
+  const match = workspaces.find(
+    (entry: unknown) =>
+      (entry as { worktree?: { checkout_path?: unknown } })?.worktree?.checkout_path === path,
+  ) as { workspace_id?: unknown } | undefined;
+
+  return typeof match?.workspace_id === "string" ? match.workspace_id : null;
+}
+
+/**
+ * Finds the id of the workspace open for a checkout path.
+ *
+ * @param path The absolute path to the checkout.
+ * @returns The workspace's id, or `null` when no workspace is open for it.
+ */
+export async function findOpenWorkspaceId(path: string): Promise<string | null> {
+  return parseOpenWorkspaceId(await runHerdrJson(["workspace", "list"]), path);
+}
+
+/**
+ * Closes a project's main workspace.
+ *
+ * @param project The project whose main workspace to close.
+ * @throws When the repository has no main worktree, or no workspace is open for it.
+ */
+export async function closeProjectMain(project: Project): Promise<void> {
+  const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);
+
+  if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
+
+  const workspaceId = await findOpenWorkspaceId(main.path);
+
+  if (workspaceId === null) throw new Error(`${project.name} has no open workspace.`);
+
+  await runHerdr(["workspace", "close", workspaceId]);
+}
+
+/**
+ * Removes an open worktree from a project's repository.
+ *
+ * @param project The project whose worktree to remove.
+ * @param branch The branch whose worktree to remove.
+ * @throws When the branch has no worktree, or no workspace is open for it.
+ */
+export async function closeProjectWorktree(project: Project, branch: string): Promise<void> {
+  const worktree = (await listWorktrees(project.repositoryRoot)).find(
+    (entry) => entry.branch === branch,
+  );
+
+  if (worktree === undefined) {
+    throw new Error(`${project.name} has no worktree on "${branch}".`);
+  }
+
+  const workspaceId = await findOpenWorkspaceId(worktree.path);
+
+  if (workspaceId === null) throw new Error(`"${branch}" has no open workspace.`);
+
+  await runHerdr(["worktree", "remove", "--workspace", workspaceId]);
 }
 
 /**

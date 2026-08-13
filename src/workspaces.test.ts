@@ -1,10 +1,13 @@
 import { stubModule } from "../test/helpers/module.ts";
 import type { Project } from "./types.ts";
 import {
+  closeProjectMain,
+  closeProjectWorktree,
   createProjectWorktree,
   openProjectMain,
   openProjectWorktree,
   parseOpenCheckoutPaths,
+  parseOpenWorkspaceId,
   workspaceRepositoryRoot,
 } from "./workspaces.ts";
 import { describe, expect, it, mock } from "bun:test";
@@ -237,6 +240,152 @@ describe("parseOpenCheckoutPaths", () => {
   describe("when the response is not a workspace listing", () => {
     it("returns an empty list", () => {
       expect(parseOpenCheckoutPaths({ nonsense: true })).toEqual([]);
+    });
+  });
+});
+
+describe("parseOpenWorkspaceId", () => {
+  describe("when a workspace is open for the path", () => {
+    it("returns its id", () => {
+      const response = {
+        result: {
+          workspaces: [
+            { workspace_id: "w1", worktree: { checkout_path: "/tmp/orc" } },
+            { workspace_id: "w2", worktree: { checkout_path: "/tmp/feature" } },
+          ],
+        },
+      };
+
+      expect(parseOpenWorkspaceId(response, "/tmp/feature")).toEqual("w2");
+    });
+  });
+
+  describe("when no workspace is open for the path", () => {
+    it("returns null", () => {
+      const response = {
+        result: { workspaces: [{ workspace_id: "w1", worktree: { checkout_path: "/tmp/orc" } }] },
+      };
+
+      expect(parseOpenWorkspaceId(response, "/tmp/feature")).toBeNull();
+    });
+  });
+
+  describe("when the response is not a workspace listing", () => {
+    it("returns null", () => {
+      expect(parseOpenWorkspaceId({ nonsense: true }, "/tmp/feature")).toBeNull();
+    });
+  });
+});
+
+/**
+ * Replaces the herdr and worktree modules so {@link closeProjectMain} and
+ * {@link closeProjectWorktree} can be exercised without a running Herdr session.
+ *
+ * @param worktrees The worktrees `listWorktrees` reports.
+ * @param openWorkspaces The workspace ids open for a checkout path, keyed by path.
+ * @returns The mocks standing in for each replaced function.
+ */
+async function mockCloseModules(
+  worktrees: { branch: string; path: string; isMain: boolean }[],
+  openWorkspaces: Record<string, string> = {},
+) {
+  const mocks = {
+    runHerdr: mock(() => Promise.resolve("")),
+    runHerdrJson: mock(() =>
+      Promise.resolve({
+        result: {
+          workspaces: Object.entries(openWorkspaces).map(([path, workspaceId]) => ({
+            workspace_id: workspaceId,
+            worktree: { checkout_path: path },
+          })),
+        },
+      }),
+    ),
+    listWorktrees: mock(() => Promise.resolve(worktrees)),
+  };
+
+  await stubModule(import.meta.resolve("./herdr.ts"), () => ({
+    runHerdr: mocks.runHerdr,
+    runHerdrJson: mocks.runHerdrJson,
+  }));
+  await stubModule(import.meta.resolve("./worktrees.ts"), () => ({
+    listWorktrees: mocks.listWorktrees,
+  }));
+
+  return mocks;
+}
+
+describe("closeProjectMain", () => {
+  describe("when the main worktree has an open workspace", () => {
+    it("closes it", async () => {
+      const mocks = await mockCloseModules([{ branch: "main", path: "/tmp/orc", isMain: true }], {
+        "/tmp/orc": "w1",
+      });
+
+      await closeProjectMain(PROJECT);
+
+      expect(mocks.runHerdr).toHaveBeenCalledWith(["workspace", "close", "w1"]);
+    });
+  });
+
+  describe("when the repository has no main worktree", () => {
+    it("throws", async () => {
+      await mockCloseModules([]);
+
+      const thrown = await closeProjectMain(PROJECT).catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toContain("no main worktree");
+    });
+  });
+
+  describe("when the main worktree has no open workspace", () => {
+    it("throws", async () => {
+      await mockCloseModules([{ branch: "main", path: "/tmp/orc", isMain: true }]);
+
+      const thrown = await closeProjectMain(PROJECT).catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toContain("no open workspace");
+    });
+  });
+});
+
+describe("closeProjectWorktree", () => {
+  describe("when the branch's worktree has an open workspace", () => {
+    it("removes it", async () => {
+      const mocks = await mockCloseModules(
+        [{ branch: "feature", path: "/tmp/worktrees/feature", isMain: false }],
+        { "/tmp/worktrees/feature": "w2" },
+      );
+
+      await closeProjectWorktree(PROJECT, "feature");
+
+      expect(mocks.runHerdr).toHaveBeenCalledWith(["worktree", "remove", "--workspace", "w2"]);
+    });
+  });
+
+  describe("when the branch has no worktree", () => {
+    it("throws", async () => {
+      await mockCloseModules([]);
+
+      const thrown = await closeProjectWorktree(PROJECT, "feature").catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toContain('no worktree on "feature"');
+    });
+  });
+
+  describe("when the branch's worktree has no open workspace", () => {
+    it("throws", async () => {
+      await mockCloseModules([
+        { branch: "feature", path: "/tmp/worktrees/feature", isMain: false },
+      ]);
+
+      const thrown = await closeProjectWorktree(PROJECT, "feature").catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toContain("no open workspace");
     });
   });
 });
