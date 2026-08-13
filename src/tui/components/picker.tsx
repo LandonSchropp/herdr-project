@@ -24,6 +24,11 @@ type PickerProps = {
    * when the value isn't in `options`.
    */
   initialSelection?: string;
+  /**
+   * An error from a previous selection, shown below the list so the picker stays open and
+   * interactive rather than being replaced by it.
+   */
+  error?: string | null;
   /** Fires when the user picks the focused filtered option. */
   onSelect: (value: string) => void;
   /** Fires when the user presses escape. */
@@ -49,7 +54,14 @@ function scrollOffset(focusedIndex: number, totalRows: number): number {
  * with arrow keys, picks with enter, and cancels with escape. The list stays a fixed height; when
  * there are more matches than rows, the visible window scrolls to keep focus in view.
  */
-export function Picker({ title, options, initialSelection, onSelect, onCancel }: PickerProps) {
+export function Picker({
+  title,
+  options,
+  initialSelection,
+  error = null,
+  onSelect,
+  onCancel,
+}: PickerProps) {
   const [query, setQuery] = useState("");
   const filteredOptions = useMemo(() => filterOptions(options, query), [options, query]);
   const initialFocus = Math.max(0, options.indexOf(initialSelection ?? ""));
@@ -103,6 +115,11 @@ export function Picker({ title, options, initialSelection, onSelect, onCancel }:
             </Box>
           ))}
         </Box>
+        {error?.split("\n").map((line, index) => (
+          <Text key={index} color="red">
+            {line}
+          </Text>
+        ))}
       </Box>
     </Modal>
   );

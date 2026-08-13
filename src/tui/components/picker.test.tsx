@@ -153,6 +153,41 @@ describe("Picker", () => {
     });
   });
 
+  describe("when an error is given", () => {
+    it("renders it below the list", () => {
+      const { lastFrame } = renderInViewport(
+        <Picker
+          title="Pick"
+          options={["alpha"]}
+          error="A workspace is already open for /tmp/orc."
+          onSelect={noop}
+          onCancel={noop}
+        />,
+      );
+
+      expect(lastFrame()).toContain("A workspace is already open");
+    });
+
+    it("keeps the list interactive rather than replacing it", async () => {
+      const onCancel = mock(() => {});
+
+      const { stdin } = renderInViewport(
+        <Picker
+          title="Pick"
+          options={["alpha"]}
+          error="A workspace is already open for /tmp/orc."
+          onSelect={noop}
+          onCancel={onCancel}
+        />,
+      );
+
+      stdin.write(String.fromCharCode(27));
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      expect(onCancel).toHaveBeenCalled();
+    });
+  });
+
   describe("when the user types a newline", () => {
     it("strips the newline from the query", async () => {
       const { stdin, lastFrame } = renderInViewport(

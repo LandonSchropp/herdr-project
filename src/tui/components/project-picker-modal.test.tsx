@@ -47,6 +47,21 @@ describe("ProjectPickerModal", () => {
     expect(frame).toContain("notes");
   });
 
+  describe("when an error is given", () => {
+    it("renders it", () => {
+      const { lastFrame } = renderInViewport(
+        <ProjectPickerModal
+          projects={[ORC]}
+          error="A workspace is already open for /home/user/Development/orc."
+          onSelect={noop}
+          onCancel={noop}
+        />,
+      );
+
+      expect(lastFrame()).toContain("A workspace is already open");
+    });
+  });
+
   describe("when a project is picked", () => {
     it("calls onSelect with the matching project", () => {
       const onSelect = mock(() => {});

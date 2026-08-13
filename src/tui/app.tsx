@@ -43,7 +43,6 @@ export function App() {
    * @returns The picker's content.
    */
   function content(): ReactNode {
-    if (error !== null) return <Text color="red">{error}</Text>;
     if (projects === null) return null;
 
     if (projects.length === 0) {
@@ -53,6 +52,7 @@ export function App() {
     return (
       <ProjectPickerModal
         projects={projects}
+        error={error}
         onSelect={(project) => void handleSelect(project)}
         onCancel={exit}
       />
