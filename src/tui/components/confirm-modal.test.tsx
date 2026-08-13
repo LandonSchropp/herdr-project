@@ -1,8 +1,17 @@
-import { ConfirmModal } from "./confirm-modal.tsx";
+import { ConfirmModal, resolveShortcut } from "./confirm-modal.tsx";
 import { describe, expect, it, mock } from "bun:test";
 import { Box } from "ink";
 import { render } from "ink-testing-library";
 import type { ReactNode } from "react";
+
+/** The raw escape sequence a terminal sends for the left arrow key. */
+const LEFT_ARROW = `${String.fromCharCode(27)}[D`;
+
+/** The raw escape sequence a terminal sends for the right arrow key. */
+const RIGHT_ARROW = `${String.fromCharCode(27)}[C`;
+
+/** The raw byte a terminal sends for the escape key alone. */
+const ESCAPE = String.fromCharCode(27);
 
 /**
  * Wraps the modal in a sized viewport so its full-window overlay has a parent to anchor to.
@@ -17,19 +26,71 @@ function renderInViewport(children: ReactNode) {
   );
 }
 
-describe("ConfirmModal", () => {
-  it("renders the message", () => {
-    const { lastFrame } = renderInViewport(
-      <ConfirmModal message="Close orc?" onAnswer={() => {}} />,
-    );
+/**
+ * Waits a tick, so a state update from an earlier `stdin.write` lands before the next one — Ink
+ * re-registers its input handler on render, and writes issued before that happens read stale
+ * state.
+ *
+ * @returns A promise that resolves after the tick.
+ */
+function tick(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 30));
+}
 
-    expect(lastFrame()).toContain("Close orc?");
+const YES = { name: "Yes" };
+const NO = { name: "No" };
+
+describe("resolveShortcut", () => {
+  describe("when no shortcut is given", () => {
+    it("defaults to the first letter of the name, lowercased", () => {
+      expect(resolveShortcut({ name: "Delete" })).toEqual("d");
+    });
   });
 
-  describe("when 'y' is pressed", () => {
-    it("calls onAnswer with true", () => {
+  describe("when a shortcut is given", () => {
+    it("lowercases it", () => {
+      expect(resolveShortcut({ name: "Remove", shortcut: "D" })).toEqual("d");
+    });
+  });
+
+  describe("when the shortcut is 'h'", () => {
+    it("throws", () => {
+      expect(() => resolveShortcut({ name: "Help" })).toThrow(/h\/l/);
+    });
+  });
+
+  describe("when the shortcut is 'l'", () => {
+    it("throws", () => {
+      expect(() => resolveShortcut({ name: "Leave", shortcut: "L" })).toThrow(/h\/l/);
+    });
+  });
+});
+
+describe("ConfirmModal", () => {
+  it("renders the title, description, and button labels", () => {
+    const { lastFrame } = renderInViewport(
+      <ConfirmModal
+        title="Close Workspace"
+        description="Close orc?"
+        confirm={YES}
+        deny={NO}
+        onAnswer={() => {}}
+      />,
+    );
+
+    const frame = lastFrame();
+    expect(frame).toContain("Close Workspace");
+    expect(frame).toContain("Close orc?");
+    expect(frame).toContain("Yes");
+    expect(frame).toContain("No");
+  });
+
+  describe("when the confirm button's shortcut is pressed", () => {
+    it("answers true, regardless of focus", () => {
       const onAnswer = mock(() => {});
-      const { stdin } = renderInViewport(<ConfirmModal message="x" onAnswer={onAnswer} />);
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
 
       stdin.write("y");
 
@@ -37,21 +98,12 @@ describe("ConfirmModal", () => {
     });
   });
 
-  describe("when 'Y' is pressed", () => {
-    it("calls onAnswer with true", () => {
+  describe("when the deny button's shortcut is pressed", () => {
+    it("answers false", () => {
       const onAnswer = mock(() => {});
-      const { stdin } = renderInViewport(<ConfirmModal message="x" onAnswer={onAnswer} />);
-
-      stdin.write("Y");
-
-      expect(onAnswer).toHaveBeenCalledWith(true);
-    });
-  });
-
-  describe("when 'n' is pressed", () => {
-    it("calls onAnswer with false", () => {
-      const onAnswer = mock(() => {});
-      const { stdin } = renderInViewport(<ConfirmModal message="x" onAnswer={onAnswer} />);
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
 
       stdin.write("n");
 
@@ -59,10 +111,25 @@ describe("ConfirmModal", () => {
     });
   });
 
-  describe("when enter is pressed", () => {
-    it("calls onAnswer with false", () => {
+  describe("when a shortcut is uppercase", () => {
+    it("still matches", () => {
       const onAnswer = mock(() => {});
-      const { stdin } = renderInViewport(<ConfirmModal message="x" onAnswer={onAnswer} />);
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
+
+      stdin.write("Y");
+
+      expect(onAnswer).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe("when enter is pressed with no navigation first", () => {
+    it("answers false, since deny is focused by default", () => {
+      const onAnswer = mock(() => {});
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
 
       stdin.write("\r");
 
@@ -70,24 +137,109 @@ describe("ConfirmModal", () => {
     });
   });
 
-  describe("when escape is pressed", () => {
-    it("calls onAnswer with false", async () => {
+  describe("when the left arrow moves focus to confirm, then enter is pressed", () => {
+    it("answers true", async () => {
       const onAnswer = mock(() => {});
-      const { stdin } = renderInViewport(<ConfirmModal message="x" onAnswer={onAnswer} />);
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
 
-      stdin.write(String.fromCharCode(27));
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      stdin.write(LEFT_ARROW);
+      await tick();
+      stdin.write("\r");
+
+      expect(onAnswer).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe("when 'h' moves focus to confirm, then enter is pressed", () => {
+    it("answers true", async () => {
+      const onAnswer = mock(() => {});
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
+
+      stdin.write("h");
+      await tick();
+      stdin.write("\r");
+
+      expect(onAnswer).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe("when 'l' moves focus back to deny, then enter is pressed", () => {
+    it("answers false", async () => {
+      const onAnswer = mock(() => {});
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
+
+      stdin.write("h");
+      await tick();
+      stdin.write("l");
+      await tick();
+      stdin.write("\r");
 
       expect(onAnswer).toHaveBeenCalledWith(false);
     });
   });
 
-  describe("when an unrelated key is pressed", () => {
-    it("does not call onAnswer", () => {
+  describe("when the right arrow is pressed, then enter", () => {
+    it("answers false, since deny is already focused by default", async () => {
       const onAnswer = mock(() => {});
-      const { stdin } = renderInViewport(<ConfirmModal message="x" onAnswer={onAnswer} />);
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
 
-      stdin.write("x");
+      stdin.write(RIGHT_ARROW);
+      await tick();
+      stdin.write("\r");
+
+      expect(onAnswer).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe("when escape is pressed", () => {
+    it("answers false", async () => {
+      const onAnswer = mock(() => {});
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
+
+      stdin.write(ESCAPE);
+      await tick();
+
+      expect(onAnswer).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe("when a button's explicit shortcut isn't its first letter", () => {
+    it("answers with that button when its shortcut is pressed", () => {
+      const onAnswer = mock(() => {});
+      const { stdin } = renderInViewport(
+        <ConfirmModal
+          title="x"
+          description="x"
+          confirm={{ name: "Remove", shortcut: "d" }}
+          deny={NO}
+          onAnswer={onAnswer}
+        />,
+      );
+
+      stdin.write("d");
+
+      expect(onAnswer).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe("when an unrelated key is pressed", () => {
+    it("does not answer", () => {
+      const onAnswer = mock(() => {});
+      const { stdin } = renderInViewport(
+        <ConfirmModal title="x" description="x" confirm={YES} deny={NO} onAnswer={onAnswer} />,
+      );
+
+      stdin.write("z");
 
       expect(onAnswer).not.toHaveBeenCalled();
     });
