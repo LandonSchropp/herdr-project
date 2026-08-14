@@ -4,7 +4,7 @@ import { flagValue, formatProjects, runCli } from "./cli.ts";
 import type { Project } from "./types.ts";
 import { describe, expect, it, mock } from "bun:test";
 import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 /**
@@ -73,6 +73,33 @@ describe("formatProjects", () => {
       expect(JSON.parse(formatProjects(PROJECTS, true, false))).toEqual([
         { name: "orc", path: "/tmp/orc", tabs: [{ name: "shell", command: null }] },
         { name: "notes", path: "/tmp/notes", tabs: [] },
+      ]);
+    });
+  });
+
+  describe("when a project's path is under the home directory", () => {
+    const HOME_PROJECTS: Project[] = [
+      {
+        name: "orc",
+        repositoryRoot: `${homedir()}/Development/orc`,
+        tabs: [],
+        focusedTab: null,
+      },
+    ];
+
+    it("collapses it to a tilde in the table", () => {
+      const lines = formatProjects(HOME_PROJECTS, false, true).split("\n");
+
+      expect(lines[1]?.split(/\s{2,}/)).toEqual(["orc", "~/Development/orc"]);
+    });
+
+    it("collapses it to a tilde in tab-separated lines", () => {
+      expect(formatProjects(HOME_PROJECTS, false, false)).toEqual("orc\t~/Development/orc\n");
+    });
+
+    it("leaves it expanded in JSON", () => {
+      expect(JSON.parse(formatProjects(HOME_PROJECTS, true, false))).toEqual([
+        { name: "orc", path: `${homedir()}/Development/orc`, tabs: [] },
       ]);
     });
   });

@@ -2,6 +2,7 @@ import { confirm, isInteractive } from "./confirm.tsx";
 import { applyProjectLayout, parseEventWorkspaceId } from "./on-workspace.ts";
 import { copyWorktreeIncludes, parseEventWorktreePath } from "./on-worktree.ts";
 import { listProjects } from "./projects.ts";
+import { collapseHome } from "./settings.ts";
 import type { Project } from "./types.ts";
 import {
   closeProjectMain,
@@ -68,11 +69,13 @@ export function formatProjects(
   }
 
   if (!isTTY) {
-    return projects.map((project) => `${project.name}\t${project.repositoryRoot}\n`).join("");
+    return projects
+      .map((project) => `${project.name}\t${collapseHome(project.repositoryRoot)}\n`)
+      .join("");
   }
 
   const header = ["NAME", "PATH"];
-  const rows = projects.map((project) => [project.name, project.repositoryRoot]);
+  const rows = projects.map((project) => [project.name, collapseHome(project.repositoryRoot)]);
   const widths = header.map((title, index) =>
     Math.max(title.length, ...rows.map((row) => row[index]?.length ?? 0)),
   );
