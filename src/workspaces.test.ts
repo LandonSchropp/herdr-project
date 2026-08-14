@@ -4,12 +4,10 @@ import {
   closeProjectMain,
   closeProjectWorktree,
   createProjectWorktree,
-  listProjectRows,
   openProjectMain,
   openProjectWorktree,
   parseOpenCheckoutPaths,
   parseOpenWorkspaceId,
-  parseOpenWorktrees,
   workspaceRepositoryRoot,
 } from "./workspaces.ts";
 import { describe, expect, it, mock } from "bun:test";
@@ -388,122 +386,6 @@ describe("closeProjectWorktree", () => {
 
       expect(thrown).toBeInstanceOf(Error);
       expect((thrown as Error).message).toContain("no open workspace");
-    });
-  });
-});
-
-describe("parseOpenWorktrees", () => {
-  describe("when workspaces are backed by worktrees", () => {
-    it("returns their repository roots and checkout paths", () => {
-      const response = {
-        result: {
-          workspaces: [
-            { worktree: { repo_root: "/tmp/orc", checkout_path: "/tmp/orc" } },
-            {
-              worktree: { repo_root: "/tmp/orc", checkout_path: "/tmp/worktrees/feature" },
-            },
-          ],
-        },
-      };
-
-      expect(parseOpenWorktrees(response)).toEqual([
-        { repositoryRoot: "/tmp/orc", checkoutPath: "/tmp/orc" },
-        { repositoryRoot: "/tmp/orc", checkoutPath: "/tmp/worktrees/feature" },
-      ]);
-    });
-  });
-
-  describe("when a workspace has no worktree", () => {
-    it("skips it", () => {
-      const response = { result: { workspaces: [{ worktree: null }, { label: "plain" }] } };
-
-      expect(parseOpenWorktrees(response)).toEqual([]);
-    });
-  });
-
-  describe("when the response is not a workspace listing", () => {
-    it("returns an empty list", () => {
-      expect(parseOpenWorktrees({ nonsense: true })).toEqual([]);
-    });
-  });
-});
-
-describe("listProjectRows", () => {
-  /**
-   * Replaces the projects, worktrees, and herdr modules so {@link listProjectRows} can be exercised
-   * without a running Herdr session.
-   *
-   * @param projects The projects `listProjects` reports.
-   * @param openWorktrees The open workspaces `workspace list` reports, as repository root and
-   *   checkout path pairs.
-   * @param worktrees The worktrees `listWorktrees` reports, keyed by repository root.
-   */
-  async function mockListModules(
-    projects: Project[],
-    openWorktrees: { repositoryRoot: string; checkoutPath: string }[],
-    worktrees: Record<string, { branch: string; path: string; isMain: boolean }[]> = {},
-  ) {
-    await stubModule(import.meta.resolve("./projects.ts"), () => ({
-      listProjects: mock(() => Promise.resolve(projects)),
-    }));
-    await stubModule(import.meta.resolve("./herdr.ts"), () => ({
-      runHerdrJson: mock(() =>
-        Promise.resolve({
-          result: {
-            workspaces: openWorktrees.map(({ repositoryRoot, checkoutPath }) => ({
-              worktree: { repo_root: repositoryRoot, checkout_path: checkoutPath },
-            })),
-          },
-        }),
-      ),
-    }));
-    await stubModule(import.meta.resolve("./worktrees.ts"), () => ({
-      listWorktrees: mock((repositoryRoot: string) =>
-        Promise.resolve(worktrees[repositoryRoot] ?? []),
-      ),
-    }));
-  }
-
-  describe("when a project has no open worktree", () => {
-    it("reports a single row with nothing open", async () => {
-      await mockListModules([PROJECT], []);
-
-      expect(await listProjectRows()).toEqual([{ name: "orc", worktree: null, path: null }]);
-    });
-  });
-
-  describe("when a project has one open worktree", () => {
-    it("reports its branch and path", async () => {
-      await mockListModules([PROJECT], [{ repositoryRoot: "/tmp/orc", checkoutPath: "/tmp/orc" }], {
-        "/tmp/orc": [{ branch: "main", path: "/tmp/orc", isMain: true }],
-      });
-
-      expect(await listProjectRows()).toEqual([
-        { name: "orc", worktree: "main", path: "/tmp/orc" },
-      ]);
-    });
-  });
-
-  describe("when a project has multiple open worktrees", () => {
-    it("reports one row per open worktree", async () => {
-      await mockListModules(
-        [PROJECT],
-        [
-          { repositoryRoot: "/tmp/orc", checkoutPath: "/tmp/orc" },
-          { repositoryRoot: "/tmp/orc", checkoutPath: "/tmp/worktrees/feature" },
-        ],
-        {
-          "/tmp/orc": [
-            { branch: "main", path: "/tmp/orc", isMain: true },
-            { branch: "feature", path: "/tmp/worktrees/feature", isMain: false },
-          ],
-        },
-      );
-
-      expect(await listProjectRows()).toEqual([
-        { name: "orc", worktree: "main", path: "/tmp/orc" },
-        { name: "orc", worktree: "feature", path: "/tmp/worktrees/feature" },
-      ]);
     });
   });
 });

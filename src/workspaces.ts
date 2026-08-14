@@ -1,7 +1,6 @@
 import { runHerdr, runHerdrJson } from "./herdr.ts";
 import { writePendingPrompt } from "./pending-prompt.ts";
-import { listProjects } from "./projects.ts";
-import type { Project, ProjectRow } from "./types.ts";
+import type { Project } from "./types.ts";
 import { createWorktree, listWorktrees, openWorktree } from "./worktrees.ts";
 
 /**
@@ -32,46 +31,6 @@ export function parseOpenCheckoutPaths(response: unknown): string[] {
  */
 export async function listOpenCheckoutPaths(): Promise<string[]> {
   return parseOpenCheckoutPaths(await runHerdrJson(["workspace", "list"]));
-}
-
-/**
- * Extracts the repository root and checkout path of every workspace backed by a worktree, which is
- * how `list` knows which of a project's worktrees are currently open.
- *
- * @param response The parsed JSON response from a workspace listing.
- * @returns The open workspaces' repository roots and checkout paths.
- */
-export function parseOpenWorktrees(
-  response: unknown,
-): { repositoryRoot: string; checkoutPath: string }[] {
-  const workspaces = (response as { result?: { workspaces?: unknown } })?.result?.workspaces;
-
-  if (!Array.isArray(workspaces)) return [];
-
-  return workspaces.flatMap((entry: unknown) => {
-    const worktree = (
-      entry as { worktree?: { repo_root?: unknown; checkout_path?: unknown } } | undefined
-    )?.worktree;
-
-    const repositoryRoot = worktree?.repo_root;
-    const checkoutPath = worktree?.checkout_path;
-
-    if (typeof repositoryRoot !== "string" || typeof checkoutPath !== "string") return [];
-
-    return [{ repositoryRoot, checkoutPath }];
-  });
-}
-
-/**
- * Lists the repository root and checkout path of every worktree that already has a Herdr workspace
- * open.
- *
- * @returns The open workspaces' repository roots and checkout paths.
- */
-export async function listOpenWorktrees(): Promise<
-  { repositoryRoot: string; checkoutPath: string }[]
-> {
-  return parseOpenWorktrees(await runHerdrJson(["workspace", "list"]));
 }
 
 /**
@@ -218,42 +177,6 @@ export async function openProjectMain(project: Project, prompt?: string): Promis
   if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
 
   await openProjectWorktree(project, main.path, project.name, prompt);
-}
-
-/**
- * Lists every configured project, with a row for each of its currently open worktrees. A project
- * with none open gets a single row reporting none, rather than being left out.
- *
- * @returns The rows for `list`, in project order.
- */
-export async function listProjectRows(): Promise<ProjectRow[]> {
-  const [projects, openWorktrees] = await Promise.all([listProjects(), listOpenWorktrees()]);
-
-  const rows: ProjectRow[] = [];
-
-  for (const project of projects) {
-    const matches = openWorktrees.filter(
-      (entry) => entry.repositoryRoot === project.repositoryRoot,
-    );
-
-    if (matches.length === 0) {
-      rows.push({ name: project.name, worktree: null, path: null });
-      continue;
-    }
-
-    const worktrees = await listWorktrees(project.repositoryRoot);
-
-    for (const match of matches) {
-      const worktree = worktrees.find((entry) => entry.path === match.checkoutPath);
-      rows.push({
-        name: project.name,
-        worktree: worktree?.branch ?? null,
-        path: match.checkoutPath,
-      });
-    }
-  }
-
-  return rows;
 }
 
 /**
