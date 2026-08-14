@@ -45,19 +45,30 @@ export type CliResult = {
 };
 
 /**
- * Formats the configured projects for `list`.
+ * Formats the configured projects for `list`. A human at a terminal gets an aligned table; a script
+ * or agent reading a pipe gets plain tab-separated lines instead, which are easier to parse without
+ * dealing with column padding.
  *
  * @param projects The projects to format.
- * @param asJson Whether to format them as a JSON array rather than a table.
+ * @param asJson Whether to format them as a JSON array instead, regardless of `isTTY`.
+ * @param isTTY Whether stdout is a terminal, which decides between a table and tab-separated lines.
  * @returns The formatted text, ending in a newline.
  */
-export function formatProjects(projects: Project[], asJson: boolean): string {
+export function formatProjects(
+  projects: Project[],
+  asJson: boolean,
+  isTTY: boolean = process.stdout.isTTY,
+): string {
   if (asJson) {
     return `${JSON.stringify(
       projects.map(({ name, repositoryRoot, tabs }) => ({ name, path: repositoryRoot, tabs })),
       null,
       2,
     )}\n`;
+  }
+
+  if (!isTTY) {
+    return projects.map((project) => `${project.name}\t${project.repositoryRoot}\n`).join("");
   }
 
   const header = ["NAME", "PATH"];

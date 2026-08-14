@@ -51,9 +51,9 @@ describe("formatProjects", () => {
     { name: "notes", repositoryRoot: "/tmp/notes", tabs: [], focusedTab: null },
   ];
 
-  describe("when formatting as a table", () => {
-    it("prints an aligned header and one row per project", () => {
-      const lines = formatProjects(PROJECTS, false).split("\n");
+  describe("when stdout is a TTY", () => {
+    it("prints an aligned table", () => {
+      const lines = formatProjects(PROJECTS, false, true).split("\n");
 
       expect(lines[0]?.split(/\s{2,}/)).toEqual(["NAME", "PATH"]);
       expect(lines[1]?.split(/\s{2,}/)).toEqual(["orc", "/tmp/orc"]);
@@ -62,9 +62,15 @@ describe("formatProjects", () => {
     });
   });
 
+  describe("when stdout is not a TTY", () => {
+    it("prints tab-separated lines instead, for scripts and agents", () => {
+      expect(formatProjects(PROJECTS, false, false)).toEqual("orc\t/tmp/orc\nnotes\t/tmp/notes\n");
+    });
+  });
+
   describe("when formatting as JSON", () => {
-    it("prints the name, path, and tabs", () => {
-      expect(JSON.parse(formatProjects(PROJECTS, true))).toEqual([
+    it("prints the name, path, and tabs regardless of TTY", () => {
+      expect(JSON.parse(formatProjects(PROJECTS, true, false))).toEqual([
         { name: "orc", path: "/tmp/orc", tabs: [{ name: "shell", command: null }] },
         { name: "notes", path: "/tmp/notes", tabs: [] },
       ]);
@@ -97,8 +103,7 @@ describe("runCli", () => {
 
       const result = await runCli(["list"]);
 
-      expect(result.stdout).toContain("orc");
-      expect(result.stdout).toContain("/tmp/orc");
+      expect(result.stdout).toEqual("orc\t/tmp/orc\n");
       expect(result.exitCode).toEqual(0);
     });
 
