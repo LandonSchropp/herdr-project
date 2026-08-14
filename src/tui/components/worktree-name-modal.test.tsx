@@ -78,6 +78,21 @@ describe("WorktreeNameModal", () => {
     });
   });
 
+  describe("when an error is given", () => {
+    it("renders it", () => {
+      const { lastFrame } = renderInViewport(
+        <WorktreeNameModal
+          projectName="orc"
+          error="A workspace is already open for /tmp/feature."
+          onSubmit={noop}
+          onCancel={noop}
+        />,
+      );
+
+      expect(lastFrame()).toContain("A workspace is already open");
+    });
+  });
+
   describe("when the branch already has a worktree", () => {
     it("submits it anyway, so the existing worktree can be opened", async () => {
       const onSubmit = mock(() => {});

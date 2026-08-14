@@ -21,6 +21,11 @@ type PromptProps = {
   /** Initial value prefilled into the input. */
   defaultValue?: string;
   /**
+   * An error from a previous submission, shown below the input the same way a validation error is —
+   * the caller keeps the prompt mounted and interactive rather than replacing it.
+   */
+  error?: string | null;
+  /**
    * Validates the input when the user presses enter. Return an error message to render below the
    * input (keeping the modal open and skipping `onSubmit`), or `null` when the value is valid.
    */
@@ -36,25 +41,28 @@ export function Prompt({
   title,
   message,
   defaultValue = "",
+  error: submissionError = null,
   onValidate,
   onSubmit,
   onCancel,
 }: PromptProps) {
   const [value, setValue] = useState(defaultValue);
-  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const lines = Array.isArray(message) ? message : [message];
+  const error = validationError ?? submissionError;
 
   useInput((_, key) => {
     if (key.escape) onCancel();
   });
 
   /**
-   * Clears any visible error as the user edits, since the message no longer describes the input.
+   * Clears any visible validation error as the user edits, since the message no longer describes
+   * the input.
    *
    * @param next The updated input value.
    */
   function handleChange(next: string) {
-    setError(null);
+    setValidationError(null);
     setValue(next);
   }
 
@@ -65,10 +73,10 @@ export function Prompt({
    * @param submitted The value entered when the user pressed enter.
    */
   function handleSubmit(submitted: string) {
-    const validationError = onValidate(submitted);
+    const validated = onValidate(submitted);
 
-    if (validationError !== null) {
-      setError(validationError);
+    if (validated !== null) {
+      setValidationError(validated);
       return;
     }
 

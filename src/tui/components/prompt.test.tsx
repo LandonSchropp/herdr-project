@@ -134,6 +134,41 @@ describe("Prompt", () => {
     });
   });
 
+  describe("when an external error is given", () => {
+    it("renders it below the input", () => {
+      const { lastFrame } = renderInViewport(
+        <Prompt
+          message="x"
+          error="A workspace is already open for /tmp/orc."
+          onValidate={() => null}
+          onSubmit={noop}
+          onCancel={noop}
+        />,
+      );
+
+      expect(lastFrame()).toContain("A workspace is already open");
+    });
+
+    it("keeps the input interactive rather than replacing it", () => {
+      const onSubmit = mock(() => {});
+
+      const { stdin } = renderInViewport(
+        <Prompt
+          message="x"
+          defaultValue="main"
+          error="A workspace is already open for /tmp/orc."
+          onValidate={() => null}
+          onSubmit={onSubmit}
+          onCancel={noop}
+        />,
+      );
+
+      stdin.write("\r");
+
+      expect(onSubmit).toHaveBeenCalledWith("main");
+    });
+  });
+
   describe("when escape is pressed", () => {
     it("calls onCancel", async () => {
       const onSubmit = mock(() => {});

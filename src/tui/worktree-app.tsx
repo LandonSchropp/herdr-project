@@ -16,6 +16,7 @@ export function WorktreeApp() {
   const { columns, rows } = useWindowSize();
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffectAsync(async () => {
     const workspaceId = process.env.HERDR_WORKSPACE_ID;
@@ -47,7 +48,8 @@ export function WorktreeApp() {
   }, []);
 
   /**
-   * Creates the named worktree and exits, surfacing any failure instead of closing silently.
+   * Creates the named worktree and exits, showing any failure inline instead of closing silently or
+   * replacing the prompt.
    *
    * @param branch The branch to create the worktree on.
    */
@@ -58,7 +60,7 @@ export function WorktreeApp() {
       await createProjectWorktree(project, branch);
       exit();
     } catch (thrown) {
-      setError(thrown instanceof Error ? thrown.message : String(thrown));
+      setSubmitError(thrown instanceof Error ? thrown.message : String(thrown));
     }
   }
 
@@ -75,6 +77,7 @@ export function WorktreeApp() {
     return (
       <WorktreeNameModal
         projectName={project.name}
+        error={submitError}
         onSubmit={(branch) => void handleSubmit(branch)}
         onCancel={exit}
       />

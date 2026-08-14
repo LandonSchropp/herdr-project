@@ -7,6 +7,8 @@ const KEBAB_CASE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 type WorktreeNameModalProps = {
   /** The name of the project the worktree is created in. */
   projectName: string;
+  /** An error from a previous submission, shown below the input rather than replacing it. */
+  error?: string | null;
   /** Fires with the validated branch name. */
   onSubmit: (branch: string) => void;
   /** Fires when the user presses escape. */
@@ -18,7 +20,12 @@ type WorktreeNameModalProps = {
  * default, since every worktree is a new branch the user is naming. A branch that already has a
  * worktree is accepted — opening that worktree is what the caller does with it.
  */
-export function WorktreeNameModal({ projectName, onSubmit, onCancel }: WorktreeNameModalProps) {
+export function WorktreeNameModal({
+  projectName,
+  error,
+  onSubmit,
+  onCancel,
+}: WorktreeNameModalProps) {
   return (
     <Prompt
       title="New Worktree"
@@ -28,6 +35,7 @@ export function WorktreeNameModal({ projectName, onSubmit, onCancel }: WorktreeN
           <Text color="blue">{projectName}</Text> worktree?
         </>,
       ]}
+      error={error}
       onValidate={(branch) => {
         if (branch.trim() === "") return "Enter a branch name.";
         if (!KEBAB_CASE.test(branch)) return "Use lower kebab case, like new-feature.";
