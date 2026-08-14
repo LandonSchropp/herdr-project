@@ -1,5 +1,6 @@
 import { stubEnv } from "../test/helpers/env.ts";
 import {
+  collapseHome,
   expandHome,
   loadSettings,
   parseProjects,
@@ -37,6 +38,32 @@ describe("expandHome", () => {
   describe("when the path is already absolute", () => {
     it("returns the path unchanged", () => {
       expect(expandHome("/tmp/projects")).toEqual("/tmp/projects");
+    });
+  });
+});
+
+describe("collapseHome", () => {
+  describe("when the path is the home directory itself", () => {
+    it("returns a tilde", () => {
+      expect(collapseHome(homedir())).toEqual("~");
+    });
+  });
+
+  describe("when the path is under the home directory", () => {
+    it("collapses the home directory to a tilde", () => {
+      expect(collapseHome(`${homedir()}/Development/orc`)).toEqual("~/Development/orc");
+    });
+  });
+
+  describe("when the path is not under the home directory", () => {
+    it("returns the path unchanged", () => {
+      expect(collapseHome("/tmp/projects")).toEqual("/tmp/projects");
+    });
+  });
+
+  describe("when the path merely starts with the same characters as the home directory", () => {
+    it("returns the path unchanged", () => {
+      expect(collapseHome(`${homedir()}2/orc`)).toEqual(`${homedir()}2/orc`);
     });
   });
 });

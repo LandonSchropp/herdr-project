@@ -35,6 +35,22 @@ export function expandHome(path: string): string {
 }
 
 /**
+ * Collapses a leading home directory to `~`, the inverse of {@link expandHome}, leaving every other
+ * path untouched.
+ *
+ * @param path The path to collapse.
+ * @returns The collapsed path.
+ */
+export function collapseHome(path: string): string {
+  const home = homedir();
+
+  if (path === home) return "~";
+  if (path.startsWith(`${home}/`)) return `~${path.slice(home.length)}`;
+
+  return path;
+}
+
+/**
  * Reads a list of tabs, keeping only entries that name the tab. A tab's `command` is optional;
  * without one the tab is left as a plain shell.
  *
@@ -117,8 +133,7 @@ export function parseSettings(contents: string): Settings | null {
     (entry as { name?: unknown })?.name === DEFAULT_PROJECT_NAME;
 
   const defaultEntry = entries.find(isDefault) as
-    | { tabs?: unknown; focusedTab?: unknown }
-    | undefined;
+    { tabs?: unknown; focusedTab?: unknown } | undefined;
   const declaredTabs = parseTabs(defaultEntry?.tabs);
   const defaultTabs = declaredTabs.length > 0 ? declaredTabs : FALLBACK_TABS;
   const defaultFocusedTab =
