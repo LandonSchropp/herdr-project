@@ -62,7 +62,7 @@ export async function applyLayout(
       "--workspace",
       workspace.workspaceId,
       "--cwd",
-      workspace.repositoryRoot,
+      workspace.checkoutPath,
       "--label",
       tab.name,
       ...(isPromptTab ? ["--env", `${AGENT_PROMPT_ENV_VAR}=${prompt}`] : []),

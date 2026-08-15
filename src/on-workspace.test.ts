@@ -235,13 +235,48 @@ describe("applyProjectLayout", () => {
           workspaceId: "w1",
           rootTabId: "w1:t1",
           rootPaneId: "w1:p1",
-          repositoryRoot: "/home/user/Notes",
+          checkoutPath: "/home/user/Notes",
         },
         TABS,
         "shell",
         null,
       );
       expect(message).toContain("applied notes layout");
+    });
+  });
+
+  describe("when the workspace's worktree is a linked worktree", () => {
+    it("lays the tabs into the worktree's checkout rather than the main repository", async () => {
+      const mocks = await mockLayoutModules({
+        workspace: {
+          result: {
+            workspace: {
+              active_tab_id: "w1:t1",
+              pane_count: 1,
+              worktree: {
+                repo_root: "/home/user/Notes",
+                checkout_path: "/home/user/Worktrees/notes-feature",
+              },
+            },
+          },
+        },
+        panes: ONE_PANE,
+        projects: [PROJECT],
+      });
+
+      await applyProjectLayout("w1");
+
+      expect(mocks.applyLayout).toHaveBeenCalledWith(
+        {
+          workspaceId: "w1",
+          rootTabId: "w1:t1",
+          rootPaneId: "w1:p1",
+          checkoutPath: "/home/user/Worktrees/notes-feature",
+        },
+        TABS,
+        "shell",
+        null,
+      );
     });
   });
 

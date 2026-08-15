@@ -7,7 +7,7 @@ const WORKSPACE: WorkspaceLayout = {
   workspaceId: "wG",
   rootTabId: "wG:t1",
   rootPaneId: "wG:p1",
-  repositoryRoot: "/repo",
+  checkoutPath: "/repo",
 };
 
 /**

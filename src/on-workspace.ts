@@ -141,7 +141,7 @@ export async function applyProjectLayout(workspaceId: string): Promise<string> {
       workspaceId,
       rootTabId: details.activeTabId,
       rootPaneId: paneId,
-      repositoryRoot: details.repositoryRoot,
+      checkoutPath: details.checkoutPath ?? details.repositoryRoot,
     },
     project.tabs,
     project.focusedTab,
