@@ -49,7 +49,7 @@ describe("applyLayout", () => {
     it("does nothing", async () => {
       const spawn = mockSpawn("{}");
 
-      await applyLayout(WORKSPACE, [], null, null);
+      await applyLayout(WORKSPACE, [], null);
 
       expect(spawn).not.toHaveBeenCalled();
     });
@@ -59,7 +59,7 @@ describe("applyLayout", () => {
     it("renames the workspace's existing tab and runs the command in its pane", async () => {
       const spawn = mockSpawnSequence(["{}", "{}"]);
 
-      await applyLayout(WORKSPACE, [{ name: "neovim", command: "nvim" }], null, null);
+      await applyLayout(WORKSPACE, [{ name: "neovim", command: "nvim" }], null);
 
       expect(callsOf(spawn)).toEqual([
         ["tab", "rename", "wG:t1", "neovim"],
@@ -72,7 +72,7 @@ describe("applyLayout", () => {
     it("leaves it as a plain shell", async () => {
       const spawn = mockSpawnSequence(["{}"]);
 
-      await applyLayout(WORKSPACE, [{ name: "shell", command: null }], null, null);
+      await applyLayout(WORKSPACE, [{ name: "shell", command: null }], null);
 
       expect(callsOf(spawn)).toEqual([["tab", "rename", "wG:t1", "shell"]]);
     });
@@ -92,7 +92,6 @@ describe("applyLayout", () => {
           { name: "shell", command: null },
           { name: "neovim", command: "nvim" },
         ],
-        null,
         null,
       );
 
@@ -119,7 +118,6 @@ describe("applyLayout", () => {
           { name: "neovim", command: "nvim" },
         ],
         "neovim",
-        null,
       );
 
       expect(callsOf(spawn)).toEqual([
@@ -141,112 +139,12 @@ describe("applyLayout", () => {
           { name: "neovim", command: null },
         ],
         "shell",
-        null,
       );
 
       expect(callsOf(spawn)).toEqual([
         ["tab", "rename", "wG:t1", "shell"],
         ["tab", "create", "--workspace", "wG", "--cwd", "/repo", "--label", "neovim", "--no-focus"],
       ]);
-    });
-  });
-
-  describe("when a prompt is given", () => {
-    describe("when the prompt tab is the first tab and it has a command", () => {
-      it("prefixes the command with the prompt env var", async () => {
-        const spawn = mockSpawnSequence(["{}", "{}"]);
-
-        await applyLayout(
-          WORKSPACE,
-          [{ name: "claude", command: "claude" }],
-          "claude",
-          "fix the bug",
-        );
-
-        expect(callsOf(spawn)).toEqual([
-          ["tab", "rename", "wG:t1", "claude"],
-          ["pane", "run", "wG:p1", "AGENT_PROMPT='fix the bug' claude"],
-        ]);
-      });
-    });
-
-    describe("when the prompt tab is the first tab and it has no command", () => {
-      it("exports the prompt env var into the plain shell", async () => {
-        const spawn = mockSpawnSequence(["{}", "{}"]);
-
-        await applyLayout(WORKSPACE, [{ name: "shell", command: null }], "shell", "fix the bug");
-
-        expect(callsOf(spawn)).toEqual([
-          ["tab", "rename", "wG:t1", "shell"],
-          ["pane", "run", "wG:p1", "export AGENT_PROMPT='fix the bug'"],
-        ]);
-      });
-    });
-
-    describe("when the prompt tab is a later tab", () => {
-      it("creates it with the prompt env var and runs its command unprefixed", async () => {
-        const spawn = mockSpawnSequence([
-          "{}",
-          JSON.stringify({ result: { root_pane: { pane_id: "wG:p2" } } }),
-          "{}",
-        ]);
-
-        await applyLayout(
-          WORKSPACE,
-          [
-            { name: "shell", command: null },
-            { name: "claude", command: "claude" },
-          ],
-          "claude",
-          "fix the bug",
-        );
-
-        expect(callsOf(spawn)).toEqual([
-          ["tab", "rename", "wG:t1", "shell"],
-          [
-            "tab",
-            "create",
-            "--workspace",
-            "wG",
-            "--cwd",
-            "/repo",
-            "--label",
-            "claude",
-            "--env",
-            "AGENT_PROMPT=fix the bug",
-            "--focus",
-          ],
-          ["pane", "run", "wG:p2", "claude"],
-        ]);
-      });
-    });
-
-    describe("when the prompt tab has a single quote in the prompt", () => {
-      it("escapes it for the shell", async () => {
-        const spawn = mockSpawnSequence(["{}", "{}"]);
-
-        await applyLayout(
-          WORKSPACE,
-          [{ name: "claude", command: "claude" }],
-          "claude",
-          "fix the user's bug",
-        );
-
-        expect(callsOf(spawn)).toEqual([
-          ["tab", "rename", "wG:t1", "claude"],
-          ["pane", "run", "wG:p1", "AGENT_PROMPT='fix the user'\"'\"'s bug' claude"],
-        ]);
-      });
-    });
-
-    describe("when no tab matches the focused tab", () => {
-      it("ignores the prompt", async () => {
-        const spawn = mockSpawnSequence(["{}"]);
-
-        await applyLayout(WORKSPACE, [{ name: "shell", command: null }], null, "fix the bug");
-
-        expect(callsOf(spawn)).toEqual([["tab", "rename", "wG:t1", "shell"]]);
-      });
     });
   });
 });

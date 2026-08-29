@@ -196,67 +196,6 @@ describe("runCli", () => {
     });
   });
 
-  describe("when --prompt is passed with no value", () => {
-    it("reports the missing value", async () => {
-      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
-
-      const result = await runCli(["open", "orc", "--prompt"]);
-
-      expect(result.stderr).toContain("--prompt requires a value");
-      expect(result.exitCode).toEqual(1);
-    });
-  });
-
-  describe("when opening with a prompt", () => {
-    it("passes it to openProjectMain", async () => {
-      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
-
-      const openProjectMain = mock(() => Promise.resolve());
-      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
-        createProjectWorktree: mock(() => Promise.resolve()),
-        openProjectMain,
-        openProjectWorktree: mock(() => Promise.resolve()),
-      }));
-
-      const result = await runCli(["open", "orc", "--prompt", "fix the bug"]);
-
-      expect(result.exitCode).toEqual(0);
-      expect(openProjectMain).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "orc" }),
-        "fix the bug",
-      );
-    });
-  });
-
-  describe("when opening a worktree with a prompt", () => {
-    it("passes it to createProjectWorktree", async () => {
-      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
-
-      const createProjectWorktree = mock(() => Promise.resolve());
-      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
-        createProjectWorktree,
-        openProjectMain: mock(() => Promise.resolve()),
-        openProjectWorktree: mock(() => Promise.resolve()),
-      }));
-
-      const result = await runCli([
-        "open",
-        "orc",
-        "--worktree",
-        "feature",
-        "--prompt",
-        "fix the bug",
-      ]);
-
-      expect(result.exitCode).toEqual(0);
-      expect(createProjectWorktree).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "orc" }),
-        "feature",
-        "fix the bug",
-      );
-    });
-  });
-
   describe("when the action fails", () => {
     it("reports the failure", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);

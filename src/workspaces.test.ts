@@ -37,7 +37,6 @@ async function mockHerdrModules(
     openWorktree: mock(() => Promise.resolve(WORKSPACE)),
     createWorktree: mock(() => Promise.resolve(CREATED_WORKSPACE)),
     listWorktrees: mock(() => Promise.resolve(worktrees)),
-    writePendingPrompt: mock(() => Promise.resolve()),
     runHerdrJson: mock(() =>
       Promise.resolve({
         result: { workspaces: openPaths.map((path) => ({ worktree: { checkout_path: path } })) },
@@ -51,9 +50,6 @@ async function mockHerdrModules(
     openWorktree: mocks.openWorktree,
     createWorktree: mocks.createWorktree,
     listWorktrees: mocks.listWorktrees,
-  }));
-  await stubModule(import.meta.resolve("./pending-prompt.ts"), () => ({
-    writePendingPrompt: mocks.writePendingPrompt,
   }));
 
   return mocks;
@@ -71,26 +67,6 @@ describe("openProjectWorktree", () => {
       undefined,
     );
     expect(mocks.applyLayout).not.toHaveBeenCalled();
-  });
-});
-
-describe("openProjectWorktree with a prompt", () => {
-  it("records the prompt for the worktree's checkout path before opening it", async () => {
-    const mocks = await mockHerdrModules([]);
-
-    await openProjectWorktree(PROJECT, "/tmp/worktrees/feature", undefined, "fix the bug");
-
-    expect(mocks.writePendingPrompt).toHaveBeenCalledWith("/tmp/worktrees/feature", "fix the bug");
-  });
-});
-
-describe("openProjectWorktree without a prompt", () => {
-  it("records nothing", async () => {
-    const mocks = await mockHerdrModules([]);
-
-    await openProjectWorktree(PROJECT, "/tmp/worktrees/feature");
-
-    expect(mocks.writePendingPrompt).not.toHaveBeenCalled();
   });
 });
 
@@ -151,31 +127,6 @@ describe("createProjectWorktree", () => {
   });
 });
 
-describe("createProjectWorktree with a prompt", () => {
-  it("records the prompt for the checkout path Herdr reports", async () => {
-    const mocks = await mockHerdrModules([]);
-
-    await createProjectWorktree(PROJECT, "feature", "fix the bug");
-
-    expect(mocks.writePendingPrompt).toHaveBeenCalledWith("/tmp/worktrees/feature", "fix the bug");
-  });
-
-  describe("when the branch already has a worktree", () => {
-    it("records the prompt for that worktree's checkout path", async () => {
-      const mocks = await mockHerdrModules([
-        { branch: "feature", path: "/tmp/worktrees/feature", isMain: false },
-      ]);
-
-      await createProjectWorktree(PROJECT, "feature", "fix the bug");
-
-      expect(mocks.writePendingPrompt).toHaveBeenCalledWith(
-        "/tmp/worktrees/feature",
-        "fix the bug",
-      );
-    });
-  });
-});
-
 describe("openProjectMain", () => {
   describe("when the repository has a main worktree", () => {
     it("opens it, naming the workspace after the project", async () => {
@@ -187,16 +138,6 @@ describe("openProjectMain", () => {
       await openProjectMain(PROJECT);
 
       expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "orc");
-    });
-  });
-
-  describe("when a prompt is given", () => {
-    it("records it for the main worktree's checkout path", async () => {
-      const mocks = await mockHerdrModules([{ branch: "main", path: "/tmp/orc", isMain: true }]);
-
-      await openProjectMain(PROJECT, "fix the bug");
-
-      expect(mocks.writePendingPrompt).toHaveBeenCalledWith("/tmp/orc", "fix the bug");
     });
   });
 

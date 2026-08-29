@@ -163,7 +163,6 @@ describe("parseTabPaneId", () => {
  * @param options.workspace The `workspace get` response.
  * @param options.panes The `pane list` response.
  * @param options.projects The projects `listProjects` reports.
- * @param options.prompt The prompt `takePendingPrompt` reports as pending, or `null` for none.
  * @returns The mocks standing in for each replaced function.
  */
 async function mockLayoutModules(options: {
@@ -175,23 +174,18 @@ async function mockLayoutModules(options: {
     tabs: { name: string; command: null }[];
     focusedTab: string | null;
   }[];
-  prompt?: string | null;
 }) {
-  const { workspace, panes = { result: { panes: [] } }, projects = [], prompt = null } = options;
+  const { workspace, panes = { result: { panes: [] } }, projects = [] } = options;
 
   const mocks = {
     applyLayout: mock(() => Promise.resolve()),
     listProjects: mock(() => Promise.resolve(projects)),
-    takePendingPrompt: mock(() => Promise.resolve(prompt)),
     runHerdrJson: mock((args: string[]) => Promise.resolve(args[0] === "pane" ? panes : workspace)),
   };
 
   await stubModule(import.meta.resolve("./layout.ts"), () => ({ applyLayout: mocks.applyLayout }));
   await stubModule(import.meta.resolve("./projects.ts"), () => ({
     listProjects: mocks.listProjects,
-  }));
-  await stubModule(import.meta.resolve("./pending-prompt.ts"), () => ({
-    takePendingPrompt: mocks.takePendingPrompt,
   }));
   await stubModule(import.meta.resolve("./herdr.ts"), () => ({ runHerdrJson: mocks.runHerdrJson }));
 
@@ -239,7 +233,6 @@ describe("applyProjectLayout", () => {
         },
         TABS,
         "shell",
-        null,
       );
       expect(message).toContain("applied notes layout");
     });
@@ -275,34 +268,12 @@ describe("applyProjectLayout", () => {
         },
         TABS,
         "shell",
-        null,
-      );
-    });
-  });
-
-  describe("when a prompt is pending for the workspace's checkout path", () => {
-    it("takes it and passes it to applyLayout", async () => {
-      const mocks = await mockLayoutModules({
-        workspace: FRESH_WORKSPACE,
-        panes: ONE_PANE,
-        projects: [PROJECT],
-        prompt: "fix the bug",
-      });
-
-      await applyProjectLayout("w1");
-
-      expect(mocks.takePendingPrompt).toHaveBeenCalledWith("/home/user/Notes");
-      expect(mocks.applyLayout).toHaveBeenCalledWith(
-        expect.anything(),
-        TABS,
-        "shell",
-        "fix the bug",
       );
     });
   });
 
   describe("when the workspace reports no checkout path", () => {
-    it("lays out the tabs without taking a pending prompt", async () => {
+    it("lays out the tabs using the repository root", async () => {
       const workspace = {
         result: {
           workspace: {
@@ -321,8 +292,7 @@ describe("applyProjectLayout", () => {
 
       await applyProjectLayout("w1");
 
-      expect(mocks.takePendingPrompt).not.toHaveBeenCalled();
-      expect(mocks.applyLayout).toHaveBeenCalledWith(expect.anything(), TABS, "shell", null);
+      expect(mocks.applyLayout).toHaveBeenCalledWith(expect.anything(), TABS, "shell");
     });
   });
 

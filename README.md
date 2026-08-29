@@ -59,7 +59,7 @@ it.
 
 ```sh
 herdr-project list [--json]
-herdr-project open <project> [--worktree <branch>] [--prompt <text>]
+herdr-project open <project> [--worktree <branch>]
 herdr-project close <project> [--worktree <branch>] [--yes]
 ```
 
@@ -69,9 +69,7 @@ gets one row per worktree. Pass `--json` for the same rows as a JSON array inste
 
 **`open`** opens the project's main worktree; with `--worktree`, it creates a worktree on that
 branch instead (or opens it, if one already exists). Either way the project's tabs are laid into
-the workspace. With `--prompt`, the text is handed to the project's `focusedTab` through the
-`AGENT_PROMPT` environment variable once that tab opens; if `focusedTab` is unset or matches no
-tab, the prompt is dropped.
+the workspace.
 
 **`close`** closes the project's main workspace; with `--worktree`, it removes that branch's
 worktree instead. Either way it asks for confirmation first, as an Ink modal — closing a worktree

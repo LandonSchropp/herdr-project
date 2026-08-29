@@ -1,6 +1,5 @@
 import { runHerdrJson } from "./herdr.ts";
 import { applyLayout } from "./layout.ts";
-import { takePendingPrompt } from "./pending-prompt.ts";
 import { listProjects } from "./projects.ts";
 
 /** What a newly created workspace looks like, as far as laying a project's tabs into it goes. */
@@ -133,9 +132,6 @@ export async function applyProjectLayout(workspaceId: string): Promise<string> {
     return `tab ${details.activeTabId} reported no pane; nothing to do.`;
   }
 
-  const prompt =
-    details.checkoutPath === null ? null : await takePendingPrompt(details.checkoutPath);
-
   await applyLayout(
     {
       workspaceId,
@@ -145,7 +141,6 @@ export async function applyProjectLayout(workspaceId: string): Promise<string> {
     },
     project.tabs,
     project.focusedTab,
-    prompt,
   );
 
   return `applied ${project.name} layout to ${workspaceId}: ${project.tabs.length} tab(s).`;

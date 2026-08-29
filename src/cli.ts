@@ -15,20 +15,18 @@ import {
 export const HELP = `herdr-project — open a project and one of its Git worktrees.
 
 Usage:
-  herdr-project                                    Open the project picker.
-  herdr-project list [--json]                      List the configured projects.
-  herdr-project open <project> [--worktree <branch>] [--prompt <text>] Open a project's workspace.
-  herdr-project close <project> [--worktree <branch>] [--yes]          Close a workspace.
-  herdr-project --help                                                Show this message.
+  herdr-project                                                Open the project picker.
+  herdr-project list [--json]                                  List the configured projects.
+  herdr-project open <project> [--worktree <branch>]           Open a project's workspace.
+  herdr-project close <project> [--worktree <branch>] [--yes]  Close a workspace.
+  herdr-project --help                                         Show this message.
 
 Commands:
   list   Prints a table with each project's name and path. A JSON array of the same projects,
          including their tabs, with --json. Herdr's own "workspace list"/"worktree list" cover
          which workspaces and worktrees are actually open.
   open   Opens the project's main worktree. With --worktree, creates a worktree on that
-         branch instead. Either way the project's tabs are laid into the workspace. With
-         --prompt, hands the text to the project's agent tab through the AGENT_PROMPT
-         environment variable.
+         branch instead. Either way the project's tabs are laid into the workspace.
   close  Closes the project's main workspace, after confirming. With --worktree, removes
          that branch's worktree instead, after confirming its deletion. --yes skips the
          confirmation, for running from a script; without it, close requires an interactive
@@ -144,14 +142,8 @@ async function runOpen(args: string[]): Promise<CliResult> {
     return { stdout: "", stderr: "Error: --worktree requires a branch name.\n", exitCode: 1 };
   }
 
-  const prompt = flagValue(args, "--prompt");
-
-  if (args.includes("--prompt") && prompt === null) {
-    return { stdout: "", stderr: "Error: --prompt requires a value.\n", exitCode: 1 };
-  }
-
-  if (branch === null) await openProjectMain(project, prompt ?? undefined);
-  else await createProjectWorktree(project, branch, prompt ?? undefined);
+  if (branch === null) await openProjectMain(project);
+  else await createProjectWorktree(project, branch);
 
   return { stdout: "", stderr: "", exitCode: 0 };
 }
