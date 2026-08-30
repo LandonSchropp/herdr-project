@@ -59,7 +59,7 @@ it.
 
 ```sh
 herdr-project list [--json]
-herdr-project open <project> [--worktree <branch>]
+herdr-project open <project> [--worktree <branch>] [--no-focus]
 herdr-project close <project> [--worktree <branch>] [--yes]
 ```
 
@@ -69,7 +69,9 @@ gets one row per worktree. Pass `--json` for the same rows as a JSON array inste
 
 **`open`** opens the project's main worktree; with `--worktree`, it creates a worktree on that
 branch instead (or opens it, if one already exists). Either way the project's tabs are laid into
-the workspace.
+the workspace and the new workspace is focused. `--no-focus` opens it in the background instead,
+leaving you in the tab you were already in. A background workspace opens on its first tab rather
+than its `focusedTab`, since focusing a tab is what pulls the session over to it.
 
 **`close`** closes the project's main workspace; with `--worktree`, it removes that branch's
 worktree instead. Either way it asks for confirmation first, as an Ink modal — closing a worktree

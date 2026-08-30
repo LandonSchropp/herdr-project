@@ -65,8 +65,24 @@ describe("openProjectWorktree", () => {
       "/tmp/orc",
       "/tmp/worktrees/feature",
       undefined,
+      true,
     );
     expect(mocks.applyLayout).not.toHaveBeenCalled();
+  });
+
+  describe("when focus is disabled", () => {
+    it("opens the worktree in the background", async () => {
+      const mocks = await mockHerdrModules([]);
+
+      await openProjectWorktree(PROJECT, "/tmp/worktrees/feature", undefined, false);
+
+      expect(mocks.openWorktree).toHaveBeenCalledWith(
+        "/tmp/orc",
+        "/tmp/worktrees/feature",
+        undefined,
+        false,
+      );
+    });
   });
 });
 
@@ -91,8 +107,18 @@ describe("createProjectWorktree", () => {
 
     await createProjectWorktree(PROJECT, "feature");
 
-    expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature");
+    expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", true);
     expect(mocks.applyLayout).not.toHaveBeenCalled();
+  });
+
+  describe("when focus is disabled", () => {
+    it("creates the worktree in the background", async () => {
+      const mocks = await mockHerdrModules([]);
+
+      await createProjectWorktree(PROJECT, "feature", false);
+
+      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", false);
+    });
   });
 
   describe("when the branch already has a worktree", () => {
@@ -108,7 +134,25 @@ describe("createProjectWorktree", () => {
         "/tmp/orc",
         "/tmp/worktrees/feature",
         undefined,
+        true,
       );
+    });
+
+    describe("when focus is disabled", () => {
+      it("opens it in the background", async () => {
+        const mocks = await mockHerdrModules([
+          { branch: "feature", path: "/tmp/worktrees/feature", isMain: false },
+        ]);
+
+        await createProjectWorktree(PROJECT, "feature", false);
+
+        expect(mocks.openWorktree).toHaveBeenCalledWith(
+          "/tmp/orc",
+          "/tmp/worktrees/feature",
+          undefined,
+          false,
+        );
+      });
     });
   });
 
@@ -137,7 +181,17 @@ describe("openProjectMain", () => {
 
       await openProjectMain(PROJECT);
 
-      expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "orc");
+      expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "orc", true);
+    });
+
+    describe("when focus is disabled", () => {
+      it("opens it in the background", async () => {
+        const mocks = await mockHerdrModules([{ branch: "main", path: "/tmp/orc", isMain: true }]);
+
+        await openProjectMain(PROJECT, false);
+
+        expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "orc", false);
+      });
     });
   });
 

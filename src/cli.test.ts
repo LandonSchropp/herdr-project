@@ -198,7 +198,41 @@ describe("runCli", () => {
       const result = await runCli(["open", "orc", "--worktree", "feature"]);
 
       expect(result.exitCode).toEqual(0);
-      expect(createProjectWorktree).toHaveBeenCalled();
+      expect(createProjectWorktree).toHaveBeenCalledWith(expect.anything(), "feature", true);
+    });
+  });
+
+  describe("when opening a project with --no-focus", () => {
+    it("opens the main workspace in the background", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const openProjectMain = mock(() => Promise.resolve());
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+        createProjectWorktree: mock(() => Promise.resolve()),
+        openProjectMain,
+        openProjectWorktree: mock(() => Promise.resolve()),
+      }));
+
+      await runCli(["open", "orc", "--no-focus"]);
+
+      expect(openProjectMain).toHaveBeenCalledWith(expect.anything(), false);
+    });
+  });
+
+  describe("when opening a project with a branch and --no-focus", () => {
+    it("creates the worktree in the background", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const createProjectWorktree = mock(() => Promise.resolve());
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+        createProjectWorktree,
+        openProjectMain: mock(() => Promise.resolve()),
+        openProjectWorktree: mock(() => Promise.resolve()),
+      }));
+
+      await runCli(["open", "orc", "--worktree", "feature", "--no-focus"]);
+
+      expect(createProjectWorktree).toHaveBeenCalledWith(expect.anything(), "feature", false);
     });
   });
 

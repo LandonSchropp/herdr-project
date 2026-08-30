@@ -56,17 +56,19 @@ export async function listWorktrees(repositoryRoot: string): Promise<Worktree[]>
 }
 
 /**
- * Opens an existing worktree into a Herdr workspace and focuses it.
+ * Opens an existing worktree into a Herdr workspace.
  *
  * @param repositoryRoot The absolute path to the project's repository.
  * @param path The absolute path to the worktree's checkout.
  * @param label The workspace's name. Omit to let Herdr name it after the repository.
+ * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @returns The workspace Herdr opened the worktree into.
  */
 export async function openWorktree(
   repositoryRoot: string,
   path: string,
   label?: string,
+  focus: boolean = true,
 ): Promise<Workspace> {
   return parseWorkspace(
     await runHerdrJson([
@@ -77,7 +79,7 @@ export async function openWorktree(
       "--path",
       path,
       ...(label === undefined ? [] : ["--label", label]),
-      "--focus",
+      focus ? "--focus" : "--no-focus",
       "--json",
     ]),
   );
@@ -88,12 +90,14 @@ export async function openWorktree(
  *
  * @param repositoryRoot The absolute path to the project's repository.
  * @param branch The branch to create the worktree on.
+ * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @returns The workspace Herdr created for the worktree, and the checkout path it was created at.
  * @throws When the response reports no checkout path.
  */
 export async function createWorktree(
   repositoryRoot: string,
   branch: string,
+  focus: boolean = true,
 ): Promise<Workspace & { checkoutPath: string }> {
   const response = await runHerdrJson([
     "worktree",
@@ -102,7 +106,7 @@ export async function createWorktree(
     repositoryRoot,
     "--branch",
     branch,
-    "--focus",
+    focus ? "--focus" : "--no-focus",
     "--json",
   ]);
 

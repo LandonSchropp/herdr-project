@@ -111,18 +111,20 @@ export async function closeProjectWorktree(project: Project, branch: string): Pr
  * @param project The project the worktree belongs to.
  * @param path The absolute path to the worktree's checkout.
  * @param label The workspace's name. Omit to let Herdr name it after the repository.
+ * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @throws When the worktree already has a workspace open.
  */
 export async function openProjectWorktree(
   project: Project,
   path: string,
   label?: string,
+  focus: boolean = true,
 ): Promise<void> {
   if ((await listOpenCheckoutPaths()).includes(path)) {
     throw new Error(`A workspace is already open for ${path}.`);
   }
 
-  await openWorktree(project.repositoryRoot, path, label);
+  await openWorktree(project.repositoryRoot, path, label, focus);
 }
 
 /**
@@ -132,19 +134,24 @@ export async function openProjectWorktree(
  *
  * @param project The project to create the worktree in.
  * @param branch The branch to create the worktree on.
+ * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @throws When the branch's existing worktree already has a workspace open.
  */
-export async function createProjectWorktree(project: Project, branch: string): Promise<void> {
+export async function createProjectWorktree(
+  project: Project,
+  branch: string,
+  focus: boolean = true,
+): Promise<void> {
   const existing = (await listWorktrees(project.repositoryRoot)).find(
     (worktree) => worktree.branch === branch,
   );
 
   if (existing !== undefined) {
-    await openProjectWorktree(project, existing.path);
+    await openProjectWorktree(project, existing.path, undefined, focus);
     return;
   }
 
-  await createWorktree(project.repositoryRoot, branch);
+  await createWorktree(project.repositoryRoot, branch, focus);
 }
 
 /**
@@ -153,14 +160,15 @@ export async function createProjectWorktree(project: Project, branch: string): P
  * is what distinguishes it in the sidebar.
  *
  * @param project The project to open.
+ * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @throws When the repository reports no main checkout.
  */
-export async function openProjectMain(project: Project): Promise<void> {
+export async function openProjectMain(project: Project, focus: boolean = true): Promise<void> {
   const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);
 
   if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
 
-  await openProjectWorktree(project, main.path, project.name);
+  await openProjectWorktree(project, main.path, project.name, focus);
 }
 
 /**

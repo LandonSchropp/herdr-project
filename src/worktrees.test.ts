@@ -152,6 +152,29 @@ describe("openWorktree", () => {
       expect.anything(),
     );
   });
+
+  describe("when focus is disabled", () => {
+    it("opens the worktree in the background", async () => {
+      const spawn = mockSpawn(WORKSPACE_RESPONSE);
+
+      await openWorktree("/tmp/repo", "/tmp/worktrees/feature", undefined, false);
+
+      expect(spawn).toHaveBeenCalledWith(
+        [
+          "herdr",
+          "worktree",
+          "open",
+          "--cwd",
+          "/tmp/repo",
+          "--path",
+          "/tmp/worktrees/feature",
+          "--no-focus",
+          "--json",
+        ],
+        expect.anything(),
+      );
+    });
+  });
 });
 
 describe("createWorktree", () => {
@@ -179,6 +202,29 @@ describe("createWorktree", () => {
       ],
       expect.anything(),
     );
+  });
+
+  describe("when focus is disabled", () => {
+    it("creates the worktree in the background", async () => {
+      const spawn = mockSpawn(WORKSPACE_RESPONSE);
+
+      await createWorktree("/tmp/repo", "feature", false);
+
+      expect(spawn).toHaveBeenCalledWith(
+        [
+          "herdr",
+          "worktree",
+          "create",
+          "--cwd",
+          "/tmp/repo",
+          "--branch",
+          "feature",
+          "--no-focus",
+          "--json",
+        ],
+        expect.anything(),
+      );
+    });
   });
 
   describe("when the response reports no checkout path", () => {
