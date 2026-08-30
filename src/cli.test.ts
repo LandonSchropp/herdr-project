@@ -38,6 +38,12 @@ describe("flagValue", () => {
       expect(flagValue(["open", "orc", "--worktree"], "--worktree")).toBeNull();
     });
   });
+
+  describe("when the flag is followed by another flag", () => {
+    it("returns null rather than treating the flag as the value", () => {
+      expect(flagValue(["open", "orc", "--worktree", "--yes"], "--worktree")).toBeNull();
+    });
+  });
 });
 
 describe("formatProjects", () => {

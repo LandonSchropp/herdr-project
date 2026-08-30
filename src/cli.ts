@@ -89,7 +89,8 @@ export function formatProjects(
 }
 
 /**
- * Reads the value of a flag from an argument list.
+ * Reads the value of a flag from an argument list. Another flag is not a value, so a flag followed
+ * by one reads as having none rather than swallowing it.
  *
  * @param args The arguments to search.
  * @param flag The flag whose value to read.
@@ -100,7 +101,9 @@ export function flagValue(args: string[], flag: string): string | null {
 
   if (index === -1) return null;
 
-  return args[index + 1] ?? null;
+  const value = args[index + 1];
+
+  return value === undefined || value.startsWith("-") ? null : value;
 }
 
 /**
