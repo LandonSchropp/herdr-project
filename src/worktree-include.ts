@@ -5,14 +5,23 @@ import { dirname, join } from "node:path";
 /** The name of the include file a repository keeps in its main checkout. */
 export const INCLUDE_FILE_NAME = ".worktreeinclude";
 
+/** The variables Git uses to locate a repository, which override the path a command is given. */
+const GIT_LOCATION_VARIABLES = ["GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE"];
+
 /**
- * Runs a Git command and returns its output.
+ * Runs a Git command and returns its output. The variables Git uses to locate a repository are
+ * dropped from the environment, so the path a command is given decides which repository it acts on
+ * — under a Git hook they name the repository being committed and would win over that path.
  *
  * @param args The arguments to pass to `git`.
  * @returns Whatever the command wrote to stdout, or `null` when it exited non-zero.
  */
 async function runGit(args: string[]): Promise<string | null> {
-  const process = Bun.spawn(["git", ...args], { stdout: "pipe", stderr: "ignore" });
+  const env = { ...Bun.env };
+
+  for (const key of GIT_LOCATION_VARIABLES) delete env[key];
+
+  const process = Bun.spawn(["git", ...args], { stdout: "pipe", stderr: "ignore", env });
   const [stdout, exitCode] = await Promise.all([
     new Response(process.stdout).text(),
     process.exited,

@@ -6,7 +6,7 @@ import {
   listIncludedPaths,
   mainCheckoutPath,
 } from "./worktree-include.ts";
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -309,6 +309,25 @@ describe("mainCheckoutPath", () => {
       expect(
         await mainCheckoutPath(await mkdtemp(join(tmpdir(), "herdr-project-plain-"))),
       ).toBeNull();
+    });
+  });
+
+  describe("when Git's location variables are in the environment", () => {
+    it("drops them so the path decides the repository", async () => {
+      const spawn = spyOn(Bun, "spawn").mockReturnValue({
+        stdout: new Response("worktree /tmp/repo\n").body,
+        exited: Promise.resolve(0),
+      } as unknown as ReturnType<typeof Bun.spawn>);
+
+      await mainCheckoutPath("/tmp/repo");
+
+      const { env } = spawn.mock.calls[0]?.[1] as { env: Record<string, string | undefined> };
+
+      expect(Object.keys(env)).not.toContainAnyValues([
+        "GIT_DIR",
+        "GIT_INDEX_FILE",
+        "GIT_WORK_TREE",
+      ]);
     });
   });
 });
