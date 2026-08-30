@@ -163,6 +163,7 @@ describe("parseTabPaneId", () => {
  * @param options.workspace The `workspace get` response.
  * @param options.panes The `pane list` response.
  * @param options.projects The projects `listProjects` reports.
+ * @param options.focusedWorkspaceId The workspace the session is showing.
  * @returns The mocks standing in for each replaced function.
  */
 async function mockLayoutModules(options: {
@@ -174,20 +175,30 @@ async function mockLayoutModules(options: {
     tabs: { name: string; command: null }[];
     focusedTab: string | null;
   }[];
+  focusedWorkspaceId?: string | null;
 }) {
-  const { workspace, panes = { result: { panes: [] } }, projects = [] } = options;
+  const {
+    workspace,
+    panes = { result: { panes: [] } },
+    projects = [],
+    focusedWorkspaceId = "w1",
+  } = options;
 
   const mocks = {
     applyLayout: mock(() => Promise.resolve()),
     listProjects: mock(() => Promise.resolve(projects)),
     runHerdrJson: mock((args: string[]) => Promise.resolve(args[0] === "pane" ? panes : workspace)),
+    focusedWorkspaceId: mock(() => Promise.resolve(focusedWorkspaceId)),
   };
 
   await stubModule(import.meta.resolve("./layout.ts"), () => ({ applyLayout: mocks.applyLayout }));
   await stubModule(import.meta.resolve("./projects.ts"), () => ({
     listProjects: mocks.listProjects,
   }));
-  await stubModule(import.meta.resolve("./herdr.ts"), () => ({ runHerdrJson: mocks.runHerdrJson }));
+  await stubModule(import.meta.resolve("./herdr.ts"), () => ({
+    runHerdrJson: mocks.runHerdrJson,
+    focusedWorkspaceId: mocks.focusedWorkspaceId,
+  }));
 
   return mocks;
 }
@@ -233,6 +244,7 @@ describe("applyProjectLayout", () => {
         },
         TABS,
         "shell",
+        true,
       );
       expect(message).toContain("applied notes layout");
     });
@@ -268,7 +280,23 @@ describe("applyProjectLayout", () => {
         },
         TABS,
         "shell",
+        true,
       );
+    });
+  });
+
+  describe("when the session is showing another workspace", () => {
+    it("lays the tabs in without focusing any of them", async () => {
+      const mocks = await mockLayoutModules({
+        workspace: FRESH_WORKSPACE,
+        panes: ONE_PANE,
+        projects: [PROJECT],
+        focusedWorkspaceId: "w2",
+      });
+
+      await applyProjectLayout("w1");
+
+      expect(mocks.applyLayout).toHaveBeenCalledWith(expect.anything(), TABS, "shell", false);
     });
   });
 
@@ -292,7 +320,7 @@ describe("applyProjectLayout", () => {
 
       await applyProjectLayout("w1");
 
-      expect(mocks.applyLayout).toHaveBeenCalledWith(expect.anything(), TABS, "shell");
+      expect(mocks.applyLayout).toHaveBeenCalledWith(expect.anything(), TABS, "shell", true);
     });
   });
 

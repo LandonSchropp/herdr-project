@@ -1,5 +1,7 @@
 import {
+  focusedWorkspaceId,
   parseCheckoutPath,
+  parseFocusedWorkspaceId,
   parseRootPaneId,
   parseWorkspace,
   runHerdr,
@@ -143,5 +145,38 @@ describe("parseCheckoutPath", () => {
     it("returns null", () => {
       expect(parseCheckoutPath({ nonsense: true })).toBeNull();
     });
+  });
+});
+
+describe("parseFocusedWorkspaceId", () => {
+  describe("when the snapshot names a focused workspace", () => {
+    it("returns its id", () => {
+      const response = { result: { snapshot: { focused_workspace_id: "wG" } } };
+
+      expect(parseFocusedWorkspaceId(response)).toEqual("wG");
+    });
+  });
+
+  describe("when the snapshot names no focused workspace", () => {
+    it("returns null", () => {
+      expect(parseFocusedWorkspaceId({ result: { snapshot: {} } })).toBeNull();
+    });
+  });
+
+  describe("when the response is not shaped like a snapshot", () => {
+    it("returns null", () => {
+      expect(parseFocusedWorkspaceId({ nonsense: true })).toBeNull();
+    });
+  });
+});
+
+describe("focusedWorkspaceId", () => {
+  it("returns the id of the workspace the session is showing", async () => {
+    const spawn = mockSpawn(
+      JSON.stringify({ result: { snapshot: { focused_workspace_id: "wG" } } }),
+    );
+
+    expect(await focusedWorkspaceId()).toEqual("wG");
+    expect(spawn).toHaveBeenCalledWith(["herdr", "api", "snapshot"], expect.anything());
   });
 });

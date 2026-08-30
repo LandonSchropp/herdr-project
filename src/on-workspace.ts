@@ -1,4 +1,4 @@
-import { runHerdrJson } from "./herdr.ts";
+import { focusedWorkspaceId, runHerdrJson } from "./herdr.ts";
 import { applyLayout } from "./layout.ts";
 import { listProjects } from "./projects.ts";
 
@@ -97,6 +97,9 @@ export function parseTabPaneId(response: unknown, tabId: string): string | null 
  * worktree, its repository isn't a configured project, or it already has more than the one pane a
  * fresh workspace starts with.
  *
+ * A workspace the session isn't already showing was opened in the background, so its tabs are laid
+ * in without focusing any of them and the user stays where they are.
+ *
  * @param workspaceId The workspace to lay out.
  * @returns A message describing what was done, for the plugin log.
  */
@@ -141,6 +144,7 @@ export async function applyProjectLayout(workspaceId: string): Promise<string> {
     },
     project.tabs,
     project.focusedTab,
+    (await focusedWorkspaceId()) === workspaceId,
   );
 
   return `applied ${project.name} layout to ${workspaceId}: ${project.tabs.length} tab(s).`;

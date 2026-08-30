@@ -128,6 +128,32 @@ describe("applyLayout", () => {
     });
   });
 
+  describe("when the workspace is not focused", () => {
+    it("creates the focused tab unfocused, leaving the session where it is", async () => {
+      const spawn = mockSpawnSequence([
+        "{}",
+        JSON.stringify({ result: { root_pane: { pane_id: "wG:p2" } } }),
+        "{}",
+      ]);
+
+      await applyLayout(
+        WORKSPACE,
+        [
+          { name: "shell", command: null },
+          { name: "neovim", command: "nvim" },
+        ],
+        "neovim",
+        false,
+      );
+
+      expect(callsOf(spawn)).toEqual([
+        ["tab", "rename", "wG:t1", "shell"],
+        ["tab", "create", "--workspace", "wG", "--cwd", "/repo", "--label", "neovim", "--no-focus"],
+        ["pane", "run", "wG:p2", "nvim"],
+      ]);
+    });
+  });
+
   describe("when the first tab is the focused tab", () => {
     it("leaves the root tab focused and creates the rest unfocused", async () => {
       const spawn = mockSpawnSequence(["{}", "{}"]);

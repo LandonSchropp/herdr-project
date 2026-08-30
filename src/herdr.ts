@@ -94,3 +94,26 @@ export function parseCheckoutPath(response: unknown): string | null {
 
   return typeof checkoutPath === "string" ? checkoutPath : null;
 }
+
+/**
+ * Extracts the id of the workspace the session is showing from an `api snapshot` response.
+ *
+ * @param response The parsed JSON response.
+ * @returns The workspace's id, or `null` when the response names none.
+ */
+export function parseFocusedWorkspaceId(response: unknown): string | null {
+  const workspaceId = (
+    response as { result?: { snapshot?: { focused_workspace_id?: unknown } } } | undefined
+  )?.result?.snapshot?.focused_workspace_id;
+
+  return typeof workspaceId === "string" ? workspaceId : null;
+}
+
+/**
+ * Reads the workspace the session is currently showing.
+ *
+ * @returns The focused workspace's id, or `null` when no workspace is focused.
+ */
+export async function focusedWorkspaceId(): Promise<string | null> {
+  return parseFocusedWorkspaceId(await runHerdrJson(["api", "snapshot"]));
+}

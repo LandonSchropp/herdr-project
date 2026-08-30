@@ -7,14 +7,20 @@ import type { Tab, WorkspaceLayout } from "./types.ts";
  * as a plain shell. The tab named by `focusedTab` is focused when it opens; the first tab, which
  * reuses the workspace's existing tab, is focused when `focusedTab` matches it or matches no tab.
  *
+ * Focusing a tab pulls the whole session to its workspace, so `focus` must be false for a workspace
+ * the session isn't already showing. Such a workspace opens on its first tab and `focusedTab` is
+ * ignored, which is the price of not yanking the user out of the workspace they are in.
+ *
  * @param workspace The workspace to lay the tabs into.
  * @param tabs The tabs to open, in display order.
  * @param focusedTab The label of the tab to focus, or `null` to leave the first tab focused.
+ * @param focus Whether any tab may be focused at all.
  */
 export async function applyLayout(
   workspace: WorkspaceLayout,
   tabs: Tab[],
   focusedTab: string | null,
+  focus: boolean = true,
 ): Promise<void> {
   const [first, ...rest] = tabs;
 
@@ -36,7 +42,7 @@ export async function applyLayout(
       workspace.checkoutPath,
       "--label",
       tab.name,
-      tab.name === focusedTab ? "--focus" : "--no-focus",
+      focus && tab.name === focusedTab ? "--focus" : "--no-focus",
     ]);
 
     if (tab.command !== null) {
