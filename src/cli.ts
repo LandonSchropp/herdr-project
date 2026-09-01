@@ -15,20 +15,21 @@ import {
 export const HELP = `herdr-project — open a project and one of its Git worktrees.
 
 Usage:
-  herdr-project                                                    Open the project picker.
-  herdr-project list [--json]                                      List the configured projects.
-  herdr-project open <project> [--worktree <branch>] [--no-focus]  Open a project's workspace.
-  herdr-project close <project> [--worktree <branch>] [--yes]      Close a workspace.
-  herdr-project --help                                             Show this message.
+  herdr-project                                                Open the project picker.
+  herdr-project list [--json]                                  List the configured projects.
+  herdr-project open <project> [options]                       Open a project's workspace.
+  herdr-project close <project> [--worktree <branch>] [--yes]  Close a workspace.
+  herdr-project --help                                         Show this message.
 
 Commands:
   list   Prints a table with each project's name and path. A JSON array of the same projects,
          including their tabs, with --json. Herdr's own "workspace list"/"worktree list" cover
          which workspaces and worktrees are actually open.
-  open   Opens the project's main worktree. With --worktree, creates a worktree on that
-         branch instead. Either way the project's tabs are laid into the workspace and the
-         new workspace is focused. --no-focus opens it in the background instead, leaving
-         you in the tab you were already in.
+  open   Opens the project's main worktree. With --worktree <branch>, creates a worktree on
+         that branch instead. Either way the project's tabs are laid into the workspace and
+         the new workspace is focused. --no-focus opens it in the background instead,
+         leaving you in the tab you were already in. --prompt <text> sends the text to the
+         workspace's agent once it starts, in place of the project's own prompt.
   close  Closes the project's main workspace, after confirming. With --worktree, removes
          that branch's worktree instead, after confirming its deletion. --yes skips the
          confirmation, for running from a script; without it, close requires an interactive
@@ -147,10 +148,17 @@ async function runOpen(args: string[]): Promise<CliResult> {
     return { stdout: "", stderr: "Error: --worktree requires a branch name.\n", exitCode: 1 };
   }
 
-  const focus = !args.includes("--no-focus");
+  const prompt = flagValue(args, "--prompt");
 
-  if (branch === null) await openProjectMain(project, focus);
-  else await createProjectWorktree(project, branch, focus);
+  if (args.includes("--prompt") && prompt === null) {
+    return { stdout: "", stderr: "Error: --prompt requires a value.\n", exitCode: 1 };
+  }
+
+  const focus = !args.includes("--no-focus");
+  const target = prompt === null ? project : { ...project, prompt };
+
+  if (branch === null) await openProjectMain(target, focus);
+  else await createProjectWorktree(target, branch, focus);
 
   return { stdout: "", stderr: "", exitCode: 0 };
 }

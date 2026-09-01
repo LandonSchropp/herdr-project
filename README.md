@@ -59,7 +59,7 @@ it.
 
 ```sh
 herdr-project list [--json]
-herdr-project open <project> [--worktree <branch>] [--no-focus]
+herdr-project open <project> [--worktree <branch>] [--prompt <text>] [--no-focus]
 herdr-project close <project> [--worktree <branch>] [--yes]
 ```
 
@@ -71,7 +71,9 @@ gets one row per worktree. Pass `--json` for the same rows as a JSON array inste
 branch instead (or opens it, if one already exists). Either way the project's tabs are laid into
 the workspace and the new workspace is focused. `--no-focus` opens it in the background instead,
 leaving you in the tab you were already in. A background workspace opens on its first tab rather
-than its `focusedTab`, since focusing a tab is what pulls the session over to it.
+than its `focusedTab`, since focusing a tab is what pulls the session over to it. `--prompt` sends
+the text to the workspace's agent once it starts, in place of the project's own prompt; see
+[Prompts](#prompts).
 
 **`close`** closes the project's main workspace; with `--worktree`, it removes that branch's
 worktree instead. Either way it asks for confirmation first, as an Ink modal — closing a worktree
@@ -172,7 +174,9 @@ and waits for the agent to pick it up, so a prompt Herdr never delivered is repo
 dropped silently.
 
 Unlike tabs, prompts belong to whoever opened the workspace rather than to the `workspace.created`
-hook, so a workspace opened from Herdr's own UI gets the project's tabs but not its prompt.
+hook, so a workspace opened from Herdr's own UI gets the project's tabs but not its prompt. That
+also keeps `--prompt` and a project's own prompt from both landing in the same agent: the flag
+replaces the project's prompt rather than queuing behind it.
 
 ## Development
 
