@@ -59,13 +59,17 @@ export async function waitForWorkspaceAgent(
 }
 
 /**
- * Sends a prompt to the agent running in a workspace, waiting for the agent to start first. Returns
- * once the agent has begun working on the prompt rather than when it answers, so a prompt Herdr
- * never delivered is reported instead of passing silently.
+ * Sends a prompt to the agent running in a workspace, waiting for that agent to start and go idle
+ * first. Returns once the agent has begun working on the prompt rather than when it answers, so a
+ * prompt Herdr never delivered is reported instead of passing silently.
+ *
+ * That report is only trustworthy because the agent is idle when the prompt is sent: delivery is
+ * confirmed by the agent starting to work, which an agent that was already working never does. An
+ * agent that might be busy needs a different wait, so don't reuse this to prompt one.
  *
  * @param workspaceId The workspace whose agent to prompt.
  * @param prompt The prompt to send.
- * @throws When no agent starts, or the agent does not start the prompt.
+ * @throws When no agent becomes idle, or the agent does not start the prompt.
  */
 export async function promptWorkspaceAgent(workspaceId: string, prompt: string): Promise<void> {
   const paneId = await waitForWorkspaceAgent(workspaceId);

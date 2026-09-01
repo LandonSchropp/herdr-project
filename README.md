@@ -169,9 +169,10 @@ which is how an override takes effect without having to list every other reposit
 ### Prompts
 
 A project's `prompt` is sent to the agent in its workspace once that agent has started, using
-Herdr's own `agent prompt`. It goes to the workspace's first ready agent, whichever tab that is,
-and waits for the agent to pick it up, so a prompt Herdr never delivered is reported rather than
-dropped silently.
+Herdr's own `agent prompt`. It goes to the workspace's first idle agent, whichever tab that is, and
+waits for that agent to start on it, so a prompt Herdr never delivered is reported rather than
+dropped silently. The agent is idle by construction here, having just started; prompting an agent
+that is already working is Herdr's job, not this plugin's.
 
 Unlike tabs, prompts belong to whoever opened the workspace rather than to the `workspace.created`
 hook, so a workspace opened from Herdr's own UI gets the project's tabs but not its prompt. That
