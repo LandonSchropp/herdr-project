@@ -68,6 +68,7 @@ export async function discoverProjects(settings: Settings): Promise<Project[]> {
     repositoryRoot,
     tabs: settings.defaultTabs,
     focusedTab: settings.defaultFocusedTab,
+    prompt: null,
   }));
 }
 

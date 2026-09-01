@@ -1,3 +1,4 @@
+import { promptWorkspaceAgent } from "./agents.ts";
 import { runHerdr, runHerdrJson } from "./herdr.ts";
 import type { Project } from "./types.ts";
 import { createWorktree, listWorktrees, openWorktree } from "./worktrees.ts";
@@ -104,15 +105,16 @@ export async function closeProjectWorktree(project: Project, branch: string): Pr
 }
 
 /**
- * Opens an existing worktree into a Herdr workspace. The project's tabs are not laid out here:
- * Herdr emits `workspace.created`, and the plugin's hook lays them in, which covers workspaces
- * Herdr opens on its own as well as the ones opened from here.
+ * Opens an existing worktree into a Herdr workspace, sending the project's prompt to the agent that
+ * starts in it. The project's tabs are not laid out here: Herdr emits `workspace.created`, and the
+ * plugin's hook lays them in, which covers workspaces Herdr opens on its own as well as the ones
+ * opened from here.
  *
  * @param project The project the worktree belongs to.
  * @param path The absolute path to the worktree's checkout.
  * @param label The workspace's name. Omit to let Herdr name it after the repository.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
- * @throws When the worktree already has a workspace open.
+ * @throws When the worktree already has a workspace open, or the project's prompt is not delivered.
  */
 export async function openProjectWorktree(
   project: Project,
@@ -124,7 +126,9 @@ export async function openProjectWorktree(
     throw new Error(`A workspace is already open for ${path}.`);
   }
 
-  await openWorktree(project.repositoryRoot, path, label, focus);
+  const { workspaceId } = await openWorktree(project.repositoryRoot, path, label, focus);
+
+  if (project.prompt !== null) await promptWorkspaceAgent(workspaceId, project.prompt);
 }
 
 /**
@@ -135,7 +139,8 @@ export async function openProjectWorktree(
  * @param project The project to create the worktree in.
  * @param branch The branch to create the worktree on.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
- * @throws When the branch's existing worktree already has a workspace open.
+ * @throws When the branch's existing worktree already has a workspace open, or the project's prompt
+ *   is not delivered.
  */
 export async function createProjectWorktree(
   project: Project,
@@ -151,7 +156,9 @@ export async function createProjectWorktree(
     return;
   }
 
-  await createWorktree(project.repositoryRoot, branch, focus);
+  const { workspaceId } = await createWorktree(project.repositoryRoot, branch, focus);
+
+  if (project.prompt !== null) await promptWorkspaceAgent(workspaceId, project.prompt);
 }
 
 /**
@@ -161,7 +168,7 @@ export async function createProjectWorktree(
  *
  * @param project The project to open.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
- * @throws When the repository reports no main checkout.
+ * @throws When the repository reports no main checkout, or the project's prompt is not delivered.
  */
 export async function openProjectMain(project: Project, focus: boolean = true): Promise<void> {
   const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);

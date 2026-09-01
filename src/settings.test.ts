@@ -124,6 +124,7 @@ describe("parseProjects", () => {
           repositoryRoot: `${homedir()}/Notes`,
           tabs: [{ name: "editor", command: "nvim" }],
           focusedTab: null,
+          prompt: null,
         },
       ]);
     });
@@ -137,6 +138,7 @@ describe("parseProjects", () => {
           repositoryRoot: "/tmp/repos/widgets",
           tabs: [SHELL_TAB],
           focusedTab: null,
+          prompt: null,
         },
       ]);
     });
@@ -170,6 +172,24 @@ describe("parseProjects", () => {
     });
   });
 
+  describe("when a project declares a prompt", () => {
+    it("returns it", () => {
+      const projects = parseProjects(
+        [{ path: "/tmp/widgets", prompt: "read the README" }],
+        [SHELL_TAB],
+        null,
+      );
+
+      expect(projects[0]?.prompt).toEqual("read the README");
+    });
+  });
+
+  describe("when a project omits its prompt", () => {
+    it("returns null", () => {
+      expect(parseProjects([{ path: "/tmp/widgets" }], [SHELL_TAB], null)[0]?.prompt).toBeNull();
+    });
+  });
+
   describe("when a project has no path", () => {
     it("skips it", () => {
       expect(parseProjects([{ name: "nowhere" }], [SHELL_TAB], null)).toEqual([]);
@@ -198,6 +218,7 @@ describe("parseSettings", () => {
             repositoryRoot: "/tmp/notes",
             tabs: [{ name: "neovim", command: "nvim" }],
             focusedTab: null,
+            prompt: null,
           },
         ],
       });

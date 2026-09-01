@@ -22,6 +22,12 @@ A project's tabs are laid out by the `workspace.created` event hook, never by wh
 
 The hook runs for every new workspace, so it must stay a quiet no-op when the workspace has no worktree, its repository is not a configured project, or it already has more than the one pane a fresh workspace starts with.
 
+## Prompts Come From the Caller, Not the Hook
+
+A project's `prompt` is sent by whoever opened the workspace — `workspaces.ts` — rather than by the `workspace.created` hook that lays the tabs in. Tabs are part of the workspace and belong to the hook; a prompt is an action taken on the workspace's agent, and only the caller knows whether one was asked for. Moving it into the hook would mean relaying a caller's own prompt through a file again, and a project that declares a prompt would prompt its agent twice.
+
+Prompting waits for the agent to start, because the hook lays the tabs in asynchronously: the workspace exists before its agent does.
+
 ## Modals Need a Sized Parent
 
 `Modal` positions itself absolutely and fills its parent, so it collapses to nothing without a parent that has a width and height. `App` wraps every step in a full-screen `Box` sized from `useWindowSize`, and component tests wrap the modal under test in a fixed-size `Box`. A modal rendered bare will silently render nothing.

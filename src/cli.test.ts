@@ -12,7 +12,9 @@ import { join } from "node:path";
  *
  * @param projects The projects to declare.
  */
-async function stubProjects(projects: { name: string; path: string }[]): Promise<void> {
+async function stubProjects(
+  projects: { name: string; path: string; prompt?: string }[],
+): Promise<void> {
   const directory = await mkdtemp(join(tmpdir(), "herdr-project-cli-"));
   const path = join(directory, "settings.json");
 
@@ -53,8 +55,9 @@ describe("formatProjects", () => {
       repositoryRoot: "/tmp/orc",
       tabs: [{ name: "shell", command: null }],
       focusedTab: null,
+      prompt: null,
     },
-    { name: "notes", repositoryRoot: "/tmp/notes", tabs: [], focusedTab: null },
+    { name: "notes", repositoryRoot: "/tmp/notes", tabs: [], focusedTab: null, prompt: null },
   ];
 
   describe("when stdout is a TTY", () => {
@@ -90,6 +93,7 @@ describe("formatProjects", () => {
         repositoryRoot: `${homedir()}/Development/orc`,
         tabs: [],
         focusedTab: null,
+        prompt: null,
       },
     ];
 
@@ -199,6 +203,37 @@ describe("runCli", () => {
 
       expect(result.exitCode).toEqual(0);
       expect(createProjectWorktree).toHaveBeenCalledWith(expect.anything(), "feature", true);
+    });
+  });
+
+  describe("when --prompt is passed with no value", () => {
+    it("reports the missing text", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const result = await runCli(["open", "orc", "--prompt"]);
+
+      expect(result.stderr).toContain("--prompt requires a value");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+
+  describe("when opening a project with --prompt", () => {
+    it("opens the main workspace with the prompt", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc", prompt: "read the AGENTS file" }]);
+
+      const openProjectMain = mock(() => Promise.resolve());
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+        createProjectWorktree: mock(() => Promise.resolve()),
+        openProjectMain,
+        openProjectWorktree: mock(() => Promise.resolve()),
+      }));
+
+      await runCli(["open", "orc", "--prompt", "read the README"]);
+
+      expect(openProjectMain).toHaveBeenCalledWith(
+        expect.objectContaining({ prompt: "read the README" }),
+        true,
+      );
     });
   });
 

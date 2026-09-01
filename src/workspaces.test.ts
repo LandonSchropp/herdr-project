@@ -14,7 +14,13 @@ import { describe, expect, it, mock } from "bun:test";
 
 const TABS = [{ name: "shell", command: null }];
 
-const PROJECT: Project = { name: "orc", repositoryRoot: "/tmp/orc", tabs: TABS, focusedTab: null };
+const PROJECT: Project = {
+  name: "orc",
+  repositoryRoot: "/tmp/orc",
+  tabs: TABS,
+  focusedTab: null,
+  prompt: null,
+};
 
 const WORKSPACE = { workspaceId: "wG", rootTabId: "wG:t1", rootPaneId: "wG:p1" };
 
@@ -34,6 +40,7 @@ async function mockHerdrModules(
 ) {
   const mocks = {
     applyLayout: mock(() => Promise.resolve()),
+    promptWorkspaceAgent: mock(() => Promise.resolve()),
     openWorktree: mock(() => Promise.resolve(WORKSPACE)),
     createWorktree: mock(() => Promise.resolve(CREATED_WORKSPACE)),
     listWorktrees: mock(() => Promise.resolve(worktrees)),
@@ -45,6 +52,9 @@ async function mockHerdrModules(
   };
 
   await stubModule(import.meta.resolve("./layout.ts"), () => ({ applyLayout: mocks.applyLayout }));
+  await stubModule(import.meta.resolve("./agents.ts"), () => ({
+    promptWorkspaceAgent: mocks.promptWorkspaceAgent,
+  }));
   await stubModule(import.meta.resolve("./herdr.ts"), () => ({ runHerdrJson: mocks.runHerdrJson }));
   await stubModule(import.meta.resolve("./worktrees.ts"), () => ({
     openWorktree: mocks.openWorktree,
@@ -68,6 +78,27 @@ describe("openProjectWorktree", () => {
       true,
     );
     expect(mocks.applyLayout).not.toHaveBeenCalled();
+  });
+
+  it("leaves the workspace's agent unprompted", async () => {
+    const mocks = await mockHerdrModules([]);
+
+    await openProjectWorktree(PROJECT, "/tmp/worktrees/feature");
+
+    expect(mocks.promptWorkspaceAgent).not.toHaveBeenCalled();
+  });
+
+  describe("when the project declares a prompt", () => {
+    it("prompts the workspace's agent", async () => {
+      const mocks = await mockHerdrModules([]);
+
+      await openProjectWorktree(
+        { ...PROJECT, prompt: "read the README" },
+        "/tmp/worktrees/feature",
+      );
+
+      expect(mocks.promptWorkspaceAgent).toHaveBeenCalledWith("wG", "read the README");
+    });
   });
 
   describe("when focus is disabled", () => {
@@ -109,6 +140,16 @@ describe("createProjectWorktree", () => {
 
     expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", true);
     expect(mocks.applyLayout).not.toHaveBeenCalled();
+  });
+
+  describe("when the project declares a prompt", () => {
+    it("prompts the new workspace's agent", async () => {
+      const mocks = await mockHerdrModules([]);
+
+      await createProjectWorktree({ ...PROJECT, prompt: "read the README" }, "feature");
+
+      expect(mocks.promptWorkspaceAgent).toHaveBeenCalledWith("wG", "read the README");
+    });
   });
 
   describe("when focus is disabled", () => {

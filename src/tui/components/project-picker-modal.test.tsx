@@ -24,6 +24,7 @@ const ORC: Project = {
   repositoryRoot: "/home/user/Development/orc",
   tabs: [],
   focusedTab: null,
+  prompt: null,
 };
 
 const NOTES: Project = {
@@ -31,6 +32,7 @@ const NOTES: Project = {
   repositoryRoot: "/home/user/Notes",
   tabs: [],
   focusedTab: null,
+  prompt: null,
 };
 
 const noop = () => {};

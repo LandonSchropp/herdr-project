@@ -133,6 +133,7 @@ describe("discoverProjects", () => {
           repositoryRoot: join(root, "widgets"),
           tabs: defaultTabs,
           focusedTab: null,
+          prompt: null,
         },
       ]);
     });
@@ -163,6 +164,7 @@ describe("mergeProjects", () => {
     repositoryRoot: "/tmp/widgets",
     tabs: [{ name: "editor", command: "nvim" }],
     focusedTab: null,
+    prompt: null,
   };
 
   describe("when a discovered project shares a declared project's path", () => {
@@ -172,6 +174,7 @@ describe("mergeProjects", () => {
         repositoryRoot: "/tmp/widgets",
         tabs: [SHELL_TAB],
         focusedTab: null,
+        prompt: null,
       };
 
       expect(mergeProjects([declared], [discovered])).toEqual([declared]);
@@ -185,6 +188,7 @@ describe("mergeProjects", () => {
         repositoryRoot: "/tmp/apple",
         tabs: [SHELL_TAB],
         focusedTab: null,
+        prompt: null,
       };
 
       expect(mergeProjects([declared], [discovered]).map((project) => project.name)).toEqual([

@@ -128,7 +128,8 @@ Settings live in a single file at `~/.config/herdr-project/settings.json`. Point
         { "name": "claude", "command": "claude" }
       ]
     },
-    { "name": "landonschropp", "path": "~/Development/landonschropp.com" }
+    { "name": "landonschropp", "path": "~/Development/landonschropp.com" },
+    { "path": "~/Notes", "prompt": "Read the vault's conventions before you touch anything." }
   ]
 }
 ```
@@ -152,15 +153,26 @@ tab.
 ### Declaring a project
 
 Discovery already covers most repositories, so declare a project only when you want to override
-something. The two reasons that come up:
+something. The reasons that come up:
 
 - **A different name**, when the directory's name isn't what you want to see in the picker (say
   `landonschropp.com` shown as `landonschropp`, or `.dotfiles` as `dotfiles`).
 - **A different layout**, when the project wants tabs other than the default's.
+- **A prompt**, when the project's agent should always start on the same instructions.
 
 Only `path` is required: `name` defaults to the directory's name, and `tabs` and `focusedTab`
 default to the `default` project's. A declared project replaces a discovered one at the same path,
 which is how an override takes effect without having to list every other repository.
+
+### Prompts
+
+A project's `prompt` is sent to the agent in its workspace once that agent has started, using
+Herdr's own `agent prompt`. It goes to the workspace's first ready agent, whichever tab that is,
+and waits for the agent to pick it up, so a prompt Herdr never delivered is reported rather than
+dropped silently.
+
+Unlike tabs, prompts belong to whoever opened the workspace rather than to the `workspace.created`
+hook, so a workspace opened from Herdr's own UI gets the project's tabs but not its prompt.
 
 ## Development
 

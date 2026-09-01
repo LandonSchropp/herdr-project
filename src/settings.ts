@@ -71,7 +71,8 @@ export function parseTabs(value: unknown): Tab[] {
 
 /**
  * Reads the explicitly declared projects. An entry needs a `path`; its `name` defaults to the
- * directory's name, its `tabs` to `defaultTabs`, and its `focusedTab` to `defaultFocusedTab`.
+ * directory's name, its `tabs` to `defaultTabs`, its `focusedTab` to `defaultFocusedTab`, and its
+ * `prompt` to none.
  *
  * @param value The value to read the projects from.
  * @param defaultTabs The tabs to use for a project that declares none.
@@ -91,6 +92,7 @@ export function parseProjects(
       path?: unknown;
       tabs?: unknown;
       focusedTab?: unknown;
+      prompt?: unknown;
     };
 
     if (typeof project.path !== "string") return [];
@@ -104,6 +106,7 @@ export function parseProjects(
         repositoryRoot,
         tabs: tabs.length > 0 ? tabs : defaultTabs,
         focusedTab: typeof project.focusedTab === "string" ? project.focusedTab : defaultFocusedTab,
+        prompt: typeof project.prompt === "string" ? project.prompt : null,
       },
     ];
   });

@@ -22,6 +22,11 @@ export type Project = {
    * focused. A name that matches none of the project's tabs is ignored.
    */
   focusedTab: string | null;
+  /**
+   * The prompt to send to the agent in the project's workspace once it starts, or `null` to leave
+   * the agent unprompted.
+   */
+  prompt: string | null;
 };
 
 /** A Git worktree belonging to a project's repository. */
