@@ -63,9 +63,10 @@ herdr-project open <project> [--worktree <branch>] [--prompt <text>] [--no-focus
 herdr-project close <project> [--worktree <branch>] [--yes]
 ```
 
-**`list`** prints a table with each project's name, the branch of each of its open worktrees, and
-its checkout path — `N/A` for a project with nothing open. A project with several open worktrees
-gets one row per worktree. Pass `--json` for the same rows as a JSON array instead of a table.
+**`list`** prints each configured project's name and path — an aligned table at a terminal, plain
+tab-separated lines when piped. Pass `--json` for the same projects, including their tabs, as a
+JSON array instead. Herdr's own `workspace list`/`worktree list` already cover which workspaces and
+worktrees are actually open.
 
 **`open`** opens the project's main worktree; with `--worktree`, it creates a worktree on that
 branch instead (or opens it, if one already exists). Either way the project's tabs are laid into
