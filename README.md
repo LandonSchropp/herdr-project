@@ -2,15 +2,17 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A [Herdr](https://herdr.dev) plugin that opens a project and one of its Git worktrees from two
-pickers.
+A [Herdr](https://herdr.dev) plugin that opens a predefined project and one of its Git worktrees
+from two pickers.
 
 ## Why?
 
-Two things come up often enough to be worth a dedicated key each: jumping straight to a project's
-main checkout, and creating a worktree for whatever project the current workspace belongs to. This
-plugin is those two actions — a project picker and a new-worktree prompt — plus CLI equivalents so
-a script or agent can drive them without a terminal UI.
+When working in Herdr, it's common to create many workspaces and worktrees, each with the same
+standard set of tabs and commands. Recreating that layout by hand every time is a pain, so this
+plugin automates it: spin up a workspace or worktree and its tabs come preconfigured, the way
+[tmuxinator](https://github.com/tmuxinator/tmuxinator) does for tmux. A `default` project, plus a
+glob of the directories your repositories live in, means most projects don't even need a separate
+[configuration](#configuration).
 
 ## How It Works
 
