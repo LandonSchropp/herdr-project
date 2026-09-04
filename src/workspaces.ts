@@ -4,7 +4,7 @@ import { runHerdr } from "./herdr.ts";
 import { reportProject } from "./metadata.ts";
 import { findOpenWorkspace, listOpenWorkspaces } from "./open-workspaces.ts";
 import { loadSettings } from "./settings.ts";
-import type { Project } from "./types.ts";
+import type { Project, Workspace } from "./types.ts";
 import {
   createFlatWorktree,
   createWorktree,
@@ -69,6 +69,32 @@ export async function closeProjectWorktree(project: Project, branch: string): Pr
 }
 
 /**
+ * Refuses to reopen a path that already has a workspace, otherwise opens one, reports the project's
+ * name, and sends the project's prompt to the agent that starts in it.
+ *
+ * @param project The project the path belongs to, whose name and prompt are sent once the workspace
+ *   opens.
+ * @param path The absolute path being opened.
+ * @param open Opens the workspace once `path` is confirmed free.
+ * @throws When a workspace is already open for `path`, or the project's prompt is not delivered.
+ */
+async function openIntoWorkspace(
+  project: Project,
+  path: string,
+  open: () => Promise<Workspace>,
+): Promise<void> {
+  if ((await findOpenWorkspace(path)) !== null) {
+    throw new Error(`A workspace is already open for ${path}.`);
+  }
+
+  const { workspaceId } = await open();
+
+  await reportProject(workspaceId, project.name);
+
+  if (project.prompt !== null) await promptWorkspaceAgent(workspaceId, project.prompt);
+}
+
+/**
  * Opens an existing worktree into a Herdr workspace, reporting the project's name and sending its
  * prompt to the agent that starts in it. The project's tabs are laid in by the `workspace.created`
  * hook rather than here.
@@ -87,17 +113,13 @@ export async function openProjectWorktree(
   label?: string,
   focus: boolean = true,
 ): Promise<void> {
-  if ((await findOpenWorkspace(path)) !== null) {
-    throw new Error(`A workspace is already open for ${path}.`);
-  }
+  const flatWorkspaces = (await loadSettings()).flatWorkspaces;
 
-  const { workspaceId } = (await loadSettings()).flatWorkspaces
-    ? await openFlatWorkspace(path, label ?? basename(path), focus)
-    : await openWorktree(project.repositoryRoot, path, label, focus);
-
-  await reportProject(workspaceId, project.name);
-
-  if (project.prompt !== null) await promptWorkspaceAgent(workspaceId, project.prompt);
+  await openIntoWorkspace(project, path, () =>
+    flatWorkspaces
+      ? openFlatWorkspace(path, label ?? basename(path), focus)
+      : openWorktree(project.repositoryRoot, path, label, focus),
+  );
 }
 
 /**
@@ -138,7 +160,8 @@ export async function createProjectWorktree(
 /**
  * Opens the project's main checkout into a Herdr workspace, named after the project. Only the main
  * checkout takes the project's name; a linked worktree keeps the branch name Herdr gives it, which
- * is what distinguishes it in the sidebar.
+ * is what distinguishes it in the sidebar. A bare repository's main checkout has no working tree of
+ * its own, so it opens as a plain workspace rather than through the usual worktree machinery.
  *
  * @param project The project to open.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
@@ -148,6 +171,13 @@ export async function openProjectMain(project: Project, focus: boolean = true): 
   const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);
 
   if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
+
+  if (main.isBare) {
+    await openIntoWorkspace(project, main.path, () =>
+      openFlatWorkspace(main.path, project.name, focus),
+    );
+    return;
+  }
 
   await openProjectWorktree(project, main.path, project.name, focus);
 }

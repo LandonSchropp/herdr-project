@@ -52,8 +52,14 @@ describe("parseWorktrees", () => {
           branch: "value-proposition",
           path: "/home/user/.cache/orc/worktrees/orc/value-proposition",
           isMain: false,
+          isBare: false,
         },
-        { branch: "main", path: "/home/user/Development/orc", isMain: true },
+        {
+          branch: "main",
+          path: "/home/user/Development/orc",
+          isMain: true,
+          isBare: false,
+        },
       ]);
     });
   });
@@ -65,6 +71,20 @@ describe("parseWorktrees", () => {
       };
 
       expect(parseWorktrees(response)).toEqual([]);
+    });
+  });
+
+  describe("when the main worktree is bare with no branch", () => {
+    it("keeps it", () => {
+      const response = {
+        result: {
+          worktrees: [{ is_linked_worktree: false, is_bare: true, path: "/tmp/anywhere" }],
+        },
+      };
+
+      expect(parseWorktrees(response)).toEqual([
+        { branch: "", path: "/tmp/anywhere", isMain: true, isBare: true },
+      ]);
     });
   });
 
@@ -85,9 +105,9 @@ describe("sortWorktrees", () => {
   describe("when a main worktree is present", () => {
     it("puts the main worktree first and sorts the rest by branch", () => {
       const worktrees = [
-        { branch: "zebra", path: "/tmp/zebra", isMain: false },
-        { branch: "main", path: "/tmp/main", isMain: true },
-        { branch: "apple", path: "/tmp/apple", isMain: false },
+        { branch: "zebra", path: "/tmp/zebra", isMain: false, isBare: false },
+        { branch: "main", path: "/tmp/main", isMain: true, isBare: false },
+        { branch: "apple", path: "/tmp/apple", isMain: false, isBare: false },
       ];
 
       expect(sortWorktrees(worktrees).map((worktree) => worktree.branch)).toEqual([
@@ -101,8 +121,8 @@ describe("sortWorktrees", () => {
   describe("when there is no main worktree", () => {
     it("sorts every worktree by branch", () => {
       const worktrees = [
-        { branch: "zebra", path: "/tmp/zebra", isMain: false },
-        { branch: "apple", path: "/tmp/apple", isMain: false },
+        { branch: "zebra", path: "/tmp/zebra", isMain: false, isBare: false },
+        { branch: "apple", path: "/tmp/apple", isMain: false, isBare: false },
       ];
 
       expect(sortWorktrees(worktrees).map((worktree) => worktree.branch)).toEqual([
@@ -118,11 +138,12 @@ describe("listWorktrees", () => {
     const spawn = mockSpawn(JSON.stringify(RESPONSE));
 
     expect(await listWorktrees("/tmp/repo")).toEqual([
-      { branch: "main", path: "/home/user/Development/orc", isMain: true },
+      { branch: "main", path: "/home/user/Development/orc", isMain: true, isBare: false },
       {
         branch: "value-proposition",
         path: "/home/user/.cache/orc/worktrees/orc/value-proposition",
         isMain: false,
+        isBare: false,
       },
     ]);
 

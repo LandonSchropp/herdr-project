@@ -40,6 +40,12 @@ export type Worktree = {
    * worktree in a repository is the main one.
    */
   isMain: boolean;
+  /**
+   * Whether this worktree has no working tree of its own. Only the main worktree of a bare
+   * repository is bare; a bare main worktree also reports no branch, since nothing is checked out
+   * in it.
+   */
+  isBare: boolean;
 };
 
 /** The Herdr workspace a worktree was opened into, and the tab and pane Herdr created with it. */

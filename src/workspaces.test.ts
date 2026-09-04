@@ -48,7 +48,7 @@ function mockRunHerdrJson(workspaces: unknown[], panes: unknown[] = []) {
  * @returns The mocks standing in for each replaced function.
  */
 async function mockHerdrModules(
-  worktrees: { branch: string; path: string; isMain: boolean }[],
+  worktrees: { branch: string; path: string; isMain: boolean; isBare?: boolean }[],
   openPaths: string[] = [],
   flatWorkspaces = false,
 ) {
@@ -291,6 +291,34 @@ describe("openProjectMain", () => {
 
       expect(thrown).toBeInstanceOf(Error);
       expect((thrown as Error).message).toContain("no main worktree");
+    });
+  });
+
+  describe("when the main worktree is bare", () => {
+    it("opens it as a plain workspace, naming it after the project", async () => {
+      const mocks = await mockHerdrModules([
+        { branch: "", path: "/tmp/orc", isMain: true, isBare: true },
+      ]);
+
+      await openProjectMain(PROJECT);
+
+      expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "orc", true);
+      expect(mocks.openWorktree).not.toHaveBeenCalled();
+    });
+
+    describe("when the path already has a workspace open", () => {
+      it("refuses rather than laying a second set of tabs into it", async () => {
+        const mocks = await mockHerdrModules(
+          [{ branch: "", path: "/tmp/orc", isMain: true, isBare: true }],
+          ["/tmp/orc"],
+        );
+
+        const thrown = await openProjectMain(PROJECT).catch((error: Error) => error);
+
+        expect(thrown).toBeInstanceOf(Error);
+        expect((thrown as Error).message).toContain("already open");
+        expect(mocks.openFlatWorkspace).not.toHaveBeenCalled();
+      });
     });
   });
 });

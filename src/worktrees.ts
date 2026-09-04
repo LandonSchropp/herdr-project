@@ -12,10 +12,11 @@ import { basename, join } from "node:path";
 const WORKTREE_DIRECTORY = ".herdr/worktrees";
 
 /**
- * Extracts the worktrees from a `herdr worktree list --json` response. Detached worktrees have no
- * branch to select or open, so they are skipped. A response that isn't shaped like a worktree list
- * yields an empty list rather than throwing, keeping a surprising payload from crashing the
- * picker.
+ * Extracts the worktrees from a `herdr worktree list --json` response. A detached linked worktree
+ * has no branch to select or open, so it is skipped; the main worktree is kept regardless, since a
+ * bare repository's main worktree has no branch either but is still where a project opens. A
+ * response that isn't shaped like a worktree list yields an empty list rather than throwing,
+ * keeping a surprising payload from crashing the picker.
  *
  * @param response The parsed JSON response.
  * @returns The worktrees described by the response.
@@ -26,15 +27,23 @@ export function parseWorktrees(response: unknown): Worktree[] {
   if (!Array.isArray(result?.worktrees)) return [];
 
   return result.worktrees.flatMap((entry: unknown) => {
-    const worktree = entry as { branch?: unknown; path?: unknown; is_linked_worktree?: unknown };
+    const worktree = entry as {
+      branch?: unknown;
+      path?: unknown;
+      is_linked_worktree?: unknown;
+      is_bare?: unknown;
+    };
+    const isMain = worktree.is_linked_worktree !== true;
 
-    if (typeof worktree.branch !== "string" || typeof worktree.path !== "string") return [];
+    if (typeof worktree.path !== "string") return [];
+    if (typeof worktree.branch !== "string" && !isMain) return [];
 
     return [
       {
-        branch: worktree.branch,
+        branch: typeof worktree.branch === "string" ? worktree.branch : "",
         path: worktree.path,
-        isMain: worktree.is_linked_worktree !== true,
+        isMain,
+        isBare: worktree.is_bare === true,
       },
     ];
   });
