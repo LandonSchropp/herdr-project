@@ -24,6 +24,12 @@ platforms = ["linux", "macos"]
 [[build]]
 command = ["sh", "scripts/build.sh"]
 
+# startup — reports every open workspace's project name as the `project` metadata token, which a
+# sidebar row renders as `$project`. Herdr runs this for you, once it has restored a session — never
+# invoke it by hand.
+[[startup]]
+command = ["./scripts/run.sh", "on-startup"]
+
 # project — the plugin's entry point. Opens the picker flow, which ends by opening the chosen
 # worktree into a Herdr workspace. Bind a key to it or run it from Herdr's action menu.
 #

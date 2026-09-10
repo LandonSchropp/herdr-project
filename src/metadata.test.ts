@@ -1,5 +1,10 @@
 import { stubModule } from "../test/helpers/module.ts";
-import { parseRepositoryRoots, reportProject, reportWorkspaceProject } from "./metadata.ts";
+import {
+  parseRepositoryRoots,
+  reportOpenWorkspaceProjects,
+  reportProject,
+  reportWorkspaceProject,
+} from "./metadata.ts";
 import type { Project } from "./types.ts";
 import { describe, expect, it, mock } from "bun:test";
 
@@ -189,6 +194,68 @@ describe("reportWorkspaceProject", () => {
       mocks.runHerdrJson.mockRejectedValue(new Error("herdr is not listening"));
 
       expect(await reportWorkspaceProject("wI")).toContain("herdr is not listening");
+    });
+  });
+});
+
+describe("reportOpenWorkspaceProjects", () => {
+  describe("when workspaces are open", () => {
+    it("reports one project name per workspace", async () => {
+      const mocks = await mockModules();
+
+      await reportOpenWorkspaceProjects();
+
+      expect(mocks.runHerdr).toHaveBeenCalledTimes(3);
+    });
+
+    it("reports each workspace's own project name", async () => {
+      const mocks = await mockModules();
+
+      await reportOpenWorkspaceProjects();
+
+      expect(mocks.runHerdr).toHaveBeenCalledWith([
+        "workspace",
+        "report-metadata",
+        "wI",
+        "--source",
+        "landonschropp.herdr-project",
+        "--token",
+        "project=dotfiles",
+      ]);
+    });
+
+    it("returns a message counting them", async () => {
+      await mockModules();
+
+      expect(await reportOpenWorkspaceProjects()).toContain("3");
+    });
+  });
+
+  describe("when no workspace's repository is a configured project", () => {
+    it("reports nothing", async () => {
+      const mocks = await mockModules(WORKSPACES, []);
+
+      await reportOpenWorkspaceProjects();
+
+      expect(mocks.runHerdr).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("when Herdr refuses a report", () => {
+    it("returns the failure rather than counting it as reported", async () => {
+      const mocks = await mockModules();
+      mocks.runHerdr.mockRejectedValue(new Error("herdr is not listening"));
+
+      expect(await reportOpenWorkspaceProjects()).toContain("herdr is not listening");
+    });
+  });
+
+  describe("when Herdr will not list its workspaces", () => {
+    it("returns the failure rather than throwing", async () => {
+      const mocks = await mockModules();
+      mocks.runHerdrJson.mockRejectedValue(new Error("herdr is not listening"));
+
+      expect(await reportOpenWorkspaceProjects()).toContain("herdr is not listening");
     });
   });
 });

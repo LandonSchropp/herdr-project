@@ -1,5 +1,5 @@
 import { confirm, isInteractive } from "./confirm.tsx";
-import { reportWorkspaceProject } from "./metadata.ts";
+import { reportOpenWorkspaceProjects, reportWorkspaceProject } from "./metadata.ts";
 import { applyProjectLayout, parseEventWorkspaceId } from "./on-workspace.ts";
 import { copyWorktreeIncludes, parseEventWorktreePath } from "./on-worktree.ts";
 import { listProjects } from "./projects.ts";
@@ -239,6 +239,15 @@ async function runOnWorkspace(): Promise<CliResult> {
 }
 
 /**
+ * Runs the `on-startup` command. Herdr invokes this once it has restored a session.
+ *
+ * @returns The command's result.
+ */
+async function runOnStartup(): Promise<CliResult> {
+  return { stdout: `${await reportOpenWorkspaceProjects()}\n`, stderr: "", exitCode: 0 };
+}
+
+/**
  * Runs the `on-worktree` hook. Herdr invokes this for every worktree it creates, so it reports what
  * it decided rather than failing when a worktree has nothing to copy.
  *
@@ -274,6 +283,7 @@ export async function runCli(args: string[]): Promise<CliResult> {
     if (command === "close") return await runClose(rest);
     if (command === "on-workspace") return await runOnWorkspace();
     if (command === "on-worktree") return await runOnWorktree();
+    if (command === "on-startup") return await runOnStartup();
   } catch (thrown) {
     const message = thrown instanceof Error ? thrown.message : String(thrown);
     return { stdout: "", stderr: `Error: ${message}\n`, exitCode: 1 };

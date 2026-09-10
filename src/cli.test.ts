@@ -567,6 +567,36 @@ describe("runCli on-workspace", () => {
   });
 });
 
+describe("runCli on-startup", () => {
+  it("re-reports every open workspace's project name", async () => {
+    await stubModule(import.meta.resolve("./metadata.ts"), () => ({
+      reportOpenWorkspaceProjects: mock(() =>
+        Promise.resolve("reported the project of 3 workspace(s)."),
+      ),
+    }));
+
+    const result = await runCli(["on-startup"]);
+
+    expect(result.stdout).toContain("reported the project of 3 workspace(s).");
+    expect(result.exitCode).toEqual(0);
+  });
+
+  describe("when Herdr is not listening", () => {
+    it("prints the failure and exits non-zero", async () => {
+      await stubModule(import.meta.resolve("./metadata.ts"), () => ({
+        reportOpenWorkspaceProjects: mock(() =>
+          Promise.reject(new Error("herdr is not listening")),
+        ),
+      }));
+
+      const result = await runCli(["on-startup"]);
+
+      expect(result.stderr).toContain("herdr is not listening");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+});
+
 describe("runCli on-worktree", () => {
   describe("when the event carries a worktree path", () => {
     it("copies the repository's included files and reports what it did", async () => {

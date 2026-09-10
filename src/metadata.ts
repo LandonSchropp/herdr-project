@@ -123,3 +123,35 @@ export async function reportWorkspaceProject(workspaceId: string): Promise<strin
 
   return reportProject(workspaceId, projectName);
 }
+
+/**
+ * Reports the project name of every open workspace. A workspace whose report Herdr refuses is named
+ * in the message rather than counted as reported, and a Herdr that will not list its workspaces is
+ * returned rather than thrown.
+ *
+ * @returns A message describing what was done, for the plugin log.
+ */
+export async function reportOpenWorkspaceProjects(): Promise<string> {
+  let names: [string, string][];
+
+  try {
+    names = [...(await projectNames())];
+  } catch (thrown) {
+    return failure(thrown);
+  }
+
+  const failures = (
+    await Promise.all(
+      names.map(([workspaceId, name]) =>
+        sendReport(workspaceId, name).then(
+          () => null,
+          (thrown: unknown) => `${workspaceId}: ${failure(thrown)}`,
+        ),
+      ),
+    )
+  ).filter((message) => message !== null);
+
+  const reported = `reported the project of ${names.length - failures.length} workspace(s).`;
+
+  return failures.length === 0 ? reported : `${reported}\n${failures.join("\n")}`;
+}
