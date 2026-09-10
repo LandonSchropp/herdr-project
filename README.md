@@ -92,6 +92,28 @@ ones created from Herdr's own UI, and ones Herdr opens on its own when grouping 
 its parent. Workspaces without a worktree, or whose repository isn't a configured project, are
 left alone.
 
+## Project Name
+
+Herdr's sidebar shows a workspace's label, which for a linked worktree is its branch name — useful
+for telling worktrees apart, useless for telling which project one belongs to. The plugin reports
+each workspace's project name to Herdr as display-only workspace metadata, under a token named
+`project`, so a sidebar row can show it as `$project`:
+
+```toml
+[ui.sidebar.spaces]
+rows = [["state_icon", "workspace"], ["$project"]]
+```
+
+The name is the one the picker uses, so a project that declares a name gets that name rather than
+its directory's: a repository at `~/.dotfiles` declared as `dotfiles` shows `dotfiles`. A workspace
+whose repository isn't a configured project has no project name, so it gets no token and the row is
+blank.
+
+The name is reported when the plugin opens a workspace, by the `workspace.created` hook for
+workspaces Herdr creates on its own, and again for every open workspace when Herdr starts. The last
+of those is what keeps the row filled in across a restart: workspace metadata is display-only, so
+Herdr doesn't persist it with the rest of the session.
+
 ## Untracked Files
 
 Git leaves untracked files behind when it creates a worktree, so a fresh checkout has no `.env` and

@@ -28,6 +28,31 @@ A project's `prompt` is sent by whoever opened the workspace — `workspaces.ts`
 
 Prompting waits for the agent to start, because the hook lays the tabs in asynchronously: the workspace exists before its agent does.
 
+## Project Names Come From Three Places
+
+Unlike tabs and prompts, a workspace's `project` metadata token is reported from everywhere it can
+be. Reporting it twice is harmless, since the same value replaces itself under the same `--source`,
+while reporting it late leaves a blank row on screen. `src/metadata.ts` holds the operations all
+three callers use.
+
+- **`workspaces.ts`, when it opens a workspace.** It already has the project, so it calls
+  `reportProject` with the name and reads nothing back from Herdr. This is the only path with no
+  visible gap.
+- **The `workspace.created` hook**, for workspaces Herdr creates on its own. It has only a workspace
+  id, so `reportWorkspaceProject` matches the workspace's repository against the configured projects
+  to find the name. Bun has to cold-start here, so a short gap is unavoidable.
+- **The `[[startup]]` command**, for a Herdr that has just restarted. Workspace metadata is
+  display-only and is not part of the session snapshot Herdr persists, so a restored session has
+  none until this runs.
+
+The token carries the project's name rather than the repository's directory, which is the whole
+point of it: a declared project like `dotfiles` reads as `dotfiles`, not `.dotfiles`. A workspace
+whose repository is not a configured project has no name to report and is left without the token.
+
+Reporting is best-effort. Every entry point returns a failure rather than throwing, because a
+display-only token is not worth failing an opening workspace over — a throw there would also skip
+the project's prompt.
+
 ## Modals Need a Sized Parent
 
 `Modal` positions itself absolutely and fills its parent, so it collapses to nothing without a parent that has a width and height. `App` wraps every step in a full-screen `Box` sized from `useWindowSize`, and component tests wrap the modal under test in a fixed-size `Box`. A modal rendered bare will silently render nothing.
