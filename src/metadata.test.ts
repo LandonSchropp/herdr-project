@@ -1,22 +1,31 @@
 import { stubModule } from "../test/helpers/module.ts";
-import {
-  parseRepositoryRoots,
-  reportOpenWorkspaceProjects,
-  reportProject,
-  reportWorkspaceProject,
-} from "./metadata.ts";
-import type { Project } from "./types.ts";
+import { reportOpenWorkspaceProjects, reportProject, reportWorkspaceProject } from "./metadata.ts";
+import type { OpenWorkspace, Project } from "./types.ts";
 import { describe, expect, it, mock } from "bun:test";
 
-const WORKSPACES = {
-  result: {
-    workspaces: [
-      { workspace_id: "wG", worktree: { repo_root: "/home/user/Notes" } },
-      { workspace_id: "wH", worktree: { repo_root: "/home/user/Development/herdr-project" } },
-      { workspace_id: "wI", worktree: { repo_root: "/home/user/.dotfiles" } },
-    ],
-  },
-};
+/**
+ * Builds an open workspace with the fields the metadata helpers read.
+ *
+ * @param workspaceId The workspace's id.
+ * @param repositoryRoot The absolute path to the repository the workspace is showing.
+ * @param isManagedWorktree Whether Herdr tracks the workspace as one of its own worktrees.
+ * @returns The open workspace.
+ */
+function openWorkspace(
+  workspaceId: string,
+  repositoryRoot: string,
+  isManagedWorktree = true,
+): OpenWorkspace {
+  return { workspaceId, checkoutPath: repositoryRoot, repositoryRoot, isManagedWorktree };
+}
+
+// `wI` is flat rather than a worktree Herdr manages, and is the workspace the assertions below
+// report against: a flat workspace has to reach the same project name as any other.
+const WORKSPACES = [
+  openWorkspace("wG", "/home/user/Notes"),
+  openWorkspace("wH", "/home/user/Development/herdr-project"),
+  openWorkspace("wI", "/home/user/.dotfiles", false),
+];
 
 /**
  * Builds a project with the defaults the metadata helpers ignore.
@@ -38,23 +47,26 @@ const PROJECTS = [
 ];
 
 /**
- * Replaces the herdr and project modules so the metadata helpers can be exercised without a running
- * Herdr session.
+ * Replaces the herdr, open-workspace, and project modules so the metadata helpers can be exercised
+ * without a running Herdr session.
  *
- * @param response The response `workspace list` reports.
+ * @param workspaces The workspaces `listOpenWorkspaces` reports.
  * @param projects The projects `listProjects` reports.
  * @returns The mocks standing in for each replaced function.
  */
-async function mockModules(response: unknown = WORKSPACES, projects: Project[] = PROJECTS) {
+async function mockModules(
+  workspaces: OpenWorkspace[] = WORKSPACES,
+  projects: Project[] = PROJECTS,
+) {
   const mocks = {
     runHerdr: mock(() => Promise.resolve("")),
-    runHerdrJson: mock(() => Promise.resolve(response)),
+    listOpenWorkspaces: mock(() => Promise.resolve(workspaces)),
     listProjects: mock(() => Promise.resolve(projects)),
   };
 
-  await stubModule(import.meta.resolve("./herdr.ts"), () => ({
-    runHerdr: mocks.runHerdr,
-    runHerdrJson: mocks.runHerdrJson,
+  await stubModule(import.meta.resolve("./herdr.ts"), () => ({ runHerdr: mocks.runHerdr }));
+  await stubModule(import.meta.resolve("./open-workspaces.ts"), () => ({
+    listOpenWorkspaces: mocks.listOpenWorkspaces,
   }));
   await stubModule(import.meta.resolve("./projects.ts"), () => ({
     listProjects: mocks.listProjects,
@@ -62,41 +74,6 @@ async function mockModules(response: unknown = WORKSPACES, projects: Project[] =
 
   return mocks;
 }
-
-describe("parseRepositoryRoots", () => {
-  describe("when the workspaces are backed by worktrees", () => {
-    it("returns each workspace's repository root", () => {
-      expect(parseRepositoryRoots(WORKSPACES)).toEqual(
-        new Map([
-          ["wG", "/home/user/Notes"],
-          ["wH", "/home/user/Development/herdr-project"],
-          ["wI", "/home/user/.dotfiles"],
-        ]),
-      );
-    });
-  });
-
-  describe("when a workspace has no worktree", () => {
-    it("leaves that workspace out", () => {
-      const response = {
-        result: {
-          workspaces: [
-            { workspace_id: "wG" },
-            { workspace_id: "wH", worktree: { repo_root: "/home/user/Notes" } },
-          ],
-        },
-      };
-
-      expect(parseRepositoryRoots(response)).toEqual(new Map([["wH", "/home/user/Notes"]]));
-    });
-  });
-
-  describe("when the response lists no workspaces", () => {
-    it("returns an empty map", () => {
-      expect(parseRepositoryRoots({ result: {} })).toEqual(new Map());
-    });
-  });
-});
 
 describe("reportProject", () => {
   it("reports the name as the project token", async () => {
@@ -120,7 +97,7 @@ describe("reportProject", () => {
 
     await reportProject("wI", "dotfiles");
 
-    expect(mocks.runHerdrJson).not.toHaveBeenCalled();
+    expect(mocks.listOpenWorkspaces).not.toHaveBeenCalled();
   });
 
   describe("when Herdr refuses the report", () => {
@@ -168,16 +145,6 @@ describe("reportWorkspaceProject", () => {
     });
   });
 
-  describe("when the workspace has no worktree", () => {
-    it("reports nothing", async () => {
-      const mocks = await mockModules({ result: { workspaces: [{ workspace_id: "wG" }] } });
-
-      await reportWorkspaceProject("wG");
-
-      expect(mocks.runHerdr).not.toHaveBeenCalled();
-    });
-  });
-
   describe("when no workspace has the id", () => {
     it("reports nothing", async () => {
       const mocks = await mockModules();
@@ -191,7 +158,7 @@ describe("reportWorkspaceProject", () => {
   describe("when Herdr will not list its workspaces", () => {
     it("returns the failure rather than throwing", async () => {
       const mocks = await mockModules();
-      mocks.runHerdrJson.mockRejectedValue(new Error("herdr is not listening"));
+      mocks.listOpenWorkspaces.mockRejectedValue(new Error("herdr is not listening"));
 
       expect(await reportWorkspaceProject("wI")).toContain("herdr is not listening");
     });
@@ -253,7 +220,7 @@ describe("reportOpenWorkspaceProjects", () => {
   describe("when Herdr will not list its workspaces", () => {
     it("returns the failure rather than throwing", async () => {
       const mocks = await mockModules();
-      mocks.runHerdrJson.mockRejectedValue(new Error("herdr is not listening"));
+      mocks.listOpenWorkspaces.mockRejectedValue(new Error("herdr is not listening"));
 
       expect(await reportOpenWorkspaceProjects()).toContain("herdr is not listening");
     });

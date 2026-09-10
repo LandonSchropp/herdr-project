@@ -1,52 +1,24 @@
-import { runHerdr, runHerdrJson } from "./herdr.ts";
+import { runHerdr } from "./herdr.ts";
+import { listOpenWorkspaces } from "./open-workspaces.ts";
 import { listProjects } from "./projects.ts";
 
 /** The scope Herdr files the plugin's workspace metadata under. */
 const SOURCE = "landonschropp.herdr-project";
 
 /**
- * Extracts the repository root of each open workspace from a `workspace list` response, keyed by
- * workspace id. A workspace without a worktree has no repository, so it contributes nothing.
- *
- * @param response The parsed JSON response from a workspace listing.
- * @returns The repository roots.
- */
-export function parseRepositoryRoots(response: unknown): Map<string, string> {
-  const workspaces = (response as { result?: { workspaces?: unknown } })?.result?.workspaces;
-
-  if (!Array.isArray(workspaces)) return new Map();
-
-  return new Map(
-    workspaces.flatMap((entry: unknown) => {
-      const workspace = entry as { workspace_id?: unknown; worktree?: { repo_root?: unknown } };
-      const repositoryRoot = workspace.worktree?.repo_root;
-
-      if (typeof workspace.workspace_id !== "string" || typeof repositoryRoot !== "string") {
-        return [];
-      }
-
-      return [[workspace.workspace_id, repositoryRoot] as [string, string]];
-    }),
-  );
-}
-
-/**
- * Reads the project name of every open workspace. A workspace whose repository is not a configured
- * project has no name, so it contributes nothing.
+ * Reads the project name of every open workspace, whether Herdr manages the workspace's worktree or
+ * not. A workspace showing no checkout, and one whose repository is not a configured project, have
+ * no name and contribute nothing.
  *
  * @returns The project names, keyed by workspace id.
  * @throws When Herdr will not list its workspaces.
  */
 async function projectNames(): Promise<Map<string, string>> {
-  const [repositoryRoots, projects] = await Promise.all([
-    runHerdrJson(["workspace", "list"]).then(parseRepositoryRoots),
-    listProjects(),
-  ]);
-
+  const [workspaces, projects] = await Promise.all([listOpenWorkspaces(), listProjects()]);
   const namesByRoot = new Map(projects.map(({ repositoryRoot, name }) => [repositoryRoot, name]));
 
   return new Map(
-    [...repositoryRoots].flatMap(([workspaceId, repositoryRoot]) => {
+    workspaces.flatMap(({ workspaceId, repositoryRoot }) => {
       const name = namesByRoot.get(repositoryRoot);
       return name === undefined ? [] : [[workspaceId, name] as [string, string]];
     }),
