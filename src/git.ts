@@ -105,3 +105,16 @@ export async function mainCheckoutPath(path: string): Promise<string | null> {
 
   return first === undefined ? null : first.slice("worktree ".length);
 }
+
+/**
+ * Removes a worktree's checkout, which is what `herdr worktree remove` does for a worktree Herdr
+ * manages and what the flat path has to do for itself. Git refuses a checkout holding uncommitted
+ * work, which is the guard against deleting something the caller still wants.
+ *
+ * @param repositoryRoot The absolute path to the repository the worktree belongs to.
+ * @param path The absolute path to the checkout to remove.
+ * @throws When Git refuses, including when the checkout is not clean.
+ */
+export async function removeWorktree(repositoryRoot: string, path: string): Promise<void> {
+  await runGitOrThrow(["-C", repositoryRoot, "worktree", "remove", path]);
+}

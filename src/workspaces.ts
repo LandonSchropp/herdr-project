@@ -1,4 +1,5 @@
 import { promptWorkspaceAgent } from "./agents.ts";
+import { removeWorktree } from "./git.ts";
 import { runHerdr } from "./herdr.ts";
 import { reportProject } from "./metadata.ts";
 import { findOpenWorkspace, listOpenWorkspaces } from "./open-workspaces.ts";
@@ -32,11 +33,18 @@ export async function closeProjectMain(project: Project): Promise<void> {
 }
 
 /**
- * Removes an open worktree from a project's repository.
+ * Removes an open worktree from a project's repository, deleting its checkout along with the
+ * workspace showing it.
+ *
+ * How that happens depends on what Herdr knows about the workspace rather than on the current
+ * settings, so a workspace opened before `flatWorkspaces` was turned on still closes the way it was
+ * opened. Herdr removes a worktree of its own; a flat one is removed with Git, which refuses a
+ * checkout holding uncommitted work and leaves the workspace open when it does.
  *
  * @param project The project whose worktree to remove.
  * @param branch The branch whose worktree to remove.
- * @throws When the branch has no worktree, or no workspace is open for it.
+ * @throws When the branch has no worktree, no workspace is open for it, or the checkout is not
+ *   clean.
  */
 export async function closeProjectWorktree(project: Project, branch: string): Promise<void> {
   const worktree = (await listWorktrees(project.repositoryRoot)).find(
@@ -51,7 +59,13 @@ export async function closeProjectWorktree(project: Project, branch: string): Pr
 
   if (workspace === null) throw new Error(`"${branch}" has no open workspace.`);
 
-  await runHerdr(["worktree", "remove", "--workspace", workspace.workspaceId]);
+  if (workspace.isManagedWorktree) {
+    await runHerdr(["worktree", "remove", "--workspace", workspace.workspaceId]);
+    return;
+  }
+
+  await removeWorktree(project.repositoryRoot, worktree.path);
+  await runHerdr(["workspace", "close", workspace.workspaceId]);
 }
 
 /**

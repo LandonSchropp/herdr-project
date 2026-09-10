@@ -1,9 +1,23 @@
 import { git, stubCommittedRepository } from "../test/helpers/repository.ts";
-import { addWorktree, mainCheckoutPath } from "./git.ts";
+import { addWorktree, mainCheckoutPath, removeWorktree } from "./git.ts";
 import { describe, expect, it, spyOn } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+/**
+ * Reports whether a path exists, which is how the removal tests tell a deleted checkout from one
+ * Git refused to touch.
+ *
+ * @param path The path to check.
+ * @returns Whether the path exists.
+ */
+async function exists(path: string): Promise<boolean> {
+  return stat(path).then(
+    () => true,
+    () => false,
+  );
+}
 
 describe("mainCheckoutPath", () => {
   describe("when the path is a linked worktree", () => {
@@ -85,6 +99,34 @@ describe("addWorktree", () => {
       const thrown = await addWorktree(root, "topic", worktree).catch((error: Error) => error);
 
       expect((thrown as Error).message).toContain("already");
+    });
+  });
+});
+
+describe("removeWorktree", () => {
+  describe("when the checkout is clean", () => {
+    it("removes it", async () => {
+      const root = await stubCommittedRepository();
+      const worktree = join(root, "..", `${Bun.hash(`${root}-remove`).toString(36)}-worktree`);
+      await addWorktree(root, "topic", worktree);
+
+      await removeWorktree(root, worktree);
+
+      expect(await exists(worktree)).toBe(false);
+    });
+  });
+
+  describe("when the checkout has uncommitted work in it", () => {
+    it("refuses rather than deleting it", async () => {
+      const root = await stubCommittedRepository();
+      const worktree = join(root, "..", `${Bun.hash(`${root}-dirty`).toString(36)}-worktree`);
+      await addWorktree(root, "topic", worktree);
+      await writeFile(join(worktree, "README.md"), "# Changed\n");
+
+      const thrown = await removeWorktree(root, worktree).catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect(await exists(worktree)).toBe(true);
     });
   });
 });

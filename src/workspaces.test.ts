@@ -301,23 +301,38 @@ describe("openProjectMain", () => {
  *
  * @param worktrees The worktrees `listWorktrees` reports.
  * @param openWorkspaces The workspace ids open for a checkout path, keyed by path.
+ * @param flat Whether the open workspaces are flat rather than worktrees Herdr manages.
  * @returns The mocks standing in for each replaced function.
  */
 async function mockCloseModules(
   worktrees: { branch: string; path: string; isMain: boolean }[],
   openWorkspaces: Record<string, string> = {},
+  flat = false,
 ) {
+  const entries = Object.entries(openWorkspaces);
+
   const mocks = {
     runHerdr: mock(() => Promise.resolve("")),
-    runHerdrJson: mockRunHerdrJson(
-      Object.entries(openWorkspaces).map(([path, workspaceId]) => ({
-        workspace_id: workspaceId,
-        worktree: { checkout_path: path, repo_root: PROJECT.repositoryRoot },
-      })),
-    ),
+    removeWorktree: mock(() => Promise.resolve()),
+    // A flat workspace carries no worktree, so Herdr reports only its pane's directory.
+    runHerdrJson: flat
+      ? mockRunHerdrJson(
+          entries.map(([, workspaceId]) => ({ workspace_id: workspaceId })),
+          entries.map(([path, workspaceId]) => ({ workspace_id: workspaceId, cwd: path })),
+        )
+      : mockRunHerdrJson(
+          entries.map(([path, workspaceId]) => ({
+            workspace_id: workspaceId,
+            worktree: { checkout_path: path, repo_root: PROJECT.repositoryRoot },
+          })),
+        ),
     listWorktrees: mock(() => Promise.resolve(worktrees)),
   };
 
+  await stubModule(import.meta.resolve("./git.ts"), () => ({
+    mainCheckoutPath: mock(() => Promise.resolve(PROJECT.repositoryRoot)),
+    removeWorktree: mocks.removeWorktree,
+  }));
   await stubModule(import.meta.resolve("./herdr.ts"), () => ({
     runHerdr: mocks.runHerdr,
     runHerdrJson: mocks.runHerdrJson,
@@ -400,6 +415,50 @@ describe("closeProjectWorktree", () => {
 
       expect(thrown).toBeInstanceOf(Error);
       expect((thrown as Error).message).toContain("no open workspace");
+    });
+  });
+
+  describe("when the workspace is flat", () => {
+    it("removes the checkout with Git, which Herdr will not do for it", async () => {
+      const mocks = await mockCloseModules(
+        [{ branch: "feature", path: "/tmp/worktrees/feature", isMain: false }],
+        { "/tmp/worktrees/feature": "w2" },
+        true,
+      );
+
+      await closeProjectWorktree(PROJECT, "feature");
+
+      expect(mocks.removeWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/worktrees/feature");
+    });
+
+    it("closes the workspace", async () => {
+      const mocks = await mockCloseModules(
+        [{ branch: "feature", path: "/tmp/worktrees/feature", isMain: false }],
+        { "/tmp/worktrees/feature": "w2" },
+        true,
+      );
+
+      await closeProjectWorktree(PROJECT, "feature");
+
+      expect(mocks.runHerdr).toHaveBeenCalledWith(["workspace", "close", "w2"]);
+    });
+
+    describe("when Git refuses to remove the checkout", () => {
+      it("leaves the workspace open", async () => {
+        const mocks = await mockCloseModules(
+          [{ branch: "feature", path: "/tmp/worktrees/feature", isMain: false }],
+          { "/tmp/worktrees/feature": "w2" },
+          true,
+        );
+        mocks.removeWorktree.mockRejectedValue(new Error("contains modified files"));
+
+        const thrown = await closeProjectWorktree(PROJECT, "feature").catch(
+          (error: Error) => error,
+        );
+
+        expect((thrown as Error).message).toContain("contains modified files");
+        expect(mocks.runHerdr).not.toHaveBeenCalled();
+      });
     });
   });
 });
