@@ -1,4 +1,5 @@
 import { confirm, isInteractive } from "./confirm.tsx";
+import { reportWorkspaceProject } from "./metadata.ts";
 import { applyProjectLayout, parseEventWorkspaceId } from "./on-workspace.ts";
 import { copyWorktreeIncludes, parseEventWorktreePath } from "./on-worktree.ts";
 import { listProjects } from "./projects.ts";
@@ -214,7 +215,8 @@ async function runClose(args: string[]): Promise<CliResult> {
 
 /**
  * Runs the `on-workspace` hook. Herdr invokes this for every workspace it creates, so it reports
- * what it decided rather than failing when a workspace isn't one the plugin lays out.
+ * what it decided about the workspace's project name and its layout rather than failing when a
+ * workspace isn't one the plugin lays out.
  *
  * @returns The command's result.
  */
@@ -228,7 +230,12 @@ async function runOnWorkspace(): Promise<CliResult> {
     return { stdout: "", stderr: "Error: no workspace id in the event.\n", exitCode: 1 };
   }
 
-  return { stdout: `${await applyProjectLayout(workspaceId)}\n`, stderr: "", exitCode: 0 };
+  const [reported, laidOut] = await Promise.all([
+    reportWorkspaceProject(workspaceId),
+    applyProjectLayout(workspaceId),
+  ]);
+
+  return { stdout: `${reported}\n${laidOut}\n`, stderr: "", exitCode: 0 };
 }
 
 /**

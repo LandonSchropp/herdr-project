@@ -521,6 +521,35 @@ describe("runCli on-workspace", () => {
       expect(result.stdout).toContain("applied notes layout");
       expect(result.exitCode).toEqual(0);
     });
+
+    it("reports the workspace's project name", async () => {
+      const reportWorkspaceProject = mock(() => Promise.resolve('reported w1 as "notes".'));
+      await stubModule(import.meta.resolve("./on-workspace.ts"), () => ({
+        applyProjectLayout: mock(() => Promise.resolve("applied notes layout to w1.")),
+        parseEventWorkspaceId: () => "w1",
+      }));
+      await stubModule(import.meta.resolve("./metadata.ts"), () => ({
+        reportWorkspaceProject,
+      }));
+
+      await runCli(["on-workspace"]);
+
+      expect(reportWorkspaceProject).toHaveBeenCalledWith("w1");
+    });
+
+    it("prints what it reported", async () => {
+      await stubModule(import.meta.resolve("./on-workspace.ts"), () => ({
+        applyProjectLayout: mock(() => Promise.resolve("applied notes layout to w1.")),
+        parseEventWorkspaceId: () => "w1",
+      }));
+      await stubModule(import.meta.resolve("./metadata.ts"), () => ({
+        reportWorkspaceProject: mock(() => Promise.resolve('reported w1 as "notes".')),
+      }));
+
+      const result = await runCli(["on-workspace"]);
+
+      expect(result.stdout).toContain('reported w1 as "notes".');
+    });
   });
 
   describe("when the event carries no workspace id", () => {

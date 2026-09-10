@@ -56,11 +56,12 @@ title = "New Worktree"
 placement = "zoomed"
 command = ["./scripts/run.sh", "worktree"]
 
-# workspace.created — lays a project's tabs into every workspace Herdr creates, whether it came
-# from this plugin, from Herdr's own UI, or from Herdr opening a worktree's parent on its own. It
-# is a quiet no-op for a workspace with no worktree, one whose repository is not a configured
-# project, or one that already has its tabs. Herdr runs this for you — never invoke it by hand.
-# Output is captured in `herdr plugin log list --plugin landonschropp.herdr-project`.
+# workspace.created — reports the workspace's project name and lays that project's tabs into every
+# workspace Herdr creates, whether it came from this plugin, from Herdr's own UI, or from Herdr
+# opening a worktree's parent on its own. Both are a quiet no-op for a workspace with no worktree or
+# one whose repository is not a configured project, and the tabs are skipped again for a workspace
+# that already has them. Herdr runs this for you — never invoke it by hand. Output is captured in
+# `herdr plugin log list --plugin landonschropp.herdr-project`.
 [[events]]
 on = "workspace.created"
 command = ["./scripts/run.sh", "on-workspace"]
