@@ -1,5 +1,6 @@
 import { promptWorkspaceAgent } from "./agents.ts";
 import { runHerdr, runHerdrJson } from "./herdr.ts";
+import { reportProject } from "./metadata.ts";
 import type { Project } from "./types.ts";
 import { createWorktree, listWorktrees, openWorktree } from "./worktrees.ts";
 
@@ -105,10 +106,9 @@ export async function closeProjectWorktree(project: Project, branch: string): Pr
 }
 
 /**
- * Opens an existing worktree into a Herdr workspace, sending the project's prompt to the agent that
- * starts in it. The project's tabs are not laid out here: Herdr emits `workspace.created`, and the
- * plugin's hook lays them in, which covers workspaces Herdr opens on its own as well as the ones
- * opened from here.
+ * Opens an existing worktree into a Herdr workspace, reporting the project's name and sending its
+ * prompt to the agent that starts in it. The project's tabs are laid in by the `workspace.created`
+ * hook rather than here.
  *
  * @param project The project the worktree belongs to.
  * @param path The absolute path to the worktree's checkout.
@@ -128,13 +128,16 @@ export async function openProjectWorktree(
 
   const { workspaceId } = await openWorktree(project.repositoryRoot, path, label, focus);
 
+  await reportProject(workspaceId, project.name);
+
   if (project.prompt !== null) await promptWorkspaceAgent(workspaceId, project.prompt);
 }
 
 /**
  * Creates a worktree on `branch` and opens it into a Herdr workspace. When the branch already has a
  * worktree, that worktree is opened instead of a second one being created. As with
- * {@link openProjectWorktree}, the workspace's tabs come from the `workspace.created` hook.
+ * {@link openProjectWorktree}, the project's name is reported here and its tabs are laid in by the
+ * `workspace.created` hook.
  *
  * @param project The project to create the worktree in.
  * @param branch The branch to create the worktree on.
@@ -157,6 +160,8 @@ export async function createProjectWorktree(
   }
 
   const { workspaceId } = await createWorktree(project.repositoryRoot, branch, focus);
+
+  await reportProject(workspaceId, project.name);
 
   if (project.prompt !== null) await promptWorkspaceAgent(workspaceId, project.prompt);
 }

@@ -41,6 +41,7 @@ async function mockHerdrModules(
   const mocks = {
     applyLayout: mock(() => Promise.resolve()),
     promptWorkspaceAgent: mock(() => Promise.resolve()),
+    reportProject: mock(() => Promise.resolve("")),
     openWorktree: mock(() => Promise.resolve(WORKSPACE)),
     createWorktree: mock(() => Promise.resolve(CREATED_WORKSPACE)),
     listWorktrees: mock(() => Promise.resolve(worktrees)),
@@ -54,6 +55,9 @@ async function mockHerdrModules(
   await stubModule(import.meta.resolve("./layout.ts"), () => ({ applyLayout: mocks.applyLayout }));
   await stubModule(import.meta.resolve("./agents.ts"), () => ({
     promptWorkspaceAgent: mocks.promptWorkspaceAgent,
+  }));
+  await stubModule(import.meta.resolve("./metadata.ts"), () => ({
+    reportProject: mocks.reportProject,
   }));
   await stubModule(import.meta.resolve("./herdr.ts"), () => ({ runHerdrJson: mocks.runHerdrJson }));
   await stubModule(import.meta.resolve("./worktrees.ts"), () => ({
@@ -86,6 +90,14 @@ describe("openProjectWorktree", () => {
     await openProjectWorktree(PROJECT, "/tmp/worktrees/feature");
 
     expect(mocks.promptWorkspaceAgent).not.toHaveBeenCalled();
+  });
+
+  it("reports the workspace's project name", async () => {
+    const mocks = await mockHerdrModules([]);
+
+    await openProjectWorktree(PROJECT, "/tmp/worktrees/feature");
+
+    expect(mocks.reportProject).toHaveBeenCalledWith("wG", "orc");
   });
 
   describe("when the project declares a prompt", () => {
@@ -140,6 +152,14 @@ describe("createProjectWorktree", () => {
 
     expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", true);
     expect(mocks.applyLayout).not.toHaveBeenCalled();
+  });
+
+  it("reports the new workspace's project name", async () => {
+    const mocks = await mockHerdrModules([]);
+
+    await createProjectWorktree(PROJECT, "feature");
+
+    expect(mocks.reportProject).toHaveBeenCalledWith("wG", "orc");
   });
 
   describe("when the project declares a prompt", () => {
