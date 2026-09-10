@@ -1,3 +1,4 @@
+import { mainCheckoutPath } from "./git.ts";
 import { focusedWorkspaceId, runHerdrJson } from "./herdr.ts";
 import { applyLayout } from "./layout.ts";
 import { listProjects } from "./projects.ts";
@@ -78,24 +79,33 @@ export function parseWorkspaceDetails(response: unknown): WorkspaceDetails {
  *
  * @param response The parsed JSON response.
  * @param tabId The tab whose pane to find.
- * @returns The pane's id, or `null` when the tab has none.
+ * @returns The pane's id and the directory it is in, or `null` when the tab has no pane. The
+ *   directory is `null` when the pane reports none.
  */
-export function parseTabPaneId(response: unknown, tabId: string): string | null {
+export function parseTabPane(
+  response: unknown,
+  tabId: string,
+): { paneId: string; directory: string | null } | null {
   const panes = (response as { result?: { panes?: unknown } } | undefined)?.result?.panes;
 
   if (!Array.isArray(panes)) return null;
 
   const pane = panes.find((entry: unknown) => (entry as { tab_id?: unknown })?.tab_id === tabId) as
-    { pane_id?: unknown } | undefined;
+    { pane_id?: unknown; cwd?: unknown } | undefined;
 
-  return typeof pane?.pane_id === "string" ? pane.pane_id : null;
+  if (typeof pane?.pane_id !== "string") return null;
+
+  return { paneId: pane.pane_id, directory: typeof pane.cwd === "string" ? pane.cwd : null };
 }
 
 /**
  * Lays the matching project's tabs into a workspace Herdr has just created. This runs for every new
- * workspace, so it is a quiet no-op whenever the workspace isn't one we lay out: it has no
- * worktree, its repository isn't a configured project, or it already has more than the one pane a
+ * workspace, so it is a quiet no-op whenever the workspace isn't one we lay out: it is showing no
+ * repository, its repository isn't a configured project, or it already has more than the one pane a
  * fresh workspace starts with.
+ *
+ * A flat workspace carries no worktree for Herdr to report, so its repository is resolved from the
+ * directory its pane is in instead, which is the checkout it was opened on.
  *
  * A workspace the session isn't already showing was opened in the background, so its tabs are laid
  * in without focusing any of them and the user stays where they are.
@@ -106,41 +116,43 @@ export function parseTabPaneId(response: unknown, tabId: string): string | null 
 export async function applyProjectLayout(workspaceId: string): Promise<string> {
   const details = parseWorkspaceDetails(await runHerdrJson(["workspace", "get", workspaceId]));
 
-  if (details.repositoryRoot === null) {
-    return `workspace ${workspaceId} has no worktree; nothing to do.`;
-  }
-
   if (details.paneCount > 1) {
     return `workspace ${workspaceId} already has ${details.paneCount} panes; skipping layout.`;
-  }
-
-  const project = (await listProjects()).find(
-    (entry) => entry.repositoryRoot === details.repositoryRoot,
-  );
-
-  if (project === undefined) {
-    return `no project matches ${details.repositoryRoot}; nothing to do.`;
   }
 
   if (details.activeTabId === null) {
     return `workspace ${workspaceId} reported no tab; nothing to do.`;
   }
 
-  const paneId = parseTabPaneId(
+  const pane = parseTabPane(
     await runHerdrJson(["pane", "list", "--workspace", workspaceId]),
     details.activeTabId,
   );
 
-  if (paneId === null) {
+  if (pane === null) {
     return `tab ${details.activeTabId} reported no pane; nothing to do.`;
+  }
+
+  const repositoryRoot =
+    details.repositoryRoot ??
+    (pane.directory === null ? null : await mainCheckoutPath(pane.directory));
+
+  if (repositoryRoot === null) {
+    return `workspace ${workspaceId} is showing no repository; nothing to do.`;
+  }
+
+  const project = (await listProjects()).find((entry) => entry.repositoryRoot === repositoryRoot);
+
+  if (project === undefined) {
+    return `no project matches ${repositoryRoot}; nothing to do.`;
   }
 
   await applyLayout(
     {
       workspaceId,
       rootTabId: details.activeTabId,
-      rootPaneId: paneId,
-      checkoutPath: details.checkoutPath ?? details.repositoryRoot,
+      rootPaneId: pane.paneId,
+      checkoutPath: details.checkoutPath ?? pane.directory ?? repositoryRoot,
     },
     project.tabs,
     project.focusedTab,

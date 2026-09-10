@@ -2,7 +2,7 @@ import { stubModule } from "../test/helpers/module.ts";
 import {
   applyProjectLayout,
   parseEventWorkspaceId,
-  parseTabPaneId,
+  parseTabPane,
   parseWorkspaceDetails,
 } from "./on-workspace.ts";
 import { describe, expect, it, mock } from "bun:test";
@@ -126,11 +126,11 @@ describe("parseWorkspaceDetails", () => {
   });
 });
 
-describe("parseTabPaneId", () => {
+describe("parseTabPane", () => {
   const response = {
     result: {
       panes: [
-        { pane_id: "w0:p1", tab_id: "w0:t1" },
+        { pane_id: "w0:p1", tab_id: "w0:t1", cwd: "/home/user/Notes" },
         { pane_id: "w0:p2", tab_id: "w0:t2" },
       ],
     },
@@ -138,19 +138,29 @@ describe("parseTabPaneId", () => {
 
   describe("when the tab has a pane", () => {
     it("returns its id", () => {
-      expect(parseTabPaneId(response, "w0:t2")).toEqual("w0:p2");
+      expect(parseTabPane(response, "w0:t2")?.paneId).toEqual("w0:p2");
+    });
+
+    it("returns the directory it is in", () => {
+      expect(parseTabPane(response, "w0:t1")?.directory).toEqual("/home/user/Notes");
+    });
+  });
+
+  describe("when the pane reports no directory", () => {
+    it("returns a null directory", () => {
+      expect(parseTabPane(response, "w0:t2")?.directory).toBeNull();
     });
   });
 
   describe("when the tab has no pane", () => {
     it("returns null", () => {
-      expect(parseTabPaneId(response, "w0:t9")).toBeNull();
+      expect(parseTabPane(response, "w0:t9")).toBeNull();
     });
   });
 
   describe("when the response has no panes", () => {
     it("returns null", () => {
-      expect(parseTabPaneId({ nonsense: true }, "w0:t1")).toBeNull();
+      expect(parseTabPane({ nonsense: true }, "w0:t1")).toBeNull();
     });
   });
 });
@@ -164,6 +174,7 @@ describe("parseTabPaneId", () => {
  * @param options.panes The `pane list` response.
  * @param options.projects The projects `listProjects` reports.
  * @param options.focusedWorkspaceId The workspace the session is showing.
+ * @param options.mainCheckout The repository a pane's directory resolves to.
  * @returns The mocks standing in for each replaced function.
  */
 async function mockLayoutModules(options: {
@@ -176,12 +187,14 @@ async function mockLayoutModules(options: {
     focusedTab: string | null;
   }[];
   focusedWorkspaceId?: string | null;
+  mainCheckout?: string | null;
 }) {
   const {
     workspace,
     panes = { result: { panes: [] } },
     projects = [],
     focusedWorkspaceId = "w1",
+    mainCheckout = null,
   } = options;
 
   const mocks = {
@@ -189,8 +202,12 @@ async function mockLayoutModules(options: {
     listProjects: mock(() => Promise.resolve(projects)),
     runHerdrJson: mock((args: string[]) => Promise.resolve(args[0] === "pane" ? panes : workspace)),
     focusedWorkspaceId: mock(() => Promise.resolve(focusedWorkspaceId)),
+    mainCheckoutPath: mock(() => Promise.resolve(mainCheckout)),
   };
 
+  await stubModule(import.meta.resolve("./git.ts"), () => ({
+    mainCheckoutPath: mocks.mainCheckoutPath,
+  }));
   await stubModule(import.meta.resolve("./layout.ts"), () => ({ applyLayout: mocks.applyLayout }));
   await stubModule(import.meta.resolve("./projects.ts"), () => ({
     listProjects: mocks.listProjects,
@@ -324,14 +341,56 @@ describe("applyProjectLayout", () => {
     });
   });
 
-  describe("when the workspace has no worktree", () => {
+  describe("when Herdr manages no worktree for the workspace", () => {
+    it("lays the tabs in using the repository the pane's directory resolves to", async () => {
+      const mocks = await mockLayoutModules({
+        workspace: { result: { workspace: { active_tab_id: "w1:t1", pane_count: 1 } } },
+        panes: {
+          result: { panes: [{ pane_id: "w1:p1", tab_id: "w1:t1", cwd: "/tmp/worktrees/feature" }] },
+        },
+        projects: [PROJECT],
+        mainCheckout: "/home/user/Notes",
+      });
+
+      await applyProjectLayout("w1");
+
+      expect(mocks.applyLayout).toHaveBeenCalledWith(
+        {
+          workspaceId: "w1",
+          rootTabId: "w1:t1",
+          rootPaneId: "w1:p1",
+          checkoutPath: "/tmp/worktrees/feature",
+        },
+        TABS,
+        "shell",
+        true,
+      );
+    });
+  });
+
+  describe("when the pane's directory is in no repository", () => {
     it("does nothing", async () => {
       const mocks = await mockLayoutModules({
         workspace: { result: { workspace: { active_tab_id: "w1:t1", pane_count: 1 } } },
+        panes: { result: { panes: [{ pane_id: "w1:p1", tab_id: "w1:t1", cwd: "/tmp" }] } },
+        projects: [PROJECT],
+        mainCheckout: null,
+      });
+
+      expect(await applyProjectLayout("w1")).toContain("no repository");
+      expect(mocks.applyLayout).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("when the pane reports no directory", () => {
+    it("does nothing", async () => {
+      const mocks = await mockLayoutModules({
+        workspace: { result: { workspace: { active_tab_id: "w1:t1", pane_count: 1 } } },
+        panes: { result: { panes: [{ pane_id: "w1:p1", tab_id: "w1:t1" }] } },
         projects: [PROJECT],
       });
 
-      expect(await applyProjectLayout("w1")).toContain("no worktree");
+      expect(await applyProjectLayout("w1")).toContain("no repository");
       expect(mocks.applyLayout).not.toHaveBeenCalled();
     });
   });
