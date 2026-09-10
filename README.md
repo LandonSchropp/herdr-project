@@ -145,6 +145,7 @@ Settings live in a single file at `~/.config/herdr-project/settings.json`. Point
 ```json
 {
   "projectPaths": ["~/Development/*", "~/.dotfiles", "~/Notes"],
+  "flatWorkspaces": true,
   "projects": [
     {
       "name": "default",
@@ -164,6 +165,9 @@ Settings live in a single file at `~/.config/herdr-project/settings.json`. Point
 - **`projectPaths`**: Where to find projects. A path with wildcards is scanned as a glob and every
   Git repository it matches becomes a project named after its directory; a path without wildcards
   is taken as a single repository. This is why most projects need no entry of their own.
+- **`flatWorkspaces`**: Whether to open each workspace as its own top-level row rather than as a
+  worktree grouped under its repository. Defaults to `false`. (See [Flat
+  Workspaces](#flat-workspaces).)
 - **`projects`**: Project definitions, each merged over the `default` project below.
 
 ### The `default` project
@@ -203,6 +207,16 @@ Unlike tabs, prompts belong to whoever opened the workspace rather than to the `
 hook, so a workspace opened from Herdr's own UI gets the project's tabs but not its prompt. That
 also keeps `--prompt` and a project's own prompt from both landing in the same agent: the flag
 replaces the project's prompt rather than queuing behind it.
+
+### Flat Workspaces
+
+Herdr groups a workspace under its repository, and opening a linked worktree opens that
+repository's main workspace alongside it. With `flatWorkspaces`, every workspace the plugin opens
+is its own top-level workspace instead.
+
+Herdr doesn't know a flat workspace is a worktree, so the built-in `branch` and `git_status`
+sidebar tokens are empty and `herdr worktree remove` refuses it. The workspace's label still
+carries the branch, and `herdr-project close` removes the checkout with Git instead.
 
 ## Development
 
