@@ -6,8 +6,8 @@
 
 The code is organized in layers, lowest to highest:
 
-1. **`src/herdr.ts`** — the `herdr` CLI wrapper. `runHerdr` returns raw output and `runHerdrJson` parses it; not every command prints something, so reach for the raw one when you don't need a response. Response parsing (`parseWorkspace`, `parseRootPaneId`) is separate so it can be tested without a running Herdr session.
-2. **`src/worktrees.ts`** and **`src/layout.ts`** — worktree listing/opening/creating, and laying a project's tabs into a workspace.
+1. **`src/herdr.ts`** and **`src/git.ts`** — the `herdr` and `git` CLI wrappers. `runHerdr` returns raw output and `runHerdrJson` parses it; not every command prints something, so reach for the raw one when you don't need a response. Response parsing (`parseWorkspace`, `parseRootPaneId`) is separate so it can be tested without a running Herdr session. In `git.ts`, `runGit` treats a non-zero exit as an answer and `runGitOrThrow` raises Git's own message, which is what a caller needs when Git refuses to remove a worktree.
+2. **`src/worktrees.ts`**, **`src/open-workspaces.ts`**, and **`src/layout.ts`** — worktree listing/opening/creating, reading back the open workspaces and the checkout each one is showing, and laying a project's tabs into a workspace.
 3. **`src/settings.ts`** and **`src/projects.ts`** — the settings file, plus discovering repositories under the project paths and merging them with the declared projects. The settings file has one project list; the entry named `default` is pulled out of it to become `Settings.defaultTabs` and never reaches the picker.
 4. **`src/workspaces.ts`**, **`src/on-workspace.ts`**, and **`src/on-worktree.ts`** — the operations both front ends need (open a worktree, create one, open a project's main checkout), plus the two event hooks: `workspace.created` lays a project's tabs into a new workspace, and `worktree.created` copies a repository's untracked include files into a new worktree. `src/worktree-include.ts` sits beside `worktrees.ts` and holds the include-file matching and copying, which is Git's work rather than Herdr's.
 5. **`src/cli.ts`** and **`src/tui/`** — the two front ends. Both call `workspaces.ts` and nothing lower. `cli.ts` returns a result rather than writing to the process, so it can be tested directly; `app.tsx` owns the picker's state and `components/` holds the modals and their primitives (`Modal`, `Picker`, `Prompt`).
@@ -20,7 +20,16 @@ Tests live alongside their source as `*.test.ts` / `*.test.tsx`. Shared test inf
 
 A project's tabs are laid out by the `workspace.created` event hook, never by whoever opened the workspace. That way a workspace gets its tabs no matter how it was created — from this plugin, from Herdr's own UI, or by Herdr opening a worktree's parent on its own. `workspaces.ts` deliberately does not call `applyLayout`; adding it back would lay the tabs in twice.
 
-The hook runs for every new workspace, so it must stay a quiet no-op when the workspace has no worktree, its repository is not a configured project, or it already has more than the one pane a fresh workspace starts with.
+The hook runs for every new workspace, so it must stay a quiet no-op when the workspace is showing no repository, its repository is not a configured project, or it already has more than the one pane a fresh workspace starts with.
+
+## A Flat Workspace Has No Identity to Read
+
+`herdr workspace create --cwd` never attaches worktree identity, which is exactly what makes a flat workspace a top-level row: Herdr groups a workspace under its repository, and opens that repository's main workspace beside it, only for a worktree it knows about. That identity is also where `worktree.repo_root` comes from, so everything that used to read it needs a fallback — the directory the workspace's first pane is in, resolved with `mainCheckoutPath`. `open-workspaces.ts` holds that fallback for every caller but the `workspace.created` hook, which is looking at one workspace it has already fetched and does it inline.
+
+Two things follow from Herdr not knowing:
+
+- **`worktree.created` never fires**, so `createFlatWorktree` copies the repository's include files itself.
+- **`herdr worktree remove` refuses the workspace**, so `closeProjectWorktree` removes the checkout with Git. It branches on what Herdr reports (`isManagedWorktree`), never on the setting, so a workspace opened before the setting was flipped still closes the way it was opened.
 
 ## Prompts Come From the Caller, Not the Hook
 
