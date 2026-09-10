@@ -1,4 +1,5 @@
-import { copyIncludedPaths, mainCheckoutPath } from "./worktree-include.ts";
+import { mainCheckoutPath } from "./git.ts";
+import { copyIncludedPaths } from "./worktree-include.ts";
 
 /**
  * Reads the checkout path a `worktree.created` event refers to. Herdr carries the worktree only in

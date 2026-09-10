@@ -1,37 +1,19 @@
 import { stubEnv } from "../test/helpers/env.ts";
 import {
+  commitAll,
+  git,
+  stubRepository as stubPlainRepository,
+} from "../test/helpers/repository.ts";
+import {
   copyIncludedPaths,
   globalIncludePath,
   includeFiles,
   listIncludedPaths,
-  mainCheckoutPath,
 } from "./worktree-include.ts";
-import { describe, expect, it, spyOn } from "bun:test";
-import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
+import { describe, expect, it } from "bun:test";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-
-/**
- * Runs a Git command against the stub repositories, failing the test when it exits non-zero. The
- * variables Git uses to locate a repository are dropped from the environment: under a Git hook — a
- * `pre-commit` run of the suite, say — they point at the repository being committed and send
- * `worktree add` looking for its index inside the stub.
- *
- * @param args The arguments to pass to `git`.
- */
-async function git(args: string[]): Promise<void> {
-  const env = { ...Bun.env };
-
-  for (const key of ["GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE"]) delete env[key];
-
-  const process = Bun.spawn(["git", ...args], { stdout: "pipe", stderr: "pipe", env });
-  const [stderr, exitCode] = await Promise.all([
-    new Response(process.stderr).text(),
-    process.exited,
-  ]);
-
-  if (exitCode !== 0) throw new Error(`git ${args.join(" ")} failed: ${stderr}`);
-}
 
 /**
  * Creates a Git repository holding an untracked `.env` file, an untracked `node_modules` directory,
@@ -40,37 +22,13 @@ async function git(args: string[]): Promise<void> {
  * @returns The repository's path, resolved through any symlinks so it matches the paths Git prints.
  */
 async function stubRepository(): Promise<string> {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "herdr-project-include-")));
+  const root = await stubPlainRepository();
 
-  await git(["init", "--quiet", "--initial-branch", "main", root]);
   await writeFile(join(root, ".env"), "SECRET=1\n");
-  await writeFile(join(root, "README.md"), "# Stub\n");
   await mkdir(join(root, "node_modules", "left-pad"), { recursive: true });
   await writeFile(join(root, "node_modules", "left-pad", "index.js"), "module.exports = 1;\n");
 
   return root;
-}
-
-/**
- * Commits everything tracked in a repository, which `git worktree add` needs before it will create
- * a worktree.
- *
- * @param root The repository to commit in.
- */
-async function commitAll(root: string): Promise<void> {
-  await git(["-C", root, "add", "README.md"]);
-  await git([
-    "-C",
-    root,
-    "-c",
-    "user.name=Test",
-    "-c",
-    "user.email=test@example.com",
-    "commit",
-    "--quiet",
-    "--message",
-    "Add a README",
-  ]);
 }
 
 /**
@@ -279,55 +237,6 @@ describe("copyIncludedPaths", () => {
       const worktree = await mkdtemp(join(tmpdir(), "herdr-project-worktree-"));
 
       expect(await copyIncludedPaths(root, worktree)).toEqual([]);
-    });
-  });
-});
-
-describe("mainCheckoutPath", () => {
-  describe("when the path is a linked worktree", () => {
-    it("returns the repository's main checkout", async () => {
-      const root = await stubRepository();
-      await commitAll(root);
-      const worktree = join(root, "..", `${Bun.hash(`${root}-main`).toString(36)}-worktree`);
-      await git(["-C", root, "worktree", "add", "--quiet", worktree, "-b", "topic"]);
-
-      expect(await mainCheckoutPath(worktree)).toEqual(root);
-    });
-  });
-
-  describe("when the path is the main checkout", () => {
-    it("returns the path itself", async () => {
-      const root = await stubRepository();
-      await commitAll(root);
-
-      expect(await mainCheckoutPath(root)).toEqual(root);
-    });
-  });
-
-  describe("when the path is not in a repository", () => {
-    it("returns null", async () => {
-      expect(
-        await mainCheckoutPath(await mkdtemp(join(tmpdir(), "herdr-project-plain-"))),
-      ).toBeNull();
-    });
-  });
-
-  describe("when Git's location variables are in the environment", () => {
-    it("drops them so the path decides the repository", async () => {
-      const spawn = spyOn(Bun, "spawn").mockReturnValue({
-        stdout: new Response("worktree /tmp/repo\n").body,
-        exited: Promise.resolve(0),
-      } as unknown as ReturnType<typeof Bun.spawn>);
-
-      await mainCheckoutPath("/tmp/repo");
-
-      const { env } = spawn.mock.calls[0]?.[1] as { env: Record<string, string | undefined> };
-
-      expect(Object.keys(env)).not.toContainAnyValues([
-        "GIT_DIR",
-        "GIT_INDEX_FILE",
-        "GIT_WORK_TREE",
-      ]);
     });
   });
 });
