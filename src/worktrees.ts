@@ -1,5 +1,15 @@
+import { addWorktree } from "./git.ts";
 import { parseCheckoutPath, parseWorkspace, runHerdrJson } from "./herdr.ts";
 import type { Workspace, Worktree } from "./types.ts";
+import { copyIncludedPaths } from "./worktree-include.ts";
+import { homedir } from "node:os";
+import { basename, join } from "node:path";
+
+/**
+ * Where Herdr keeps the worktrees it creates. Herdr's own `[worktrees] directory` setting can move
+ * them, but it isn't readable through its CLI, so the flat path assumes the default.
+ */
+const WORKTREE_DIRECTORY = ".herdr/worktrees";
 
 /**
  * Extracts the worktrees from a `herdr worktree list --json` response. Detached worktrees have no
@@ -115,4 +125,67 @@ export async function createWorktree(
   if (checkoutPath === null) throw new Error("herdr did not report a checkout path");
 
   return { ...parseWorkspace(response), checkoutPath };
+}
+
+/**
+ * Where a flat worktree's checkout goes, which is where Herdr would have put it.
+ *
+ * @param repositoryRoot The absolute path to the project's repository.
+ * @param branch The branch the worktree is on.
+ * @returns The absolute path to the checkout, which need not exist.
+ */
+export function flatWorktreePath(repositoryRoot: string, branch: string): string {
+  return join(homedir(), WORKTREE_DIRECTORY, basename(repositoryRoot), branch);
+}
+
+/**
+ * Opens a checkout into a Herdr workspace of its own, without telling Herdr it is a worktree. That
+ * is what keeps the workspace a top-level row: Herdr groups a workspace under its repository and
+ * opens that repository's main workspace beside it only when it knows the workspace is a worktree.
+ *
+ * @param checkoutPath The absolute path to the checkout to open.
+ * @param label The workspace's name, which Herdr has no worktree to infer one from.
+ * @param focus Whether to focus the workspace, leaving the caller where it is when false.
+ * @returns The workspace Herdr created.
+ */
+export async function openFlatWorkspace(
+  checkoutPath: string,
+  label: string,
+  focus: boolean = true,
+): Promise<Workspace> {
+  return parseWorkspace(
+    await runHerdrJson([
+      "workspace",
+      "create",
+      "--cwd",
+      checkoutPath,
+      "--label",
+      label,
+      focus ? "--focus" : "--no-focus",
+    ]),
+  );
+}
+
+/**
+ * Creates a worktree on `branch` with Git and opens it as a flat workspace. Herdr never learns the
+ * checkout is a worktree, so its `worktree.created` event doesn't fire for it and the repository's
+ * include files are copied here instead.
+ *
+ * @param repositoryRoot The absolute path to the project's repository.
+ * @param branch The branch to create the worktree on.
+ * @param focus Whether to focus the workspace, leaving the caller where it is when false.
+ * @returns The workspace Herdr created, and the checkout path it was created at.
+ * @throws When Git will not create the worktree.
+ */
+export async function createFlatWorktree(
+  repositoryRoot: string,
+  branch: string,
+  focus: boolean = true,
+): Promise<Workspace & { checkoutPath: string }> {
+  const checkoutPath = flatWorktreePath(repositoryRoot, branch);
+
+  await addWorktree(repositoryRoot, branch, checkoutPath);
+  await copyIncludedPaths(repositoryRoot, checkoutPath);
+
+  return { ...(await openFlatWorkspace(checkoutPath, branch, focus)), checkoutPath };
 }

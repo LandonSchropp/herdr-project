@@ -1,12 +1,18 @@
+import { stubModule } from "../test/helpers/module.ts";
 import { mockSpawn } from "./herdr.test.ts";
 import {
+  createFlatWorktree,
   createWorktree,
+  flatWorktreePath,
   listWorktrees,
+  openFlatWorkspace,
   openWorktree,
   parseWorktrees,
   sortWorktrees,
 } from "./worktrees.ts";
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 const RESPONSE = {
   id: "cli:worktree:list",
@@ -243,6 +249,120 @@ describe("createWorktree", () => {
 
       expect(thrown).toBeInstanceOf(Error);
       expect((thrown as Error).message).toContain("did not report a checkout path");
+    });
+  });
+});
+
+describe("flatWorktreePath", () => {
+  it("puts the checkout where Herdr puts its own", () => {
+    expect(flatWorktreePath("/home/user/Development/orc", "feature")).toEqual(
+      join(homedir(), ".herdr/worktrees/orc/feature"),
+    );
+  });
+});
+
+describe("openFlatWorkspace", () => {
+  it("creates a workspace on the checkout rather than a worktree Herdr manages", async () => {
+    const spawn = mockSpawn(WORKSPACE_RESPONSE);
+
+    expect(await openFlatWorkspace("/tmp/worktrees/feature", "feature")).toEqual({
+      workspaceId: "wG",
+      rootTabId: "wG:t1",
+      rootPaneId: "wG:p1",
+    });
+
+    expect(spawn).toHaveBeenCalledWith(
+      [
+        "herdr",
+        "workspace",
+        "create",
+        "--cwd",
+        "/tmp/worktrees/feature",
+        "--label",
+        "feature",
+        "--focus",
+      ],
+      expect.anything(),
+    );
+  });
+
+  describe("when focus is disabled", () => {
+    it("opens the workspace in the background", async () => {
+      const spawn = mockSpawn(WORKSPACE_RESPONSE);
+
+      await openFlatWorkspace("/tmp/worktrees/feature", "feature", false);
+
+      expect(spawn).toHaveBeenCalledWith(
+        [
+          "herdr",
+          "workspace",
+          "create",
+          "--cwd",
+          "/tmp/worktrees/feature",
+          "--label",
+          "feature",
+          "--no-focus",
+        ],
+        expect.anything(),
+      );
+    });
+  });
+});
+
+describe("createFlatWorktree", () => {
+  /**
+   * Replaces the Git and include modules so the checkout is never really created.
+   *
+   * @returns The mocks standing in for each replaced function.
+   */
+  async function mockCreateModules() {
+    const mocks = {
+      addWorktree: mock(() => Promise.resolve()),
+      copyIncludedPaths: mock(() => Promise.resolve([])),
+    };
+
+    await stubModule(import.meta.resolve("./git.ts"), () => ({ addWorktree: mocks.addWorktree }));
+    await stubModule(import.meta.resolve("./worktree-include.ts"), () => ({
+      copyIncludedPaths: mocks.copyIncludedPaths,
+    }));
+
+    return mocks;
+  }
+
+  it("creates the checkout with Git", async () => {
+    const mocks = await mockCreateModules();
+    mockSpawn(WORKSPACE_RESPONSE);
+
+    await createFlatWorktree("/tmp/repo", "feature");
+
+    expect(mocks.addWorktree).toHaveBeenCalledWith(
+      "/tmp/repo",
+      "feature",
+      join(homedir(), ".herdr/worktrees/repo/feature"),
+    );
+  });
+
+  it("copies the repository's include files, which Herdr's own hook never fires for", async () => {
+    const mocks = await mockCreateModules();
+    mockSpawn(WORKSPACE_RESPONSE);
+
+    await createFlatWorktree("/tmp/repo", "feature");
+
+    expect(mocks.copyIncludedPaths).toHaveBeenCalledWith(
+      "/tmp/repo",
+      join(homedir(), ".herdr/worktrees/repo/feature"),
+    );
+  });
+
+  it("returns the workspace and the checkout it was created at", async () => {
+    await mockCreateModules();
+    mockSpawn(WORKSPACE_RESPONSE);
+
+    expect(await createFlatWorktree("/tmp/repo", "feature")).toEqual({
+      workspaceId: "wG",
+      rootTabId: "wG:t1",
+      rootPaneId: "wG:p1",
+      checkoutPath: join(homedir(), ".herdr/worktrees/repo/feature"),
     });
   });
 });

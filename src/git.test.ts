@@ -1,5 +1,5 @@
 import { git, stubCommittedRepository } from "../test/helpers/repository.ts";
-import { mainCheckoutPath } from "./git.ts";
+import { addWorktree, mainCheckoutPath } from "./git.ts";
 import { describe, expect, it, spyOn } from "bun:test";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -48,6 +48,43 @@ describe("mainCheckoutPath", () => {
         "GIT_INDEX_FILE",
         "GIT_WORK_TREE",
       ]);
+    });
+  });
+});
+
+describe("addWorktree", () => {
+  describe("when the branch does not exist yet", () => {
+    it("creates it", async () => {
+      const root = await stubCommittedRepository();
+      const worktree = join(root, "..", `${Bun.hash(`${root}-new`).toString(36)}-worktree`);
+
+      await addWorktree(root, "topic", worktree);
+
+      expect(await mainCheckoutPath(worktree)).toEqual(root);
+    });
+  });
+
+  describe("when the branch already exists", () => {
+    it("checks it out rather than failing", async () => {
+      const root = await stubCommittedRepository();
+      const worktree = join(root, "..", `${Bun.hash(`${root}-existing`).toString(36)}-worktree`);
+      await git(["-C", root, "branch", "topic"]);
+
+      await addWorktree(root, "topic", worktree);
+
+      expect(await mainCheckoutPath(worktree)).toEqual(root);
+    });
+  });
+
+  describe("when Git refuses", () => {
+    it("throws with what Git said", async () => {
+      const root = await stubCommittedRepository();
+      const worktree = join(root, "..", `${Bun.hash(`${root}-twice`).toString(36)}-worktree`);
+      await addWorktree(root, "topic", worktree);
+
+      const thrown = await addWorktree(root, "topic", worktree).catch((error: Error) => error);
+
+      expect((thrown as Error).message).toContain("already");
     });
   });
 });

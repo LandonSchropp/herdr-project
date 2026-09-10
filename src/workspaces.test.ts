@@ -44,11 +44,13 @@ function mockRunHerdrJson(workspaces: unknown[], panes: unknown[] = []) {
  *
  * @param worktrees The worktrees `listWorktrees` reports.
  * @param openPaths The checkout paths that already have a workspace open.
+ * @param flatWorkspaces Whether the settings ask for flat workspaces.
  * @returns The mocks standing in for each replaced function.
  */
 async function mockHerdrModules(
   worktrees: { branch: string; path: string; isMain: boolean }[],
   openPaths: string[] = [],
+  flatWorkspaces = false,
 ) {
   const mocks = {
     applyLayout: mock(() => Promise.resolve()),
@@ -57,6 +59,9 @@ async function mockHerdrModules(
     openWorktree: mock(() => Promise.resolve(WORKSPACE)),
     createWorktree: mock(() => Promise.resolve(CREATED_WORKSPACE)),
     listWorktrees: mock(() => Promise.resolve(worktrees)),
+    openFlatWorkspace: mock(() => Promise.resolve(WORKSPACE)),
+    createFlatWorktree: mock(() => Promise.resolve(CREATED_WORKSPACE)),
+    loadSettings: mock(() => Promise.resolve({ flatWorkspaces })),
     mainCheckoutPath: mock(() => Promise.resolve(null)),
     runHerdrJson: mockRunHerdrJson(
       openPaths.map((path, index) => ({
@@ -77,10 +82,15 @@ async function mockHerdrModules(
     reportProject: mocks.reportProject,
   }));
   await stubModule(import.meta.resolve("./herdr.ts"), () => ({ runHerdrJson: mocks.runHerdrJson }));
+  await stubModule(import.meta.resolve("./settings.ts"), () => ({
+    loadSettings: mocks.loadSettings,
+  }));
   await stubModule(import.meta.resolve("./worktrees.ts"), () => ({
     openWorktree: mocks.openWorktree,
     createWorktree: mocks.createWorktree,
     listWorktrees: mocks.listWorktrees,
+    openFlatWorkspace: mocks.openFlatWorkspace,
+    createFlatWorktree: mocks.createFlatWorktree,
   }));
 
   return mocks;
@@ -417,6 +427,74 @@ describe("workspaceRepositoryRoot", () => {
       }));
 
       expect(await workspaceRepositoryRoot("w1")).toBeNull();
+    });
+  });
+});
+
+describe("when the settings ask for flat workspaces", () => {
+  describe("openProjectWorktree", () => {
+    it("opens the checkout as its own workspace rather than as a worktree", async () => {
+      const mocks = await mockHerdrModules([], [], true);
+
+      await openProjectWorktree(PROJECT, "/tmp/worktrees/feature");
+
+      expect(mocks.openFlatWorkspace).toHaveBeenCalledWith(
+        "/tmp/worktrees/feature",
+        "feature",
+        true,
+      );
+      expect(mocks.openWorktree).not.toHaveBeenCalled();
+    });
+
+    describe("when the caller names the workspace", () => {
+      it("uses that name rather than the checkout's directory", async () => {
+        const mocks = await mockHerdrModules([], [], true);
+
+        await openProjectWorktree(PROJECT, "/tmp/orc", "orc");
+
+        expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "orc", true);
+      });
+    });
+
+    it("reports the workspace's project name", async () => {
+      const mocks = await mockHerdrModules([], [], true);
+
+      await openProjectWorktree(PROJECT, "/tmp/worktrees/feature");
+
+      expect(mocks.reportProject).toHaveBeenCalledWith("wG", "orc");
+    });
+  });
+
+  describe("createProjectWorktree", () => {
+    it("creates the worktree with Git rather than with Herdr", async () => {
+      const mocks = await mockHerdrModules([], [], true);
+
+      await createProjectWorktree(PROJECT, "feature");
+
+      expect(mocks.createFlatWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", true);
+      expect(mocks.createWorktree).not.toHaveBeenCalled();
+    });
+
+    it("reports the new workspace's project name", async () => {
+      const mocks = await mockHerdrModules([], [], true);
+
+      await createProjectWorktree(PROJECT, "feature");
+
+      expect(mocks.reportProject).toHaveBeenCalledWith("wG", "orc");
+    });
+  });
+
+  describe("openProjectMain", () => {
+    it("opens the main checkout under the project's name", async () => {
+      const mocks = await mockHerdrModules(
+        [{ branch: "main", path: "/tmp/orc", isMain: true }],
+        [],
+        true,
+      );
+
+      await openProjectMain(PROJECT);
+
+      expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "orc", true);
     });
   });
 });

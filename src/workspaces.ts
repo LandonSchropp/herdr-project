@@ -2,8 +2,16 @@ import { promptWorkspaceAgent } from "./agents.ts";
 import { runHerdr } from "./herdr.ts";
 import { reportProject } from "./metadata.ts";
 import { findOpenWorkspace, listOpenWorkspaces } from "./open-workspaces.ts";
+import { loadSettings } from "./settings.ts";
 import type { Project } from "./types.ts";
-import { createWorktree, listWorktrees, openWorktree } from "./worktrees.ts";
+import {
+  createFlatWorktree,
+  createWorktree,
+  listWorktrees,
+  openFlatWorkspace,
+  openWorktree,
+} from "./worktrees.ts";
+import { basename } from "node:path";
 
 /**
  * Closes a project's main workspace.
@@ -53,7 +61,9 @@ export async function closeProjectWorktree(project: Project, branch: string): Pr
  *
  * @param project The project the worktree belongs to.
  * @param path The absolute path to the worktree's checkout.
- * @param label The workspace's name. Omit to let Herdr name it after the repository.
+ * @param label The workspace's name. Omit to let Herdr name it after the repository, or — with
+ *   `flatWorkspaces`, where Herdr has no worktree to name it after — after the checkout's own
+ *   directory, which for a worktree this plugin created is its branch.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @throws When the worktree already has a workspace open, or the project's prompt is not delivered.
  */
@@ -67,7 +77,9 @@ export async function openProjectWorktree(
     throw new Error(`A workspace is already open for ${path}.`);
   }
 
-  const { workspaceId } = await openWorktree(project.repositoryRoot, path, label, focus);
+  const { workspaceId } = (await loadSettings()).flatWorkspaces
+    ? await openFlatWorkspace(path, label ?? basename(path), focus)
+    : await openWorktree(project.repositoryRoot, path, label, focus);
 
   await reportProject(workspaceId, project.name);
 
@@ -100,7 +112,9 @@ export async function createProjectWorktree(
     return;
   }
 
-  const { workspaceId } = await createWorktree(project.repositoryRoot, branch, focus);
+  const { workspaceId } = (await loadSettings()).flatWorkspaces
+    ? await createFlatWorktree(project.repositoryRoot, branch, focus)
+    : await createWorktree(project.repositoryRoot, branch, focus);
 
   await reportProject(workspaceId, project.name);
 
