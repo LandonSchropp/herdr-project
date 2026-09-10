@@ -51,6 +51,7 @@ async function stubRepositories(
 function buildSettings(overrides: Partial<Settings> = {}): Settings {
   return {
     projectPaths: [],
+    flatWorkspaces: false,
     defaultTabs: [SHELL_TAB],
     defaultFocusedTab: null,
     projects: [],

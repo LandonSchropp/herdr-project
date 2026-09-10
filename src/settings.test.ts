@@ -202,6 +202,7 @@ describe("parseSettings", () => {
     it("returns them with paths expanded", () => {
       const contents = JSON.stringify({
         projectPaths: ["~/Development/*"],
+        flatWorkspaces: true,
         projects: [
           { name: "default", tabs: [{ name: "neovim", command: "nvim" }] },
           { name: "notes", path: "/tmp/notes" },
@@ -210,6 +211,7 @@ describe("parseSettings", () => {
 
       expect(parseSettings(contents)).toEqual({
         projectPaths: [`${homedir()}/Development/*`],
+        flatWorkspaces: true,
         defaultTabs: [{ name: "neovim", command: "nvim" }],
         defaultFocusedTab: null,
         projects: [
@@ -248,6 +250,7 @@ describe("parseSettings", () => {
 
       expect(parseSettings(contents)).toEqual({
         projectPaths: [],
+        flatWorkspaces: false,
         defaultTabs: [{ name: "editor", command: null }],
         defaultFocusedTab: null,
         projects: [],
@@ -305,6 +308,7 @@ describe("parseSettings", () => {
     it("returns the defaults", () => {
       expect(parseSettings("{}")).toEqual({
         projectPaths: [],
+        flatWorkspaces: false,
         defaultTabs: [SHELL_TAB],
         defaultFocusedTab: null,
         projects: [],
@@ -340,6 +344,7 @@ describe("loadSettings", () => {
 
       expect(await loadSettings()).toEqual({
         projectPaths: [],
+        flatWorkspaces: false,
         defaultTabs: [SHELL_TAB],
         defaultFocusedTab: null,
         projects: [],
@@ -352,6 +357,26 @@ describe("loadSettings", () => {
       await stubSettings("{ not json");
 
       expect((await loadSettings()).projectPaths).toEqual([]);
+    });
+  });
+});
+
+describe("parseSettings flatWorkspaces", () => {
+  describe("when the settings declare it", () => {
+    it("returns what they declare", () => {
+      expect(parseSettings(JSON.stringify({ flatWorkspaces: true }))?.flatWorkspaces).toBe(true);
+    });
+  });
+
+  describe("when the settings declare nothing", () => {
+    it("returns false, leaving Herdr to group workspaces as it always has", () => {
+      expect(parseSettings("{}")?.flatWorkspaces).toBe(false);
+    });
+  });
+
+  describe("when the settings declare something other than a boolean", () => {
+    it("returns false", () => {
+      expect(parseSettings(JSON.stringify({ flatWorkspaces: "yes" }))?.flatWorkspaces).toBe(false);
     });
   });
 });

@@ -130,7 +130,7 @@ export function parseSettings(contents: string): Settings | null {
 
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
 
-  const { projectPaths, projects } = parsed as Record<string, unknown>;
+  const { projectPaths, flatWorkspaces, projects } = parsed as Record<string, unknown>;
   const entries = Array.isArray(projects) ? projects : [];
   const isDefault = (entry: unknown) =>
     (entry as { name?: unknown })?.name === DEFAULT_PROJECT_NAME;
@@ -146,6 +146,7 @@ export function parseSettings(contents: string): Settings | null {
     projectPaths: Array.isArray(projectPaths)
       ? projectPaths.filter((path): path is string => typeof path === "string").map(expandHome)
       : [],
+    flatWorkspaces: flatWorkspaces === true,
     defaultTabs,
     defaultFocusedTab,
     projects: parseProjects(
