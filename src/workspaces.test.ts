@@ -6,8 +6,6 @@ import {
   createProjectWorktree,
   openProjectMain,
   openProjectWorktree,
-  parseOpenCheckoutPaths,
-  parseOpenWorkspaceId,
   workspaceRepositoryRoot,
 } from "./workspaces.ts";
 import { describe, expect, it, mock } from "bun:test";
@@ -25,6 +23,20 @@ const PROJECT: Project = {
 const WORKSPACE = { workspaceId: "wG", rootTabId: "wG:t1", rootPaneId: "wG:p1" };
 
 const CREATED_WORKSPACE = { ...WORKSPACE, checkoutPath: "/tmp/worktrees/feature" };
+
+/**
+ * Builds a `runHerdrJson` mock that answers `workspace list` with the given workspaces and `pane
+ * list` with the given panes, which is what the open-workspace listing reads.
+ *
+ * @param workspaces The workspace entries to report.
+ * @param panes The pane entries to report.
+ * @returns The mock standing in for `runHerdrJson`.
+ */
+function mockRunHerdrJson(workspaces: unknown[], panes: unknown[] = []) {
+  return mock((args: string[]) =>
+    Promise.resolve(args[0] === "pane" ? { result: { panes } } : { result: { workspaces } }),
+  );
+}
 
 /**
  * Replaces the herdr, worktree, and layout modules so the workspace helpers can be exercised
@@ -45,13 +57,18 @@ async function mockHerdrModules(
     openWorktree: mock(() => Promise.resolve(WORKSPACE)),
     createWorktree: mock(() => Promise.resolve(CREATED_WORKSPACE)),
     listWorktrees: mock(() => Promise.resolve(worktrees)),
-    runHerdrJson: mock(() =>
-      Promise.resolve({
-        result: { workspaces: openPaths.map((path) => ({ worktree: { checkout_path: path } })) },
-      }),
+    mainCheckoutPath: mock(() => Promise.resolve(null)),
+    runHerdrJson: mockRunHerdrJson(
+      openPaths.map((path, index) => ({
+        workspace_id: `w${index}`,
+        worktree: { checkout_path: path, repo_root: PROJECT.repositoryRoot },
+      })),
     ),
   };
 
+  await stubModule(import.meta.resolve("./git.ts"), () => ({
+    mainCheckoutPath: mocks.mainCheckoutPath,
+  }));
   await stubModule(import.meta.resolve("./layout.ts"), () => ({ applyLayout: mocks.applyLayout }));
   await stubModule(import.meta.resolve("./agents.ts"), () => ({
     promptWorkspaceAgent: mocks.promptWorkspaceAgent,
@@ -268,71 +285,6 @@ describe("openProjectMain", () => {
   });
 });
 
-describe("parseOpenCheckoutPaths", () => {
-  describe("when workspaces are backed by worktrees", () => {
-    it("returns their checkout paths without duplicates", () => {
-      const response = {
-        result: {
-          workspaces: [
-            { worktree: { checkout_path: "/tmp/orc" } },
-            { worktree: { checkout_path: "/tmp/feature" } },
-            { worktree: { checkout_path: "/tmp/orc" } },
-          ],
-        },
-      };
-
-      expect(parseOpenCheckoutPaths(response)).toEqual(["/tmp/orc", "/tmp/feature"]);
-    });
-  });
-
-  describe("when a workspace has no worktree", () => {
-    it("skips it", () => {
-      const response = { result: { workspaces: [{ worktree: null }, { label: "plain" }] } };
-
-      expect(parseOpenCheckoutPaths(response)).toEqual([]);
-    });
-  });
-
-  describe("when the response is not a workspace listing", () => {
-    it("returns an empty list", () => {
-      expect(parseOpenCheckoutPaths({ nonsense: true })).toEqual([]);
-    });
-  });
-});
-
-describe("parseOpenWorkspaceId", () => {
-  describe("when a workspace is open for the path", () => {
-    it("returns its id", () => {
-      const response = {
-        result: {
-          workspaces: [
-            { workspace_id: "w1", worktree: { checkout_path: "/tmp/orc" } },
-            { workspace_id: "w2", worktree: { checkout_path: "/tmp/feature" } },
-          ],
-        },
-      };
-
-      expect(parseOpenWorkspaceId(response, "/tmp/feature")).toEqual("w2");
-    });
-  });
-
-  describe("when no workspace is open for the path", () => {
-    it("returns null", () => {
-      const response = {
-        result: { workspaces: [{ workspace_id: "w1", worktree: { checkout_path: "/tmp/orc" } }] },
-      };
-
-      expect(parseOpenWorkspaceId(response, "/tmp/feature")).toBeNull();
-    });
-  });
-
-  describe("when the response is not a workspace listing", () => {
-    it("returns null", () => {
-      expect(parseOpenWorkspaceId({ nonsense: true }, "/tmp/feature")).toBeNull();
-    });
-  });
-});
-
 /**
  * Replaces the herdr and worktree modules so {@link closeProjectMain} and
  * {@link closeProjectWorktree} can be exercised without a running Herdr session.
@@ -347,15 +299,11 @@ async function mockCloseModules(
 ) {
   const mocks = {
     runHerdr: mock(() => Promise.resolve("")),
-    runHerdrJson: mock(() =>
-      Promise.resolve({
-        result: {
-          workspaces: Object.entries(openWorkspaces).map(([path, workspaceId]) => ({
-            workspace_id: workspaceId,
-            worktree: { checkout_path: path },
-          })),
-        },
-      }),
+    runHerdrJson: mockRunHerdrJson(
+      Object.entries(openWorkspaces).map(([path, workspaceId]) => ({
+        workspace_id: workspaceId,
+        worktree: { checkout_path: path, repo_root: PROJECT.repositoryRoot },
+      })),
     ),
     listWorktrees: mock(() => Promise.resolve(worktrees)),
   };
@@ -447,24 +395,25 @@ describe("closeProjectWorktree", () => {
 });
 
 describe("workspaceRepositoryRoot", () => {
-  describe("when the workspace has a worktree", () => {
+  describe("when the workspace is showing a checkout", () => {
     it("returns its repository root", async () => {
       await stubModule(import.meta.resolve("./herdr.ts"), () => ({
-        runHerdrJson: mock(() =>
-          Promise.resolve({
-            result: { workspace: { worktree: { repo_root: "/home/user/Notes" } } },
-          }),
-        ),
+        runHerdrJson: mockRunHerdrJson([
+          {
+            workspace_id: "w1",
+            worktree: { checkout_path: "/home/user/Notes", repo_root: "/home/user/Notes" },
+          },
+        ]),
       }));
 
       expect(await workspaceRepositoryRoot("w1")).toEqual("/home/user/Notes");
     });
   });
 
-  describe("when the workspace has no worktree", () => {
+  describe("when the workspace is showing no checkout", () => {
     it("returns null", async () => {
       await stubModule(import.meta.resolve("./herdr.ts"), () => ({
-        runHerdrJson: mock(() => Promise.resolve({ result: { workspace: {} } })),
+        runHerdrJson: mockRunHerdrJson([{ workspace_id: "w1" }]),
       }));
 
       expect(await workspaceRepositoryRoot("w1")).toBeNull();

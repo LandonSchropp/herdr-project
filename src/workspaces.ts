@@ -1,68 +1,9 @@
 import { promptWorkspaceAgent } from "./agents.ts";
-import { runHerdr, runHerdrJson } from "./herdr.ts";
+import { runHerdr } from "./herdr.ts";
 import { reportProject } from "./metadata.ts";
+import { findOpenWorkspace, listOpenWorkspaces } from "./open-workspaces.ts";
 import type { Project } from "./types.ts";
 import { createWorktree, listWorktrees, openWorktree } from "./worktrees.ts";
-
-/**
- * Extracts the checkout paths of the worktrees that already have a workspace open. A workspace that
- * isn't backed by a worktree contributes nothing.
- *
- * @param response The parsed JSON response from a workspace listing.
- * @returns The checkout paths, without duplicates.
- */
-export function parseOpenCheckoutPaths(response: unknown): string[] {
-  const workspaces = (response as { result?: { workspaces?: unknown } })?.result?.workspaces;
-
-  if (!Array.isArray(workspaces)) return [];
-
-  const paths = workspaces.flatMap((entry: unknown) => {
-    const path = (entry as { worktree?: { checkout_path?: unknown } })?.worktree?.checkout_path;
-    return typeof path === "string" ? [path] : [];
-  });
-
-  return [...new Set(paths)];
-}
-
-/**
- * Lists the checkout paths that already have a Herdr workspace open, so opening one again — which
- * would lay a second set of tabs into it — can be refused before it happens.
- *
- * @returns The checkout paths of every open worktree workspace.
- */
-export async function listOpenCheckoutPaths(): Promise<string[]> {
-  return parseOpenCheckoutPaths(await runHerdrJson(["workspace", "list"]));
-}
-
-/**
- * Extracts the id of the workspace open for a checkout path.
- *
- * @param response The parsed JSON response from a workspace listing.
- * @param path The checkout path to find an open workspace for.
- * @returns The workspace's id, or `null` when no open workspace is backed by that path.
- */
-export function parseOpenWorkspaceId(response: unknown, path: string): string | null {
-  const workspaces = (response as { result?: { workspaces?: unknown } })?.result?.workspaces;
-
-  if (!Array.isArray(workspaces)) return null;
-
-  const match = workspaces.find(
-    (entry: unknown) =>
-      (entry as { worktree?: { checkout_path?: unknown } })?.worktree?.checkout_path === path,
-  ) as { workspace_id?: unknown } | undefined;
-
-  return typeof match?.workspace_id === "string" ? match.workspace_id : null;
-}
-
-/**
- * Finds the id of the workspace open for a checkout path.
- *
- * @param path The absolute path to the checkout.
- * @returns The workspace's id, or `null` when no workspace is open for it.
- */
-export async function findOpenWorkspaceId(path: string): Promise<string | null> {
-  return parseOpenWorkspaceId(await runHerdrJson(["workspace", "list"]), path);
-}
 
 /**
  * Closes a project's main workspace.
@@ -75,11 +16,11 @@ export async function closeProjectMain(project: Project): Promise<void> {
 
   if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
 
-  const workspaceId = await findOpenWorkspaceId(main.path);
+  const workspace = await findOpenWorkspace(main.path);
 
-  if (workspaceId === null) throw new Error(`${project.name} has no open workspace.`);
+  if (workspace === null) throw new Error(`${project.name} has no open workspace.`);
 
-  await runHerdr(["workspace", "close", workspaceId]);
+  await runHerdr(["workspace", "close", workspace.workspaceId]);
 }
 
 /**
@@ -98,11 +39,11 @@ export async function closeProjectWorktree(project: Project, branch: string): Pr
     throw new Error(`${project.name} has no worktree on "${branch}".`);
   }
 
-  const workspaceId = await findOpenWorkspaceId(worktree.path);
+  const workspace = await findOpenWorkspace(worktree.path);
 
-  if (workspaceId === null) throw new Error(`"${branch}" has no open workspace.`);
+  if (workspace === null) throw new Error(`"${branch}" has no open workspace.`);
 
-  await runHerdr(["worktree", "remove", "--workspace", workspaceId]);
+  await runHerdr(["worktree", "remove", "--workspace", workspace.workspaceId]);
 }
 
 /**
@@ -122,7 +63,7 @@ export async function openProjectWorktree(
   label?: string,
   focus: boolean = true,
 ): Promise<void> {
-  if ((await listOpenCheckoutPaths()).includes(path)) {
+  if ((await findOpenWorkspace(path)) !== null) {
     throw new Error(`A workspace is already open for ${path}.`);
   }
 
@@ -188,14 +129,13 @@ export async function openProjectMain(project: Project, focus: boolean = true): 
  * it is creating a worktree in.
  *
  * @param workspaceId The workspace to look up.
- * @returns The absolute path to the workspace's repository, or `null` when it has no worktree.
+ * @returns The absolute path to the workspace's repository, or `null` when it is showing no
+ *   checkout.
  */
 export async function workspaceRepositoryRoot(workspaceId: string): Promise<string | null> {
-  const repositoryRoot = (await runHerdrJson(["workspace", "get", workspaceId])) as {
-    result?: { workspace?: { worktree?: { repo_root?: unknown } } };
-  };
+  const workspaces = await listOpenWorkspaces();
 
-  const root = repositoryRoot?.result?.workspace?.worktree?.repo_root;
-
-  return typeof root === "string" ? root : null;
+  return (
+    workspaces.find((workspace) => workspace.workspaceId === workspaceId)?.repositoryRoot ?? null
+  );
 }

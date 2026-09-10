@@ -52,6 +52,31 @@ export type Workspace = {
   rootPaneId: string;
 };
 
+/** What Herdr reports about an open workspace, before its repository has been resolved. */
+export type ReportedWorkspace = {
+  /** The workspace's id. */
+  workspaceId: string;
+  /** The worktree Herdr manages for the workspace, or `null` when it manages none. */
+  worktree: { checkoutPath: string; repositoryRoot: string } | null;
+  /** The directory the workspace's first pane is in, or `null` when it reported no pane. */
+  paneDirectory: string | null;
+};
+
+/** An open Herdr workspace and the checkout it is showing. */
+export type OpenWorkspace = {
+  /** The workspace's id. */
+  workspaceId: string;
+  /** The absolute path to the checkout the workspace is showing. */
+  checkoutPath: string;
+  /** The absolute path to the main repository the checkout belongs to. */
+  repositoryRoot: string;
+  /**
+   * Whether Herdr tracks the workspace as one of its own worktrees, which is what decides how the
+   * workspace is closed and whether Herdr groups it under its repository.
+   */
+  isManagedWorktree: boolean;
+};
+
 /** A workspace to lay a project's tabs into. */
 export type WorkspaceLayout = Workspace & {
   /** The absolute path to the worktree's checkout, where new tabs should start. */
