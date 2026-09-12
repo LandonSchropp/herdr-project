@@ -183,6 +183,25 @@ export async function openProjectMain(project: Project, focus: boolean = true): 
 }
 
 /**
+ * Opens a project on a branch, which is what both front ends do once they know which project and
+ * which worktree the user asked for. An empty branch asks for the project's main checkout, since
+ * that is what a caller means when it has no branch to offer.
+ *
+ * @param project The project to open.
+ * @param branch The branch whose worktree to open, or an empty string for the main checkout.
+ * @param focus Whether to focus the workspace, leaving the caller where it is when false.
+ * @throws When the workspace is already open, or the project's prompt is not delivered.
+ */
+export async function openProject(
+  project: Project,
+  branch: string,
+  focus: boolean = true,
+): Promise<void> {
+  if (branch === "") await openProjectMain(project, focus);
+  else await createProjectWorktree(project, branch, focus);
+}
+
+/**
  * Finds the repository behind a workspace, which is how the new-worktree prompt knows which project
  * it is creating a worktree in.
  *

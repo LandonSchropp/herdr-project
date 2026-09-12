@@ -4,6 +4,7 @@ import {
   closeProjectMain,
   closeProjectWorktree,
   createProjectWorktree,
+  openProject,
   openProjectMain,
   openProjectWorktree,
   workspaceRepositoryRoot,
@@ -582,6 +583,39 @@ describe("when the settings ask for flat workspaces", () => {
       await openProjectMain(PROJECT);
 
       expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "orc", true);
+    });
+  });
+});
+
+describe("openProject", () => {
+  describe("when the branch is empty", () => {
+    it("opens the project's main checkout", async () => {
+      const mocks = await mockHerdrModules([{ branch: "main", path: "/tmp/orc", isMain: true }]);
+
+      await openProject(PROJECT, "");
+
+      expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "orc", true);
+      expect(mocks.createWorktree).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("when the branch is named", () => {
+    it("creates that worktree instead", async () => {
+      const mocks = await mockHerdrModules([]);
+
+      await openProject(PROJECT, "feature");
+
+      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", true);
+    });
+  });
+
+  describe("when focus is disabled", () => {
+    it("passes it along", async () => {
+      const mocks = await mockHerdrModules([]);
+
+      await openProject(PROJECT, "feature", false);
+
+      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", false);
     });
   });
 });

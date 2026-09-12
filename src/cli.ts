@@ -5,12 +5,7 @@ import { copyWorktreeIncludes, parseEventWorktreePath } from "./on-worktree.ts";
 import { listProjects } from "./projects.ts";
 import { collapseHome } from "./settings.ts";
 import type { Project } from "./types.ts";
-import {
-  closeProjectMain,
-  closeProjectWorktree,
-  createProjectWorktree,
-  openProjectMain,
-} from "./workspaces.ts";
+import { closeProjectMain, closeProjectWorktree, openProject } from "./workspaces.ts";
 
 /** The CLI's usage text, printed for `--help` and for a malformed invocation. */
 export const HELP = `herdr-project — open a project and one of its Git worktrees.
@@ -158,8 +153,7 @@ async function runOpen(args: string[]): Promise<CliResult> {
   const focus = !args.includes("--no-focus");
   const target = prompt === null ? project : { ...project, prompt };
 
-  if (branch === null) await openProjectMain(target, focus);
-  else await createProjectWorktree(target, branch, focus);
+  await openProject(target, branch ?? "", focus);
 
   return { stdout: "", stderr: "", exitCode: 0 };
 }
