@@ -30,18 +30,26 @@ describe("WorktreeNameModal", () => {
     expect(lastFrame()).toContain("orc");
   });
 
-  describe("when the prompt first opens", () => {
-    it("starts empty rather than proposing a name", async () => {
+  it("says what an empty name gets you", () => {
+    const { lastFrame } = renderInViewport(
+      <WorktreeNameModal projectName="orc" onSubmit={noop} onCancel={noop} />,
+    );
+
+    expect(lastFrame()).toContain("main checkout");
+  });
+
+  describe("when the name is left empty", () => {
+    it("submits it, since an empty name asks for the main checkout", async () => {
       const onSubmit = mock(() => {});
 
-      const { stdin, lastFrame } = renderInViewport(
+      const { stdin } = renderInViewport(
         <WorktreeNameModal projectName="orc" onSubmit={onSubmit} onCancel={noop} />,
       );
 
       stdin.write("\r");
-      await waitFor(() => lastFrame()?.includes("Enter a branch name.") ?? false);
+      await waitFor(() => onSubmit.mock.calls.length > 0);
 
-      expect(onSubmit).not.toHaveBeenCalled();
+      expect(onSubmit).toHaveBeenCalledWith("");
     });
   });
 

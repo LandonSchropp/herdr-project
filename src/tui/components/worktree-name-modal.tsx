@@ -16,9 +16,10 @@ type WorktreeNameModalProps = {
 };
 
 /**
- * The new-worktree prompt. The input starts empty: unlike the project picker there is no sensible
- * default, since every worktree is a new branch the user is naming. A branch that already has a
- * worktree is accepted — opening that worktree is what the caller does with it.
+ * The worktree prompt. The input starts empty, and an empty name submits as `""` rather than being
+ * rejected: it is how the caller is asked for the project's main checkout, which is the common case
+ * and so deserves the shortest keystroke. A branch that already has a worktree is accepted —
+ * opening that worktree is what the caller does with it.
  */
 export function WorktreeNameModal({
   projectName,
@@ -28,16 +29,16 @@ export function WorktreeNameModal({
 }: WorktreeNameModalProps) {
   return (
     <Prompt
-      title="New Worktree"
+      title="Open a Worktree"
       message={[
-        "What would you like to name the",
         <>
-          <Text color="blue">{projectName}</Text> worktree?
+          Which <Text color="blue">{projectName}</Text> worktree?
         </>,
+        "Leave it empty for the main checkout.",
       ]}
       error={error}
       onValidate={(branch) => {
-        if (branch.trim() === "") return "Enter a branch name.";
+        if (branch === "") return null;
         if (!KEBAB_CASE.test(branch)) return "Use lower kebab case, like new-feature.";
         return null;
       }}
