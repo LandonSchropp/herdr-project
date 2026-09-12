@@ -2,7 +2,7 @@ import { promptWorkspaceAgent } from "./agents.ts";
 import { removeWorktree } from "./git.ts";
 import { runHerdr } from "./herdr.ts";
 import { reportProject } from "./metadata.ts";
-import { findOpenWorkspace, listOpenWorkspaces } from "./open-workspaces.ts";
+import { findOpenWorkspace } from "./open-workspaces.ts";
 import { loadSettings } from "./settings.ts";
 import type { Project, Workspace } from "./types.ts";
 import {
@@ -199,20 +199,4 @@ export async function openProject(
 ): Promise<void> {
   if (branch === "") await openProjectMain(project, focus);
   else await createProjectWorktree(project, branch, focus);
-}
-
-/**
- * Finds the repository behind a workspace, which is how the new-worktree prompt knows which project
- * it is creating a worktree in.
- *
- * @param workspaceId The workspace to look up.
- * @returns The absolute path to the workspace's repository, or `null` when it is showing no
- *   checkout.
- */
-export async function workspaceRepositoryRoot(workspaceId: string): Promise<string | null> {
-  const workspaces = await listOpenWorkspaces();
-
-  return (
-    workspaces.find((workspace) => workspace.workspaceId === workspaceId)?.repositoryRoot ?? null
-  );
 }

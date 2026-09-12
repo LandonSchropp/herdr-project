@@ -3,8 +3,8 @@
 # `herdr plugin link .`, or from GitHub with `herdr plugin install LandonSchropp/herdr-project`.
 #
 # The plugin opens a project and one of its Git worktrees in two steps: choose the project, then
-# name the branch to open it on. The name is prefilled with the repository's main checkout, and a
-# branch with no worktree yet gets one created for it.
+# name the branch to open it on. An empty name opens the project's main checkout, and a branch with
+# no worktree yet gets one created for it.
 #
 # The same operations are available non-interactively for agents and scripts:
 #
@@ -47,20 +47,6 @@ id = "picker"
 title = "Herdr Project"
 placement = "zoomed"
 command = ["./scripts/run.sh"]
-
-# worktree — prompts for a branch name and creates a worktree in the current workspace's project.
-# Bind a key to it or run it from Herdr's action menu.
-[[actions]]
-id = "worktree"
-title = "Herdr Project: New Worktree"
-command = ["./scripts/open-worktree.sh"]
-
-# worktree-prompt — the new-worktree prompt as a Herdr-managed pane.
-[[panes]]
-id = "worktree-prompt"
-title = "New Worktree"
-placement = "zoomed"
-command = ["./scripts/run.sh", "worktree"]
 
 # workspace.created — reports the workspace's project name and lays that project's tabs into every
 # workspace Herdr creates, whether it came from this plugin, from Herdr's own UI, or from Herdr
