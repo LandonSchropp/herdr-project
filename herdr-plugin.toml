@@ -16,7 +16,7 @@ id = "landonschropp.herdr-project"
 name = "Herdr Project"
 version = "0.1.0"
 min_herdr_version = "0.8.2"
-description = "Open a project and one of its Git worktrees from two pickers."
+description = "Open a project and one of its Git worktrees from a picker."
 platforms = ["linux", "macos"]
 
 # Install dependencies so the Bun entry point can run. Herdr runs this once, after you confirm the

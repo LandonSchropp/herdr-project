@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A [Herdr](https://herdr.dev) plugin that opens a predefined project and one of its Git worktrees
-from two pickers.
+from a picker.
 
 ## Why?
 
@@ -16,15 +16,15 @@ glob of the directories your repositories live in, means most projects don't eve
 
 ## How It Works
 
-Two independent actions, each its own picker:
+One action, two questions:
 
-- **Open a project.** Fuzzy-search the projects you've defined and pick one; it opens on its main
-  checkout. Escape cancels.
-- **New worktree.** Run from inside an already-open workspace. Type a branch name and it creates
-  that worktree for the current workspace's project — or opens it, if it already exists. Escape
-  cancels.
+1. **Which project?** Fuzzy-search the projects you've defined and pick one. Escape cancels.
+2. **Which worktree?** Type a branch name and it creates that worktree — or opens it, if it already
+   exists. Leave it empty for the project's main checkout. Escape goes back to the project.
 
-Either way, the project's tabs are laid into the workspace afterward; see [Tabs](#tabs).
+Neither answer is inferred from the workspace you were in when you opened the picker, so it works
+the same from anywhere. The project's tabs are laid into the workspace afterward; see
+[Tabs](#tabs).
 
 ## Installation
 
@@ -38,7 +38,7 @@ Either way, the project's tabs are laid into the workspace afterward; see [Tabs]
    herdr plugin link .
    ```
 
-3. Bind each action to a key in `~/.config/herdr/config.toml`:
+3. Bind the action to a key in `~/.config/herdr/config.toml`:
 
    ```toml
    [[keys.command]]
@@ -46,12 +46,6 @@ Either way, the project's tabs are laid into the workspace afterward; see [Tabs]
    type = "plugin_action"
    command = "landonschropp.herdr-project.project"
    description = "open a project"
-
-   [[keys.command]]
-   key = "cmd+shift+n"
-   type = "plugin_action"
-   command = "landonschropp.herdr-project.worktree"
-   description = "create a worktree"
    ```
 
 ## CLI
