@@ -44,13 +44,13 @@ function mockRunHerdrJson(workspaces: unknown[], panes: unknown[] = []) {
  *
  * @param worktrees The worktrees `listWorktrees` reports.
  * @param openPaths The checkout paths that already have a workspace open.
- * @param flatWorkspaces Whether the settings ask for flat workspaces.
+ * @param flat Whether the settings ask for flat workspaces.
  * @returns The mocks standing in for each replaced function.
  */
 async function mockHerdrModules(
   worktrees: { branch: string; path: string; isMain: boolean; isBare?: boolean }[],
   openPaths: string[] = [],
-  flatWorkspaces = false,
+  flat = false,
 ) {
   const mocks = {
     applyLayout: mock(() => Promise.resolve()),
@@ -61,7 +61,7 @@ async function mockHerdrModules(
     listWorktrees: mock(() => Promise.resolve(worktrees)),
     openFlatWorkspace: mock(() => Promise.resolve(WORKSPACE)),
     createFlatWorktree: mock(() => Promise.resolve(CREATED_WORKSPACE)),
-    loadSettings: mock(() => Promise.resolve({ flatWorkspaces })),
+    loadSettings: mock(() => Promise.resolve({ flat })),
     mainCheckoutPath: mock(() => Promise.resolve(null)),
     runHerdrJson: mockRunHerdrJson(
       openPaths.map((path, index) => ({

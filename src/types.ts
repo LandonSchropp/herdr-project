@@ -100,7 +100,7 @@ export type Settings = {
    * Whether to open each workspace as its own top-level row rather than as a worktree Herdr groups
    * under its repository. False unless the settings declare otherwise.
    */
-  flatWorkspaces: boolean;
+  flat: boolean;
   /**
    * The tabs used by discovered projects and by any declared project that omits its own, taken from
    * the `default` project in the settings file.

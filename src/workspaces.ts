@@ -37,9 +37,9 @@ export async function closeProjectMain(project: Project): Promise<void> {
  * workspace showing it.
  *
  * How that happens depends on what Herdr knows about the workspace rather than on the current
- * settings, so a workspace opened before `flatWorkspaces` was turned on still closes the way it was
- * opened. Herdr removes a worktree of its own; a flat one is removed with Git, which refuses a
- * checkout holding uncommitted work and leaves the workspace open when it does.
+ * settings, so a workspace opened before `flat` was turned on still closes the way it was opened.
+ * Herdr removes a worktree of its own; a flat one is removed with Git, which refuses a checkout
+ * holding uncommitted work and leaves the workspace open when it does.
  *
  * @param project The project whose worktree to remove.
  * @param branch The branch whose worktree to remove.
@@ -102,8 +102,8 @@ async function openIntoWorkspace(
  * @param project The project the worktree belongs to.
  * @param path The absolute path to the worktree's checkout.
  * @param label The workspace's name. Omit to let Herdr name it after the repository, or — with
- *   `flatWorkspaces`, where Herdr has no worktree to name it after — after the checkout's own
- *   directory, which for a worktree this plugin created is its branch.
+ *   `flat`, where Herdr has no worktree to name it after — after the checkout's own directory,
+ *   which for a worktree this plugin created is its branch.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @throws When the worktree already has a workspace open, or the project's prompt is not delivered.
  */
@@ -113,10 +113,10 @@ export async function openProjectWorktree(
   label?: string,
   focus: boolean = true,
 ): Promise<void> {
-  const flatWorkspaces = (await loadSettings()).flatWorkspaces;
+  const flat = (await loadSettings()).flat;
 
   await openIntoWorkspace(project, path, () =>
-    flatWorkspaces
+    flat
       ? openFlatWorkspace(path, label ?? basename(path), focus)
       : openWorktree(project.repositoryRoot, path, label, focus),
   );
@@ -148,7 +148,7 @@ export async function createProjectWorktree(
     return;
   }
 
-  const { workspaceId } = (await loadSettings()).flatWorkspaces
+  const { workspaceId } = (await loadSettings()).flat
     ? await createFlatWorktree(project.repositoryRoot, branch, focus)
     : await createWorktree(project.repositoryRoot, branch, focus);
 
