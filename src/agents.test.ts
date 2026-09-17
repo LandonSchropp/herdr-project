@@ -1,5 +1,6 @@
 import { stubModule } from "../test/helpers/module.ts";
 import { parseAgentPaneId, promptWorkspaceAgent, waitForWorkspaceAgent } from "./agents.ts";
+import { HerdrTimeoutError } from "./herdr.ts";
 import { describe, expect, it, mock } from "bun:test";
 
 /**
@@ -18,15 +19,19 @@ function agentList(workspaceId: string, status: string) {
 /**
  * Replaces the herdr module so the agent helpers can be exercised without a running Herdr session.
  *
- * @param responses The responses `runHerdrJson` returns, one per call, repeating the last one.
+ * @param responses The responses `runHerdrJson` returns, one per call, repeating the last one. An
+ *   `Error` is thrown rather than returned, which is how an unanswered or refused check is staged.
  * @returns The mocks standing in for each replaced function.
  */
 async function mockHerdrModule(responses: unknown[]) {
   const mocks = {
+    HerdrTimeoutError,
     runHerdr: mock(() => Promise.resolve("")),
-    runHerdrJson: mock(() =>
-      Promise.resolve(responses.length > 1 ? responses.shift() : responses[0]),
-    ),
+    runHerdrJson: mock(() => {
+      const response = responses.length > 1 ? responses.shift() : responses[0];
+
+      return response instanceof Error ? Promise.reject(response) : Promise.resolve(response);
+    }),
   };
 
   await stubModule(import.meta.resolve("./herdr.ts"), () => mocks);
@@ -82,6 +87,43 @@ describe("waitForWorkspaceAgent", () => {
       expect((thrown as Error).message).toContain("no agent is running in wG");
     });
   });
+
+  it("bounds each check", async () => {
+    const mocks = await mockHerdrModule([agentList("wG", "idle")]);
+
+    await waitForWorkspaceAgent("wG");
+
+    expect(mocks.runHerdrJson).toHaveBeenCalledWith(["agent", "list"], expect.any(Number));
+  });
+
+  describe("when a check goes unanswered", () => {
+    it("checks again", async () => {
+      await mockHerdrModule([new HerdrTimeoutError("timed out"), agentList("wG", "idle")]);
+
+      expect(await waitForWorkspaceAgent("wG")).toBe("wG:p3");
+    });
+  });
+
+  describe("when every check goes unanswered", () => {
+    it("throws without claiming no agent is running", async () => {
+      await mockHerdrModule([new HerdrTimeoutError("timed out")]);
+
+      const thrown = await waitForWorkspaceAgent("wG", 0).catch((error: Error) => error);
+
+      expect((thrown as Error).message).toContain("wG");
+      expect((thrown as Error).message).not.toContain("no agent is running");
+    });
+  });
+
+  describe("when Herdr reports an error", () => {
+    it("raises it rather than waiting out the timeout", async () => {
+      await mockHerdrModule([new Error("herdr agent list failed: no session")]);
+
+      const thrown = await waitForWorkspaceAgent("wG").catch((error: Error) => error);
+
+      expect((thrown as Error).message).toContain("no session");
+    });
+  });
 });
 
 describe("promptWorkspaceAgent", () => {
@@ -90,16 +132,19 @@ describe("promptWorkspaceAgent", () => {
 
     await promptWorkspaceAgent("wG", "read the README");
 
-    expect(mocks.runHerdr).toHaveBeenCalledWith([
-      "agent",
-      "prompt",
-      "wG:p3",
-      "read the README",
-      "--wait",
-      "--until",
-      "working",
-      "--timeout",
-      "10000",
-    ]);
+    expect(mocks.runHerdr).toHaveBeenCalledWith(
+      [
+        "agent",
+        "prompt",
+        "wG:p3",
+        "read the README",
+        "--wait",
+        "--until",
+        "working",
+        "--timeout",
+        "10000",
+      ],
+      expect.any(Number),
+    );
   });
 });

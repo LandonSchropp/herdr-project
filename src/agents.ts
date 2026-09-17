@@ -1,4 +1,4 @@
-import { runHerdr, runHerdrJson } from "./herdr.ts";
+import { HerdrTimeoutError, runHerdr, runHerdrJson } from "./herdr.ts";
 
 /** How long to wait for a workspace's agent to be ready, in milliseconds. */
 const READY_TIMEOUT_MILLISECONDS = 60_000;
@@ -6,8 +6,20 @@ const READY_TIMEOUT_MILLISECONDS = 60_000;
 /** How long to wait between checks while a workspace's agent is starting, in milliseconds. */
 const POLL_INTERVAL_MILLISECONDS = 250;
 
+/**
+ * How long a single check for a workspace's agent is given, in milliseconds. A check only reads
+ * Herdr's own state, so one that takes this long is wedged rather than slow.
+ */
+const POLL_TIMEOUT_MILLISECONDS = 5_000;
+
 /** How long Herdr is given to observe the agent start the prompt, in milliseconds. */
 const PROMPT_TIMEOUT_MILLISECONDS = 10_000;
+
+/**
+ * How long the command that sends the prompt is given, in milliseconds. It waits out
+ * {@link PROMPT_TIMEOUT_MILLISECONDS} itself, so this leaves room for that answer to come back.
+ */
+const DELIVERY_TIMEOUT_MILLISECONDS = PROMPT_TIMEOUT_MILLISECONDS + 5_000;
 
 /**
  * Extracts the pane of the agent running in a workspace and ready for a prompt. An agent that is
@@ -32,14 +44,38 @@ export function parseAgentPaneId(response: unknown, workspaceId: string): string
 }
 
 /**
+ * Checks whether a workspace's agent is ready for a prompt. A check that goes unanswered reads as
+ * an agent that isn't ready, rather than as a failure; a Herdr that answers with an error still
+ * raises, since that is Herdr reporting something real.
+ *
+ * @param workspaceId The workspace whose agent to look for.
+ * @returns The agent's pane id, `null` when the workspace has no agent ready, and `undefined` when
+ *   the check went unanswered.
+ * @throws When Herdr reports an error.
+ */
+async function checkWorkspaceAgent(workspaceId: string): Promise<string | null | undefined> {
+  try {
+    const response = await runHerdrJson(["agent", "list"], POLL_TIMEOUT_MILLISECONDS);
+    return parseAgentPaneId(response, workspaceId);
+  } catch (error) {
+    if (error instanceof HerdrTimeoutError) return undefined;
+    throw error;
+  }
+}
+
+/**
  * Waits for a workspace's agent to start and become ready for a prompt. A workspace's tabs are laid
  * out asynchronously by the `workspace.created` hook, so its agent doesn't exist yet when the
  * workspace opens.
  *
+ * Each check is bounded, so `timeout` bounds the wait itself to within one check of it. An
+ * unanswered check costs that check rather than the rest of the wait.
+ *
  * @param workspaceId The workspace whose agent to wait for.
  * @param timeout How long to wait before giving up, in milliseconds.
  * @returns The agent's pane id.
- * @throws When no agent is ready before the timeout elapses.
+ * @throws When no agent is ready before the timeout elapses, distinguishing an unanswered check
+ *   from an absent agent.
  */
 export async function waitForWorkspaceAgent(
   workspaceId: string,
@@ -48,11 +84,17 @@ export async function waitForWorkspaceAgent(
   const deadline = Date.now() + timeout;
 
   for (;;) {
-    const paneId = parseAgentPaneId(await runHerdrJson(["agent", "list"]), workspaceId);
+    const paneId = await checkWorkspaceAgent(workspaceId);
 
-    if (paneId !== null) return paneId;
+    if (typeof paneId === "string") return paneId;
 
-    if (Date.now() >= deadline) throw new Error(`no agent is running in ${workspaceId}.`);
+    if (Date.now() >= deadline) {
+      throw paneId === undefined
+        ? new Error(
+            `herdr stopped answering, so whether an agent is running in ${workspaceId} is unknown.`,
+          )
+        : new Error(`no agent is running in ${workspaceId}.`);
+    }
 
     await Bun.sleep(POLL_INTERVAL_MILLISECONDS);
   }
@@ -74,15 +116,18 @@ export async function waitForWorkspaceAgent(
 export async function promptWorkspaceAgent(workspaceId: string, prompt: string): Promise<void> {
   const paneId = await waitForWorkspaceAgent(workspaceId);
 
-  await runHerdr([
-    "agent",
-    "prompt",
-    paneId,
-    prompt,
-    "--wait",
-    "--until",
-    "working",
-    "--timeout",
-    `${PROMPT_TIMEOUT_MILLISECONDS}`,
-  ]);
+  await runHerdr(
+    [
+      "agent",
+      "prompt",
+      paneId,
+      prompt,
+      "--wait",
+      "--until",
+      "working",
+      "--timeout",
+      `${PROMPT_TIMEOUT_MILLISECONDS}`,
+    ],
+    DELIVERY_TIMEOUT_MILLISECONDS,
+  );
 }
