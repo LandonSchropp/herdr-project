@@ -1,20 +1,92 @@
 import type { Workspace } from "./types.ts";
 
+/** Raised when a `herdr` command is abandoned for outliving its timeout. */
+export class HerdrTimeoutError extends Error {
+  /** @param message What went wrong. */
+  constructor(message: string) {
+    super(message);
+    this.name = "HerdrTimeoutError";
+  }
+}
+
+/**
+ * Waits for a promise, giving up once a deadline passes.
+ *
+ * @param promise The promise to wait for.
+ * @param timeout How long to wait before giving up, in milliseconds.
+ * @returns What `promise` resolved to, or `null` when the deadline passed first.
+ */
+async function withTimeout<Value>(promise: Promise<Value>, timeout: number): Promise<Value | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), timeout);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Reads a stream to the end as text.
+ *
+ * @param reader The reader to drain.
+ * @param reader.read Reads the next chunk, reporting `done` once the stream has ended.
+ * @returns Everything the stream produced.
+ */
+async function readAll(reader: {
+  read: () => Promise<{ done?: boolean; value?: Uint8Array }>;
+}): Promise<string> {
+  const decoder = new TextDecoder();
+  let text = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+
+    if (done === true) break;
+
+    text += decoder.decode(value, { stream: true });
+  }
+
+  return text + decoder.decode();
+}
+
 /**
  * Runs a `herdr` CLI command and returns its raw output. Not every command prints something — `pane
  * run`, for one, prints nothing — so callers that need a response use {@link runHerdrJson}.
  *
  * @param args The arguments to pass to the `herdr` binary.
+ * @param timeout How long the command is given, in milliseconds. Omit to leave it unbounded, which
+ *   is what a command that does real work needs.
  * @returns Whatever the command wrote to stdout.
+ * @throws {HerdrTimeoutError} When the command outlives `timeout`.
  * @throws When the command exits non-zero.
  */
-export async function runHerdr(args: string[]): Promise<string> {
+export async function runHerdr(args: string[], timeout?: number): Promise<string> {
   const process = Bun.spawn(["herdr", ...args], { stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(process.stdout).text(),
-    new Response(process.stderr).text(),
-    process.exited,
-  ]);
+
+  // Read the output through readers we hold, so abandoning a command releases its streams. A read
+  // left pending outlives the command and keeps the process from ever exiting.
+  const outputReader = process.stdout.getReader();
+  const errorReader = process.stderr.getReader();
+
+  const gathered = Promise.all([readAll(outputReader), readAll(errorReader), process.exited]);
+
+  const result = timeout === undefined ? await gathered : await withTimeout(gathered, timeout);
+
+  if (result === null) {
+    process.kill();
+    void outputReader.cancel();
+    void errorReader.cancel();
+
+    throw new HerdrTimeoutError(`herdr ${args.join(" ")} timed out after ${timeout}ms`);
+  }
+
+  const [stdout, stderr, exitCode] = result;
 
   if (exitCode !== 0) {
     throw new Error(`herdr ${args.join(" ")} failed: ${stderr.trim() || stdout.trim()}`);
@@ -27,11 +99,13 @@ export async function runHerdr(args: string[]): Promise<string> {
  * Runs a `herdr` CLI command that prints JSON and returns the parsed response.
  *
  * @param args The arguments to pass to the `herdr` binary.
+ * @param timeout How long the command is given, in milliseconds, as in {@link runHerdr}.
  * @returns The parsed JSON response.
+ * @throws {HerdrTimeoutError} When the command outlives `timeout`.
  * @throws When the command exits non-zero or prints output that is not JSON.
  */
-export async function runHerdrJson(args: string[]): Promise<unknown> {
-  const stdout = await runHerdr(args);
+export async function runHerdrJson(args: string[], timeout?: number): Promise<unknown> {
+  const stdout = await runHerdr(args, timeout);
 
   try {
     return JSON.parse(stdout);

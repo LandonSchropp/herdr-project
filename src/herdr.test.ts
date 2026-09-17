@@ -1,4 +1,5 @@
 import {
+  HerdrTimeoutError,
   focusedWorkspaceId,
   parseCheckoutPath,
   parseFocusedWorkspaceId,
@@ -7,7 +8,7 @@ import {
   runHerdr,
   runHerdrJson,
 } from "./herdr.ts";
-import { describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 
 const WORKSPACE_RESPONSE = {
   result: {
@@ -33,6 +34,22 @@ export function mockSpawn(stdout: string, options: { exitCode?: number; stderr?:
     stdout: new Response(stdout).body,
     stderr: new Response(stderr).body,
     exited: Promise.resolve(exitCode),
+    kill: () => {},
+  } as unknown as ReturnType<typeof Bun.spawn>);
+}
+
+/**
+ * Mocks `Bun.spawn` as a command that never finishes and never closes its output, which is what a
+ * command outliving its timeout looks like.
+ *
+ * @returns The spy standing in for `Bun.spawn`.
+ */
+function mockHangingSpawn() {
+  return spyOn(Bun, "spawn").mockReturnValue({
+    stdout: new ReadableStream(),
+    stderr: new ReadableStream(),
+    exited: new Promise<number>(() => {}),
+    kill: () => {},
   } as unknown as ReturnType<typeof Bun.spawn>);
 }
 
@@ -65,6 +82,34 @@ describe("runHerdr", () => {
 
       expect(thrown).toBeInstanceOf(Error);
       expect((thrown as Error).message).toContain("not a repository");
+    });
+  });
+
+  describe("when the command outlives its timeout", () => {
+    it("throws a HerdrTimeoutError", async () => {
+      mockHangingSpawn();
+
+      const thrown = await runHerdr(["agent", "list"], 50).catch((error: Error) => error);
+
+      expect(thrown).toBeInstanceOf(HerdrTimeoutError);
+      expect((thrown as Error).message).toContain("timed out");
+    });
+
+    it("kills the command and releases its output", async () => {
+      const kill = mock(() => {});
+      const cancel = mock(() => Promise.resolve());
+
+      spyOn(Bun, "spawn").mockReturnValue({
+        stdout: { getReader: () => ({ read: () => new Promise(() => {}), cancel }) },
+        stderr: { getReader: () => ({ read: () => new Promise(() => {}), cancel }) },
+        exited: new Promise<number>(() => {}),
+        kill,
+      } as unknown as ReturnType<typeof Bun.spawn>);
+
+      await runHerdr(["agent", "list"], 50).catch(() => undefined);
+
+      expect(kill).toHaveBeenCalled();
+      expect(cancel).toHaveBeenCalledTimes(2);
     });
   });
 });
