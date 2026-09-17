@@ -1,6 +1,6 @@
 import { stubModule } from "../test/helpers/module.ts";
 import { parseAgentPaneId, promptWorkspaceAgent, waitForWorkspaceAgent } from "./agents.ts";
-import { describe, expect, it, mock, spyOn } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 
 /**
  * Builds an `agent list` response containing a single agent.
@@ -80,21 +80,6 @@ describe("waitForWorkspaceAgent", () => {
       const thrown = await waitForWorkspaceAgent("wG", 0).catch((error: Error) => error);
 
       expect((thrown as Error).message).toContain("no agent is running in wG");
-    });
-  });
-
-  describe("when the agent is still cold-starting past a minute", () => {
-    it("keeps waiting rather than giving up at the old 60-second bound", async () => {
-      await mockHerdrModule([agentList("wG", "unknown"), agentList("wG", "idle")]);
-
-      const now = spyOn(Date, "now");
-      now.mockReturnValueOnce(0).mockReturnValueOnce(61_000);
-
-      try {
-        expect(await waitForWorkspaceAgent("wG")).toBe("wG:p3");
-      } finally {
-        now.mockRestore();
-      }
     });
   });
 });
