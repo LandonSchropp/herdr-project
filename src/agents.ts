@@ -1,7 +1,11 @@
 import { runHerdr, runHerdrJson } from "./herdr.ts";
 
-/** How long to wait for a workspace's agent to be ready, in milliseconds. */
-const READY_TIMEOUT_MILLISECONDS = 60_000;
+/**
+ * How long to wait for a workspace's agent to be ready, in milliseconds. Generous enough to cover a
+ * cold start on a loaded machine, not just the common case of an otherwise-idle one, so a prompt
+ * isn't dropped while the agent is still on its way up.
+ */
+const READY_TIMEOUT_MILLISECONDS = 300_000;
 
 /** How long to wait between checks while a workspace's agent is starting, in milliseconds. */
 const POLL_INTERVAL_MILLISECONDS = 250;
