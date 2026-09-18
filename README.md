@@ -55,7 +55,7 @@ it.
 
 ```sh
 herdr-project list [--json]
-herdr-project open --project <name> [--worktree <branch>] [--prompt <text>] [--no-focus]
+herdr-project open --project <name> [--worktree <branch>] [--name <label>] [--prompt <text>] [--no-focus]
 herdr-project close --project <name> [--worktree <branch>] [--yes]
 ```
 
@@ -66,11 +66,11 @@ worktrees are actually open.
 
 **`open`** opens the project's main worktree; with `--worktree`, it creates a worktree on that
 branch instead (or opens it, if one already exists). Either way the project's tabs are laid into
-the workspace and the new workspace is focused. `--no-focus` opens it in the background instead,
-leaving you in the tab you were already in. A background workspace opens on its first tab rather
-than its `focusedTab`, since focusing a tab is what pulls the session over to it. `--prompt` sends
-the text to the workspace's agent once it starts, in place of the project's own prompt; see
-[Prompts](#prompts).
+the workspace and the new workspace is focused. `--name` labels the workspace, independent of
+`--worktree`. `--no-focus` opens it in the background instead, leaving you in the tab you were
+already in. A background workspace opens on its first tab rather than its `focusedTab`, since
+focusing a tab is what pulls the session over to it. `--prompt` sends the text to the workspace's
+agent once it starts, in place of the project's own prompt; see [Prompts](#prompts).
 
 **`close`** closes the project's main workspace; with `--worktree`, it removes that branch's
 worktree instead. Either way it asks for confirmation first, as an Ink modal — closing a worktree

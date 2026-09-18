@@ -211,6 +211,56 @@ describe("runCli", () => {
     });
   });
 
+  describe("when --name is passed with no value", () => {
+    it("reports the missing value", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const result = await runCli(["open", "--project", "orc", "--name"]);
+
+      expect(result.stderr).toContain("--name requires a value");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+
+  describe("when opening a project with --name", () => {
+    it("labels the main workspace with it", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const openProjectMain = mock(() => Promise.resolve());
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+        createProjectWorktree: mock(() => Promise.resolve()),
+        openProjectMain,
+        openProjectWorktree: mock(() => Promise.resolve()),
+      }));
+
+      await runCli(["open", "--project", "orc", "--name", "fix-sync"]);
+
+      expect(openProjectMain).toHaveBeenCalledWith(expect.anything(), "fix-sync", true);
+    });
+  });
+
+  describe("when opening a project with --name and --worktree together", () => {
+    it("labels the worktree's workspace, since --name is independent of --worktree", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const createProjectWorktree = mock(() => Promise.resolve());
+      await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+        createProjectWorktree,
+        openProjectMain: mock(() => Promise.resolve()),
+        openProjectWorktree: mock(() => Promise.resolve()),
+      }));
+
+      await runCli(["open", "--project", "orc", "--worktree", "feature", "--name", "fix-sync"]);
+
+      expect(createProjectWorktree).toHaveBeenCalledWith(
+        expect.anything(),
+        "feature",
+        "fix-sync",
+        true,
+      );
+    });
+  });
+
   describe("when --prompt is passed with no value", () => {
     it("reports the missing text", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);

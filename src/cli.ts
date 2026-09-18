@@ -23,9 +23,10 @@ Commands:
          which workspaces and worktrees are actually open.
   open   Opens the project's main worktree. With --worktree <branch>, creates a worktree on
          that branch instead. Either way the project's tabs are laid into the workspace and
-         the new workspace is focused. --no-focus opens it in the background instead,
-         leaving you in the tab you were already in. --prompt <text> sends the text to the
-         workspace's agent once it starts, in place of the project's own prompt.
+         the new workspace is focused. --name <label> labels the workspace, independent of
+         --worktree. --no-focus opens it in the background instead, leaving you in the tab
+         you were already in. --prompt <text> sends the text to the workspace's agent once
+         it starts, in place of the project's own prompt.
   close  Closes the project's main workspace, after confirming. With --worktree, removes
          that branch's worktree instead, after confirming its deletion. --yes skips the
          confirmation, for running from a script; without it, close requires an interactive
@@ -150,10 +151,16 @@ async function runOpen(args: string[]): Promise<CliResult> {
     return { stdout: "", stderr: "Error: --prompt requires a value.\n", exitCode: 1 };
   }
 
+  const label = flagValue(args, "--name");
+
+  if (args.includes("--name") && label === null) {
+    return { stdout: "", stderr: "Error: --name requires a value.\n", exitCode: 1 };
+  }
+
   const focus = !args.includes("--no-focus");
   const target = prompt === null ? project : { ...project, prompt };
 
-  await openProject(target, branch ?? "", undefined, focus);
+  await openProject(target, branch ?? "", label ?? undefined, focus);
 
   return { stdout: "", stderr: "", exitCode: 0 };
 }
