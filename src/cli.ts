@@ -11,11 +11,11 @@ import { closeProjectMain, closeProjectWorktree, openProject } from "./workspace
 export const HELP = `herdr-project — open a project and one of its Git worktrees.
 
 Usage:
-  herdr-project                                                       Open the project picker.
-  herdr-project list [--json]                                         List the configured projects.
-  herdr-project open --project <name> [options]                       Open a project's workspace.
-  herdr-project close --project <name> [--worktree <branch>] [--yes]  Close a workspace.
-  herdr-project --help                                                Show this message.
+  herdr-project                                   Open the project picker.
+  herdr-project list [--json]                     List the configured projects.
+  herdr-project open --project <name> [options]   Open a project's workspace.
+  herdr-project close --project <name> [options]  Close a workspace.
+  herdr-project --help                            Show this message.
 
 Commands:
   list   Prints a table with each project's name and path. A JSON array of the same projects,
@@ -28,7 +28,8 @@ Commands:
          you were already in. --prompt <text> sends the text to the workspace's agent once
          it starts, in place of the project's own prompt.
   close  Closes the project's main workspace, after confirming. With --worktree, removes
-         that branch's worktree instead, after confirming its deletion. --yes skips the
+         that branch's worktree instead, after confirming its deletion. --name is accepted
+         for symmetry with open, but has no effect on what gets closed. --yes skips the
          confirmation, for running from a script; without it, close requires an interactive
          terminal and errors otherwise.
 `;
@@ -188,6 +189,10 @@ async function runClose(args: string[]): Promise<CliResult> {
 
   if (args.includes("--worktree") && branch === null) {
     return { stdout: "", stderr: "Error: --worktree requires a branch name.\n", exitCode: 1 };
+  }
+
+  if (args.includes("--name") && flagValue(args, "--name") === null) {
+    return { stdout: "", stderr: "Error: --name requires a value.\n", exitCode: 1 };
   }
 
   const skipConfirmation = args.includes("--yes");

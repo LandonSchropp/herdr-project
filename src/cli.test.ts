@@ -380,6 +380,17 @@ describe("runCli", () => {
     });
   });
 
+  describe("when --name is passed to close with no value", () => {
+    it("reports the missing value", async () => {
+      await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+      const result = await runCli(["close", "--project", "orc", "--name"]);
+
+      expect(result.stderr).toContain("--name requires a value");
+      expect(result.exitCode).toEqual(1);
+    });
+  });
+
   describe("when closing a project's main workspace", () => {
     describe("when confirmed", () => {
       it("closes it", async () => {

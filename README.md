@@ -56,7 +56,7 @@ it.
 ```sh
 herdr-project list [--json]
 herdr-project open --project <name> [--worktree <branch>] [--name <label>] [--prompt <text>] [--no-focus]
-herdr-project close --project <name> [--worktree <branch>] [--yes]
+herdr-project close --project <name> [--worktree <branch>] [--name <label>] [--yes]
 ```
 
 **`list`** prints each configured project's name and path — an aligned table at a terminal, plain
@@ -74,9 +74,9 @@ agent once it starts, in place of the project's own prompt; see [Prompts](#promp
 
 **`close`** closes the project's main workspace; with `--worktree`, it removes that branch's
 worktree instead. Either way it asks for confirmation first, as an Ink modal — closing a worktree
-deletes its checkout, not just the workspace. `--yes` skips the confirmation, for running from a
-script; without it, `close` requires an interactive terminal and errors immediately otherwise,
-rather than hanging.
+deletes its checkout, not just the workspace. `--name` is accepted for symmetry with `open`; the
+flag has no effect here. `--yes` skips the confirmation, for running from a script; without it,
+`close` requires an interactive terminal and errors immediately otherwise, rather than hanging.
 
 ## Tabs
 
