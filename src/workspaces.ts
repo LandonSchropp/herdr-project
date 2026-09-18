@@ -130,6 +130,8 @@ export async function openProjectWorktree(
  *
  * @param project The project to create the worktree in.
  * @param branch The branch to create the worktree on.
+ * @param label The workspace's name. Omit to let it default to the branch, or — when the branch
+ *   already has an open worktree — to {@link openProjectWorktree}'s own default instead.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @throws When the branch's existing worktree already has a workspace open, or the project's prompt
  *   is not delivered.
@@ -137,6 +139,7 @@ export async function openProjectWorktree(
 export async function createProjectWorktree(
   project: Project,
   branch: string,
+  label?: string,
   focus: boolean = true,
 ): Promise<void> {
   const existing = (await listWorktrees(project.repositoryRoot)).find(
@@ -144,13 +147,13 @@ export async function createProjectWorktree(
   );
 
   if (existing !== undefined) {
-    await openProjectWorktree(project, existing.path, undefined, focus);
+    await openProjectWorktree(project, existing.path, label, focus);
     return;
   }
 
   const { workspaceId } = (await loadSettings()).flat
-    ? await createFlatWorktree(project.repositoryRoot, branch, focus)
-    : await createWorktree(project.repositoryRoot, branch, focus);
+    ? await createFlatWorktree(project.repositoryRoot, branch, label, focus)
+    : await createWorktree(project.repositoryRoot, branch, label, focus);
 
   await reportProject(workspaceId, project.name);
 
@@ -164,22 +167,27 @@ export async function createProjectWorktree(
  * its own, so it opens as a plain workspace rather than through the usual worktree machinery.
  *
  * @param project The project to open.
+ * @param label The workspace's name. Omit to name it after the project.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @throws When the repository reports no main checkout, or the project's prompt is not delivered.
  */
-export async function openProjectMain(project: Project, focus: boolean = true): Promise<void> {
+export async function openProjectMain(
+  project: Project,
+  label?: string,
+  focus: boolean = true,
+): Promise<void> {
   const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);
 
   if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
 
   if (main.isBare) {
     await openIntoWorkspace(project, main.path, () =>
-      openFlatWorkspace(main.path, project.name, focus),
+      openFlatWorkspace(main.path, label ?? project.name, focus),
     );
     return;
   }
 
-  await openProjectWorktree(project, main.path, project.name, focus);
+  await openProjectWorktree(project, main.path, label ?? project.name, focus);
 }
 
 /**
@@ -189,14 +197,16 @@ export async function openProjectMain(project: Project, focus: boolean = true): 
  *
  * @param project The project to open.
  * @param branch The branch whose worktree to open, or an empty string for the main checkout.
+ * @param label The workspace's name, overriding the default for either case above.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @throws When the workspace is already open, or the project's prompt is not delivered.
  */
 export async function openProject(
   project: Project,
   branch: string,
+  label?: string,
   focus: boolean = true,
 ): Promise<void> {
-  if (branch === "") await openProjectMain(project, focus);
-  else await createProjectWorktree(project, branch, focus);
+  if (branch === "") await openProjectMain(project, label, focus);
+  else await createProjectWorktree(project, branch, label, focus);
 }

@@ -235,7 +235,7 @@ describe("createWorktree", () => {
     it("creates the worktree in the background", async () => {
       const spawn = mockSpawn(WORKSPACE_RESPONSE);
 
-      await createWorktree("/tmp/repo", "feature", false);
+      await createWorktree("/tmp/repo", "feature", undefined, false);
 
       expect(spawn).toHaveBeenCalledWith(
         [
@@ -270,6 +270,31 @@ describe("createWorktree", () => {
 
       expect(thrown).toBeInstanceOf(Error);
       expect((thrown as Error).message).toContain("did not report a checkout path");
+    });
+  });
+
+  describe("when a label is given", () => {
+    it("passes it to herdr instead of leaving the workspace named after the branch", async () => {
+      const spawn = mockSpawn(WORKSPACE_RESPONSE);
+
+      await createWorktree("/tmp/repo", "feature", "fix-sync", true);
+
+      expect(spawn).toHaveBeenCalledWith(
+        [
+          "herdr",
+          "worktree",
+          "create",
+          "--cwd",
+          "/tmp/repo",
+          "--branch",
+          "feature",
+          "--label",
+          "fix-sync",
+          "--focus",
+          "--json",
+        ],
+        expect.anything(),
+      );
     });
   });
 });
@@ -384,6 +409,29 @@ describe("createFlatWorktree", () => {
       rootTabId: "wG:t1",
       rootPaneId: "wG:p1",
       checkoutPath: join(homedir(), ".herdr/worktrees/repo/feature"),
+    });
+  });
+
+  describe("when a label is given", () => {
+    it("labels the workspace with it instead of the branch", async () => {
+      await mockCreateModules();
+      const spawn = mockSpawn(WORKSPACE_RESPONSE);
+
+      await createFlatWorktree("/tmp/repo", "feature", "fix-sync", true);
+
+      expect(spawn).toHaveBeenCalledWith(
+        [
+          "herdr",
+          "workspace",
+          "create",
+          "--cwd",
+          join(homedir(), ".herdr/worktrees/repo/feature"),
+          "--label",
+          "fix-sync",
+          "--focus",
+        ],
+        expect.anything(),
+      );
     });
   });
 });

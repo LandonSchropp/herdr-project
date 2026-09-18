@@ -202,7 +202,12 @@ describe("runCli", () => {
       const result = await runCli(["open", "--project", "orc", "--worktree", "feature"]);
 
       expect(result.exitCode).toEqual(0);
-      expect(createProjectWorktree).toHaveBeenCalledWith(expect.anything(), "feature", true);
+      expect(createProjectWorktree).toHaveBeenCalledWith(
+        expect.anything(),
+        "feature",
+        undefined,
+        true,
+      );
     });
   });
 
@@ -232,6 +237,7 @@ describe("runCli", () => {
 
       expect(openProjectMain).toHaveBeenCalledWith(
         expect.objectContaining({ prompt: "read the README" }),
+        undefined,
         true,
       );
     });
@@ -250,7 +256,7 @@ describe("runCli", () => {
 
       await runCli(["open", "--project", "orc", "--no-focus"]);
 
-      expect(openProjectMain).toHaveBeenCalledWith(expect.anything(), false);
+      expect(openProjectMain).toHaveBeenCalledWith(expect.anything(), undefined, false);
     });
   });
 
@@ -267,7 +273,12 @@ describe("runCli", () => {
 
       await runCli(["open", "--project", "orc", "--worktree", "feature", "--no-focus"]);
 
-      expect(createProjectWorktree).toHaveBeenCalledWith(expect.anything(), "feature", false);
+      expect(createProjectWorktree).toHaveBeenCalledWith(
+        expect.anything(),
+        "feature",
+        undefined,
+        false,
+      );
     });
   });
 

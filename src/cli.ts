@@ -153,7 +153,7 @@ async function runOpen(args: string[]): Promise<CliResult> {
   const focus = !args.includes("--no-focus");
   const target = prompt === null ? project : { ...project, prompt };
 
-  await openProject(target, branch ?? "", focus);
+  await openProject(target, branch ?? "", undefined, focus);
 
   return { stdout: "", stderr: "", exitCode: 0 };
 }

@@ -109,6 +109,7 @@ export async function openWorktree(
  *
  * @param repositoryRoot The absolute path to the project's repository.
  * @param branch The branch to create the worktree on.
+ * @param label The workspace's name. Omit to let Herdr name it after the branch.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @returns The workspace Herdr created for the worktree, and the checkout path it was created at.
  * @throws When the response reports no checkout path.
@@ -116,6 +117,7 @@ export async function openWorktree(
 export async function createWorktree(
   repositoryRoot: string,
   branch: string,
+  label?: string,
   focus: boolean = true,
 ): Promise<Workspace & { checkoutPath: string }> {
   const response = await runHerdrJson([
@@ -125,6 +127,7 @@ export async function createWorktree(
     repositoryRoot,
     "--branch",
     branch,
+    ...(label === undefined ? [] : ["--label", label]),
     focus ? "--focus" : "--no-focus",
     "--json",
   ]);
@@ -182,6 +185,7 @@ export async function openFlatWorkspace(
  *
  * @param repositoryRoot The absolute path to the project's repository.
  * @param branch The branch to create the worktree on.
+ * @param label The workspace's name. Omit to let it default to the branch.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
  * @returns The workspace Herdr created, and the checkout path it was created at.
  * @throws When Git will not create the worktree.
@@ -189,6 +193,7 @@ export async function openFlatWorkspace(
 export async function createFlatWorktree(
   repositoryRoot: string,
   branch: string,
+  label?: string,
   focus: boolean = true,
 ): Promise<Workspace & { checkoutPath: string }> {
   const checkoutPath = flatWorktreePath(repositoryRoot, branch);
@@ -196,5 +201,5 @@ export async function createFlatWorktree(
   await addWorktree(repositoryRoot, branch, checkoutPath);
   await copyIncludedPaths(repositoryRoot, checkoutPath);
 
-  return { ...(await openFlatWorkspace(checkoutPath, branch, focus)), checkoutPath };
+  return { ...(await openFlatWorkspace(checkoutPath, label ?? branch, focus)), checkoutPath };
 }

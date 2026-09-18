@@ -177,7 +177,7 @@ describe("createProjectWorktree", () => {
 
     await createProjectWorktree(PROJECT, "feature");
 
-    expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", true);
+    expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", undefined, true);
     expect(mocks.applyLayout).not.toHaveBeenCalled();
   });
 
@@ -203,9 +203,19 @@ describe("createProjectWorktree", () => {
     it("creates the worktree in the background", async () => {
       const mocks = await mockHerdrModules([]);
 
-      await createProjectWorktree(PROJECT, "feature", false);
+      await createProjectWorktree(PROJECT, "feature", undefined, false);
 
-      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", false);
+      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", undefined, false);
+    });
+  });
+
+  describe("when a label is given", () => {
+    it("passes it through instead of leaving the workspace named after the branch", async () => {
+      const mocks = await mockHerdrModules([]);
+
+      await createProjectWorktree(PROJECT, "feature", "fix-sync");
+
+      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", "fix-sync", true);
     });
   });
 
@@ -226,13 +236,30 @@ describe("createProjectWorktree", () => {
       );
     });
 
+    describe("when a label is given", () => {
+      it("passes it through as the workspace's label", async () => {
+        const mocks = await mockHerdrModules([
+          { branch: "feature", path: "/tmp/worktrees/feature", isMain: false },
+        ]);
+
+        await createProjectWorktree(PROJECT, "feature", "fix-sync");
+
+        expect(mocks.openWorktree).toHaveBeenCalledWith(
+          "/tmp/orc",
+          "/tmp/worktrees/feature",
+          "fix-sync",
+          true,
+        );
+      });
+    });
+
     describe("when focus is disabled", () => {
       it("opens it in the background", async () => {
         const mocks = await mockHerdrModules([
           { branch: "feature", path: "/tmp/worktrees/feature", isMain: false },
         ]);
 
-        await createProjectWorktree(PROJECT, "feature", false);
+        await createProjectWorktree(PROJECT, "feature", undefined, false);
 
         expect(mocks.openWorktree).toHaveBeenCalledWith(
           "/tmp/orc",
@@ -276,9 +303,19 @@ describe("openProjectMain", () => {
       it("opens it in the background", async () => {
         const mocks = await mockHerdrModules([{ branch: "main", path: "/tmp/orc", isMain: true }]);
 
-        await openProjectMain(PROJECT, false);
+        await openProjectMain(PROJECT, undefined, false);
 
         expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "orc", false);
+      });
+    });
+
+    describe("when a label is given", () => {
+      it("names the workspace with it instead of the project", async () => {
+        const mocks = await mockHerdrModules([{ branch: "main", path: "/tmp/orc", isMain: true }]);
+
+        await openProjectMain(PROJECT, "fix-sync");
+
+        expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "fix-sync", true);
       });
     });
   });
@@ -304,6 +341,18 @@ describe("openProjectMain", () => {
 
       expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "orc", true);
       expect(mocks.openWorktree).not.toHaveBeenCalled();
+    });
+
+    describe("when a label is given", () => {
+      it("names the workspace with it instead of the project", async () => {
+        const mocks = await mockHerdrModules([
+          { branch: "", path: "/tmp/orc", isMain: true, isBare: true },
+        ]);
+
+        await openProjectMain(PROJECT, "fix-sync");
+
+        expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "fix-sync", true);
+      });
     });
 
     describe("when the path already has a workspace open", () => {
@@ -509,7 +558,7 @@ describe("openProject", () => {
 
       await openProject(PROJECT, "feature");
 
-      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", true);
+      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", undefined, true);
     });
   });
 
@@ -517,9 +566,27 @@ describe("openProject", () => {
     it("passes it along", async () => {
       const mocks = await mockHerdrModules([]);
 
-      await openProject(PROJECT, "feature", false);
+      await openProject(PROJECT, "feature", undefined, false);
 
-      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", false);
+      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", undefined, false);
+    });
+  });
+
+  describe("when a label is given", () => {
+    it("passes it along for the main checkout", async () => {
+      const mocks = await mockHerdrModules([{ branch: "main", path: "/tmp/orc", isMain: true }]);
+
+      await openProject(PROJECT, "", "fix-sync");
+
+      expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "fix-sync", true);
+    });
+
+    it("passes it along for a worktree", async () => {
+      const mocks = await mockHerdrModules([]);
+
+      await openProject(PROJECT, "feature", "fix-sync");
+
+      expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", "fix-sync", true);
     });
   });
 });
