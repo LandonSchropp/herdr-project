@@ -55,8 +55,8 @@ it.
 
 ```sh
 herdr-project list [--json]
-herdr-project open <project> [--worktree <branch>] [--prompt <text>] [--no-focus]
-herdr-project close <project> [--worktree <branch>] [--yes]
+herdr-project open --project <name> [--worktree <branch>] [--prompt <text>] [--no-focus]
+herdr-project close --project <name> [--worktree <branch>] [--yes]
 ```
 
 **`list`** prints each configured project's name and path — an aligned table at a terminal, plain

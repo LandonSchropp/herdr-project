@@ -11,11 +11,11 @@ import { closeProjectMain, closeProjectWorktree, openProject } from "./workspace
 export const HELP = `herdr-project — open a project and one of its Git worktrees.
 
 Usage:
-  herdr-project                                                Open the project picker.
-  herdr-project list [--json]                                  List the configured projects.
-  herdr-project open <project> [options]                       Open a project's workspace.
-  herdr-project close <project> [--worktree <branch>] [--yes]  Close a workspace.
-  herdr-project --help                                         Show this message.
+  herdr-project                                                       Open the project picker.
+  herdr-project list [--json]                                         List the configured projects.
+  herdr-project open --project <name> [options]                       Open a project's workspace.
+  herdr-project close --project <name> [--worktree <branch>] [--yes]  Close a workspace.
+  herdr-project --help                                                Show this message.
 
 Commands:
   list   Prints a table with each project's name and path. A JSON array of the same projects,
@@ -126,10 +126,10 @@ async function runList(args: string[]): Promise<CliResult> {
  * @returns The command's result.
  */
 async function runOpen(args: string[]): Promise<CliResult> {
-  const name = args[0];
+  const name = flagValue(args, "--project");
 
-  if (name === undefined || name.startsWith("-")) {
-    return { stdout: "", stderr: "Error: open requires a project name.\n", exitCode: 1 };
+  if (name === null) {
+    return { stdout: "", stderr: "Error: open requires a --project flag.\n", exitCode: 1 };
   }
 
   const project = (await listProjects()).find((entry) => entry.name === name);
@@ -165,10 +165,10 @@ async function runOpen(args: string[]): Promise<CliResult> {
  * @returns The command's result.
  */
 async function runClose(args: string[]): Promise<CliResult> {
-  const name = args[0];
+  const name = flagValue(args, "--project");
 
-  if (name === undefined || name.startsWith("-")) {
-    return { stdout: "", stderr: "Error: close requires a project name.\n", exitCode: 1 };
+  if (name === null) {
+    return { stdout: "", stderr: "Error: close requires a --project flag.\n", exitCode: 1 };
   }
 
   const project = (await listProjects()).find((entry) => entry.name === name);

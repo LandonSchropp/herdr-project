@@ -157,11 +157,11 @@ describe("runCli", () => {
     });
   });
 
-  describe("when opening without a project name", () => {
-    it("reports the missing name", async () => {
+  describe("when opening without a --project flag", () => {
+    it("reports the missing flag", async () => {
       const result = await runCli(["open"]);
 
-      expect(result.stderr).toContain("open requires a project name");
+      expect(result.stderr).toContain("open requires a --project flag");
       expect(result.exitCode).toEqual(1);
     });
   });
@@ -170,7 +170,7 @@ describe("runCli", () => {
     it("reports the unknown project", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      const result = await runCli(["open", "missing"]);
+      const result = await runCli(["open", "--project", "missing"]);
 
       expect(result.stderr).toContain('no project named "missing"');
       expect(result.exitCode).toEqual(1);
@@ -181,7 +181,7 @@ describe("runCli", () => {
     it("reports the missing branch", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      const result = await runCli(["open", "orc", "--worktree"]);
+      const result = await runCli(["open", "--project", "orc", "--worktree"]);
 
       expect(result.stderr).toContain("--worktree requires a branch name");
       expect(result.exitCode).toEqual(1);
@@ -199,7 +199,7 @@ describe("runCli", () => {
         openProjectWorktree: mock(() => Promise.resolve()),
       }));
 
-      const result = await runCli(["open", "orc", "--worktree", "feature"]);
+      const result = await runCli(["open", "--project", "orc", "--worktree", "feature"]);
 
       expect(result.exitCode).toEqual(0);
       expect(createProjectWorktree).toHaveBeenCalledWith(expect.anything(), "feature", true);
@@ -210,7 +210,7 @@ describe("runCli", () => {
     it("reports the missing text", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      const result = await runCli(["open", "orc", "--prompt"]);
+      const result = await runCli(["open", "--project", "orc", "--prompt"]);
 
       expect(result.stderr).toContain("--prompt requires a value");
       expect(result.exitCode).toEqual(1);
@@ -228,7 +228,7 @@ describe("runCli", () => {
         openProjectWorktree: mock(() => Promise.resolve()),
       }));
 
-      await runCli(["open", "orc", "--prompt", "read the README"]);
+      await runCli(["open", "--project", "orc", "--prompt", "read the README"]);
 
       expect(openProjectMain).toHaveBeenCalledWith(
         expect.objectContaining({ prompt: "read the README" }),
@@ -248,7 +248,7 @@ describe("runCli", () => {
         openProjectWorktree: mock(() => Promise.resolve()),
       }));
 
-      await runCli(["open", "orc", "--no-focus"]);
+      await runCli(["open", "--project", "orc", "--no-focus"]);
 
       expect(openProjectMain).toHaveBeenCalledWith(expect.anything(), false);
     });
@@ -265,7 +265,7 @@ describe("runCli", () => {
         openProjectWorktree: mock(() => Promise.resolve()),
       }));
 
-      await runCli(["open", "orc", "--worktree", "feature", "--no-focus"]);
+      await runCli(["open", "--project", "orc", "--worktree", "feature", "--no-focus"]);
 
       expect(createProjectWorktree).toHaveBeenCalledWith(expect.anything(), "feature", false);
     });
@@ -281,18 +281,18 @@ describe("runCli", () => {
         openProjectWorktree: mock(() => Promise.resolve()),
       }));
 
-      const result = await runCli(["open", "orc"]);
+      const result = await runCli(["open", "--project", "orc"]);
 
       expect(result.stderr).toContain("herdr is not running");
       expect(result.exitCode).toEqual(1);
     });
   });
 
-  describe("when closing without a project name", () => {
-    it("reports the missing name", async () => {
+  describe("when closing without a --project flag", () => {
+    it("reports the missing flag", async () => {
       const result = await runCli(["close"]);
 
-      expect(result.stderr).toContain("close requires a project name");
+      expect(result.stderr).toContain("close requires a --project flag");
       expect(result.exitCode).toEqual(1);
     });
   });
@@ -301,7 +301,7 @@ describe("runCli", () => {
     it("reports the unknown project", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      const result = await runCli(["close", "missing"]);
+      const result = await runCli(["close", "--project", "missing"]);
 
       expect(result.stderr).toContain('no project named "missing"');
       expect(result.exitCode).toEqual(1);
@@ -312,7 +312,7 @@ describe("runCli", () => {
     it("reports the missing branch", async () => {
       await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
 
-      const result = await runCli(["close", "orc", "--worktree"]);
+      const result = await runCli(["close", "--project", "orc", "--worktree"]);
 
       expect(result.stderr).toContain("--worktree requires a branch name");
       expect(result.exitCode).toEqual(1);
@@ -334,7 +334,7 @@ describe("runCli", () => {
           isInteractive: mock(() => true),
         }));
 
-        const result = await runCli(["close", "orc"]);
+        const result = await runCli(["close", "--project", "orc"]);
 
         expect(closeProjectMain).toHaveBeenCalledWith(expect.objectContaining({ name: "orc" }));
         expect(result.exitCode).toEqual(0);
@@ -355,7 +355,7 @@ describe("runCli", () => {
           isInteractive: mock(() => true),
         }));
 
-        const result = await runCli(["close", "orc"]);
+        const result = await runCli(["close", "--project", "orc"]);
 
         expect(closeProjectMain).not.toHaveBeenCalled();
         expect(result.stdout).toContain("Cancelled");
@@ -375,7 +375,7 @@ describe("runCli", () => {
         }));
         await stubModule(import.meta.resolve("./confirm.tsx"), () => ({ confirm }));
 
-        const result = await runCli(["close", "orc", "--yes"]);
+        const result = await runCli(["close", "--project", "orc", "--yes"]);
 
         expect(confirm).not.toHaveBeenCalled();
         expect(closeProjectMain).toHaveBeenCalled();
@@ -400,7 +400,7 @@ describe("runCli", () => {
           isInteractive: mock(() => true),
         }));
 
-        const result = await runCli(["close", "orc", "--worktree", "feature"]);
+        const result = await runCli(["close", "--project", "orc", "--worktree", "feature"]);
 
         expect(confirm).toHaveBeenCalledWith(
           expect.any(String),
@@ -428,7 +428,7 @@ describe("runCli", () => {
           isInteractive: mock(() => true),
         }));
 
-        const result = await runCli(["close", "orc", "--worktree", "feature"]);
+        const result = await runCli(["close", "--project", "orc", "--worktree", "feature"]);
 
         expect(closeProjectWorktree).not.toHaveBeenCalled();
         expect(result.stdout).toContain("Cancelled");
@@ -450,7 +450,7 @@ describe("runCli", () => {
         isInteractive: mock(() => true),
       }));
 
-      const result = await runCli(["close", "orc"]);
+      const result = await runCli(["close", "--project", "orc"]);
 
       expect(result.stderr).toContain("herdr is not running");
       expect(result.exitCode).toEqual(1);
@@ -472,7 +472,7 @@ describe("runCli", () => {
         isInteractive: mock(() => false),
       }));
 
-      const result = await runCli(["close", "orc"]);
+      const result = await runCli(["close", "--project", "orc"]);
 
       expect(confirm).not.toHaveBeenCalled();
       expect(closeProjectMain).not.toHaveBeenCalled();
@@ -496,7 +496,7 @@ describe("runCli", () => {
         isInteractive: mock(() => false),
       }));
 
-      const result = await runCli(["close", "orc", "--worktree", "feature"]);
+      const result = await runCli(["close", "--project", "orc", "--worktree", "feature"]);
 
       expect(confirm).not.toHaveBeenCalled();
       expect(closeProjectWorktree).not.toHaveBeenCalled();
