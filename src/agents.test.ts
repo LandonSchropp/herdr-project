@@ -44,6 +44,12 @@ describe("parseAgentPaneId", () => {
     expect(parseAgentPaneId(agentList("wG", "idle"), "wG")).toBe("wG:p3");
   });
 
+  describe("when the agent settled without its tab being seen", () => {
+    it("returns the agent's pane", () => {
+      expect(parseAgentPaneId(agentList("wG", "done"), "wG")).toBe("wG:p3");
+    });
+  });
+
   describe("when the agent belongs to another workspace", () => {
     it("returns null", () => {
       expect(parseAgentPaneId(agentList("wH", "idle"), "wG")).toBeNull();

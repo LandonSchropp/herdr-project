@@ -24,7 +24,8 @@ const DELIVERY_TIMEOUT_MILLISECONDS = PROMPT_TIMEOUT_MILLISECONDS + 5_000;
 /**
  * Extracts the pane of the agent running in a workspace and ready for a prompt. An agent that is
  * still starting up counts as absent, since a prompt sent to it would be typed into a terminal that
- * isn't listening yet.
+ * isn't listening yet. An agent that is `done` counts as ready: Herdr reports that for an idle
+ * agent whose tab hasn't been seen, which is where one opened in an unfocused workspace settles.
  *
  * @param response The parsed JSON response from an agent listing.
  * @param workspaceId The workspace whose agent to find.
@@ -37,7 +38,10 @@ export function parseAgentPaneId(response: unknown, workspaceId: string): string
 
   const match = agents.find((entry: unknown) => {
     const agent = entry as { workspace_id?: unknown; agent_status?: unknown };
-    return agent.workspace_id === workspaceId && agent.agent_status === "idle";
+    return (
+      agent.workspace_id === workspaceId &&
+      (agent.agent_status === "idle" || agent.agent_status === "done")
+    );
   }) as { pane_id?: unknown } | undefined;
 
   return typeof match?.pane_id === "string" ? match.pane_id : null;
