@@ -160,10 +160,17 @@ describe("listOpenWorkspaces", () => {
   });
 
   describe("when the pane's directory is not in a repository", () => {
-    it("leaves the workspace out", async () => {
+    it("treats the directory as its own root", async () => {
       await mockListModules([{ workspace_id: "w1" }], [{ workspace_id: "w1", cwd: "/tmp" }], null);
 
-      expect(await listOpenWorkspaces()).toEqual([]);
+      expect(await listOpenWorkspaces()).toEqual([
+        {
+          workspaceId: "w1",
+          checkoutPath: "/tmp",
+          repositoryRoot: "/tmp",
+          isManagedWorktree: false,
+        },
+      ]);
     });
   });
 

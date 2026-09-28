@@ -369,16 +369,38 @@ describe("applyProjectLayout", () => {
   });
 
   describe("when the pane's directory is in no repository", () => {
-    it("does nothing", async () => {
-      const mocks = await mockLayoutModules({
-        workspace: { result: { workspace: { active_tab_id: "w1:t1", pane_count: 1 } } },
-        panes: { result: { panes: [{ pane_id: "w1:p1", tab_id: "w1:t1", cwd: "/tmp" }] } },
-        projects: [PROJECT],
-        mainCheckout: null,
-      });
+    describe("when a project is at the directory", () => {
+      it("lays the project's tabs in", async () => {
+        const mocks = await mockLayoutModules({
+          workspace: { result: { workspace: { active_tab_id: "w1:t1", pane_count: 1 } } },
+          panes: { result: { panes: [{ pane_id: "w1:p1", tab_id: "w1:t1", cwd: "/tmp" }] } },
+          projects: [{ ...PROJECT, repositoryRoot: "/tmp" }],
+          mainCheckout: null,
+        });
 
-      expect(await applyProjectLayout("w1")).toContain("no repository");
-      expect(mocks.applyLayout).not.toHaveBeenCalled();
+        await applyProjectLayout("w1");
+
+        expect(mocks.applyLayout).toHaveBeenCalledWith(
+          { workspaceId: "w1", rootTabId: "w1:t1", rootPaneId: "w1:p1", checkoutPath: "/tmp" },
+          TABS,
+          "shell",
+          true,
+        );
+      });
+    });
+
+    describe("when no project is at the directory", () => {
+      it("does nothing", async () => {
+        const mocks = await mockLayoutModules({
+          workspace: { result: { workspace: { active_tab_id: "w1:t1", pane_count: 1 } } },
+          panes: { result: { panes: [{ pane_id: "w1:p1", tab_id: "w1:t1", cwd: "/tmp" }] } },
+          projects: [PROJECT],
+          mainCheckout: null,
+        });
+
+        expect(await applyProjectLayout("w1")).toContain("no project matches");
+        expect(mocks.applyLayout).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -390,7 +412,7 @@ describe("applyProjectLayout", () => {
         projects: [PROJECT],
       });
 
-      expect(await applyProjectLayout("w1")).toContain("no repository");
+      expect(await applyProjectLayout("w1")).toContain("no directory");
       expect(mocks.applyLayout).not.toHaveBeenCalled();
     });
   });

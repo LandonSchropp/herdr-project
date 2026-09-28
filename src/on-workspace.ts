@@ -100,12 +100,14 @@ export function parseTabPane(
 
 /**
  * Lays the matching project's tabs into a workspace Herdr has just created. This runs for every new
- * workspace, so it is a quiet no-op whenever the workspace isn't one we lay out: it is showing no
- * repository, its repository isn't a configured project, or it already has more than the one pane a
+ * workspace, so it is a quiet no-op whenever the workspace isn't one we lay out: it reports no
+ * directory, its repository isn't a configured project, or it already has more than the one pane a
  * fresh workspace starts with.
  *
  * A flat workspace carries no worktree for Herdr to report, so its repository is resolved from the
- * directory its pane is in instead, which is the checkout it was opened on.
+ * directory its pane is in instead, which is the checkout it was opened on. A directory in no
+ * repository is matched against the projects as it is, so a project that isn't a repository gets
+ * its tabs too.
  *
  * A workspace the session isn't already showing was opened in the background, so its tabs are laid
  * in without focusing any of them and the user stays where they are.
@@ -135,10 +137,10 @@ export async function applyProjectLayout(workspaceId: string): Promise<string> {
 
   const repositoryRoot =
     details.repositoryRoot ??
-    (pane.directory === null ? null : await mainCheckoutPath(pane.directory));
+    (pane.directory === null ? null : ((await mainCheckoutPath(pane.directory)) ?? pane.directory));
 
   if (repositoryRoot === null) {
-    return `workspace ${workspaceId} is showing no repository; nothing to do.`;
+    return `workspace ${workspaceId} reported no directory; nothing to do.`;
   }
 
   const project = (await listProjects()).find((entry) => entry.repositoryRoot === repositoryRoot);

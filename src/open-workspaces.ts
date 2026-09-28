@@ -59,8 +59,8 @@ export function parseReportedWorkspaces(
  *
  * A workspace Herdr opened as one of its own worktrees carries that identity, and a flat workspace
  * does not, so the repository behind a flat one is resolved from its first pane's directory
- * instead. A workspace whose directory is in no repository — a plain shell somewhere — is left out,
- * as is one that reports no pane at all.
+ * instead. A workspace whose directory is in no repository is its own root. A workspace that
+ * reports no pane at all is left out.
  *
  * @returns The open workspaces, in the order Herdr listed them.
  */
@@ -76,16 +76,12 @@ export async function listOpenWorkspaces(): Promise<OpenWorkspace[]> {
         if (worktree !== null) return { workspaceId, ...worktree, isManagedWorktree: true };
         if (paneDirectory === null) return null;
 
-        const repositoryRoot = await mainCheckoutPath(paneDirectory);
-
-        return repositoryRoot === null
-          ? null
-          : {
-              workspaceId,
-              checkoutPath: paneDirectory,
-              repositoryRoot,
-              isManagedWorktree: false,
-            };
+        return {
+          workspaceId,
+          checkoutPath: paneDirectory,
+          repositoryRoot: (await mainCheckoutPath(paneDirectory)) ?? paneDirectory,
+          isManagedWorktree: false,
+        };
       },
     ),
   );

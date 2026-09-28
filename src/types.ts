@@ -74,7 +74,10 @@ export type OpenWorkspace = {
   workspaceId: string;
   /** The absolute path to the checkout the workspace is showing. */
   checkoutPath: string;
-  /** The absolute path to the main repository the checkout belongs to. */
+  /**
+   * The absolute path to the main repository the checkout belongs to, or the checkout itself when
+   * it is in no repository.
+   */
   repositoryRoot: string;
   /**
    * Whether Herdr tracks the workspace as one of its own worktrees, which is what decides how the
