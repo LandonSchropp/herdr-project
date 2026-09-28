@@ -20,7 +20,7 @@ import { basename } from "node:path";
  * @param project The project to check.
  * @returns Whether the project's path is inside a repository.
  */
-async function isInRepository(project: Project): Promise<boolean> {
+export async function isInRepository(project: Project): Promise<boolean> {
   return (await mainCheckoutPath(project.repositoryRoot)) !== null;
 }
 
