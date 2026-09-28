@@ -1,5 +1,5 @@
 import { promptWorkspaceAgent } from "./agents.ts";
-import { removeWorktree } from "./git.ts";
+import { mainCheckoutPath, removeWorktree } from "./git.ts";
 import { runHerdr } from "./herdr.ts";
 import { reportProject } from "./metadata.ts";
 import { findOpenWorkspace } from "./open-workspaces.ts";
@@ -15,17 +15,34 @@ import {
 import { basename } from "node:path";
 
 /**
- * Closes a project's main workspace.
+ * Reports whether a project's path is inside a Git repository.
+ *
+ * @param project The project to check.
+ * @returns Whether the project's path is inside a repository.
+ */
+async function isInRepository(project: Project): Promise<boolean> {
+  return (await mainCheckoutPath(project.repositoryRoot)) !== null;
+}
+
+/**
+ * Closes a project's main workspace, which for a project outside any repository is the workspace
+ * open on its directory.
  *
  * @param project The project whose main workspace to close.
  * @throws When the repository has no main worktree, or no workspace is open for it.
  */
 export async function closeProjectMain(project: Project): Promise<void> {
-  const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);
+  let path = project.repositoryRoot;
 
-  if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
+  if (await isInRepository(project)) {
+    const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);
 
-  const workspace = await findOpenWorkspace(main.path);
+    if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
+
+    path = main.path;
+  }
+
+  const workspace = await findOpenWorkspace(path);
 
   if (workspace === null) throw new Error(`${project.name} has no open workspace.`);
 
@@ -133,8 +150,8 @@ export async function openProjectWorktree(
  * @param label The workspace's name. Omit to let it default to the branch, or — when the branch
  *   already has an open worktree — to {@link openProjectWorktree}'s own default instead.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
- * @throws When the branch's existing worktree already has a workspace open, or the project's prompt
- *   is not delivered.
+ * @throws When the project is outside any repository, the branch's existing worktree already has a
+ *   workspace open, or the project's prompt is not delivered.
  */
 export async function createProjectWorktree(
   project: Project,
@@ -142,6 +159,10 @@ export async function createProjectWorktree(
   label?: string,
   focus: boolean = true,
 ): Promise<void> {
+  if (!(await isInRepository(project))) {
+    throw new Error(`${project.name} is not in a Git repository, so it has no worktrees.`);
+  }
+
   const existing = (await listWorktrees(project.repositoryRoot)).find(
     (worktree) => worktree.branch === branch,
   );
@@ -163,27 +184,34 @@ export async function createProjectWorktree(
 /**
  * Opens the project's main checkout into a Herdr workspace, named after the project. Only the main
  * checkout takes the project's name; a linked worktree keeps the branch name Herdr gives it, which
- * is what distinguishes it in the sidebar. A bare repository's main checkout has no working tree of
- * its own, so it opens as a plain workspace rather than through the usual worktree machinery.
+ * is what distinguishes it in the sidebar. A bare repository's main checkout, and the directory of
+ * a project outside any repository, open as a plain workspace.
  *
  * @param project The project to open.
  * @param label The workspace's name. Omit to name it after the project.
  * @param focus Whether to focus the workspace, leaving the caller where it is when false.
- * @throws When the repository reports no main checkout, or the project's prompt is not delivered.
+ * @throws When the repository reports no main checkout, a workspace is already open for it, or the
+ *   project's prompt is not delivered.
  */
 export async function openProjectMain(
   project: Project,
   label?: string,
   focus: boolean = true,
 ): Promise<void> {
+  const openPlain = (path: string) =>
+    openIntoWorkspace(project, path, () => openFlatWorkspace(path, label ?? project.name, focus));
+
+  if (!(await isInRepository(project))) {
+    await openPlain(project.repositoryRoot);
+    return;
+  }
+
   const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);
 
   if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
 
   if (main.isBare) {
-    await openIntoWorkspace(project, main.path, () =>
-      openFlatWorkspace(main.path, label ?? project.name, focus),
-    );
+    await openPlain(main.path);
     return;
   }
 

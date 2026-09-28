@@ -62,7 +62,7 @@ async function mockHerdrModules(
     openFlatWorkspace: mock(() => Promise.resolve(WORKSPACE)),
     createFlatWorktree: mock(() => Promise.resolve(CREATED_WORKSPACE)),
     loadSettings: mock(() => Promise.resolve({ flat })),
-    mainCheckoutPath: mock(() => Promise.resolve(null)),
+    mainCheckoutPath: mock((): Promise<string | null> => Promise.resolve(PROJECT.repositoryRoot)),
     runHerdrJson: mockRunHerdrJson(
       openPaths.map((path, index) => ({
         workspace_id: `w${index}`,
@@ -172,6 +172,18 @@ describe("openProjectWorktree when the worktree already has a workspace", () => 
 });
 
 describe("createProjectWorktree", () => {
+  describe("when the project is outside any repository", () => {
+    it("throws without creating anything", async () => {
+      const mocks = await mockHerdrModules([]);
+      mocks.mainCheckoutPath.mockResolvedValue(null);
+
+      const thrown = await createProjectWorktree(PROJECT, "feature").catch((error: Error) => error);
+
+      expect((thrown as Error).message).toContain("not in a Git repository");
+      expect(mocks.createWorktree).not.toHaveBeenCalled();
+    });
+  });
+
   it("creates the worktree and leaves the tabs to the workspace.created hook", async () => {
     const mocks = await mockHerdrModules([]);
 
@@ -331,6 +343,40 @@ describe("openProjectMain", () => {
     });
   });
 
+  describe("when the project is outside any repository", () => {
+    it("opens its directory as a plain workspace, naming it after the project", async () => {
+      const mocks = await mockHerdrModules([]);
+      mocks.mainCheckoutPath.mockResolvedValue(null);
+
+      await openProjectMain(PROJECT);
+
+      expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "orc", true);
+    });
+
+    describe("when a label is given", () => {
+      it("names the workspace with it instead of the project", async () => {
+        const mocks = await mockHerdrModules([]);
+        mocks.mainCheckoutPath.mockResolvedValue(null);
+
+        await openProjectMain(PROJECT, "fix-sync", false);
+
+        expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "fix-sync", false);
+      });
+    });
+
+    describe("when the directory already has a workspace open", () => {
+      it("refuses rather than laying a second set of tabs into it", async () => {
+        const mocks = await mockHerdrModules([], ["/tmp/orc"]);
+        mocks.mainCheckoutPath.mockResolvedValue(null);
+
+        const thrown = await openProjectMain(PROJECT).catch((error: Error) => error);
+
+        expect((thrown as Error).message).toContain("already open");
+        expect(mocks.openFlatWorkspace).not.toHaveBeenCalled();
+      });
+    });
+  });
+
   describe("when the main worktree is bare", () => {
     it("opens it as a plain workspace, naming it after the project", async () => {
       const mocks = await mockHerdrModules([
@@ -404,10 +450,11 @@ async function mockCloseModules(
           })),
         ),
     listWorktrees: mock(() => Promise.resolve(worktrees)),
+    mainCheckoutPath: mock((): Promise<string | null> => Promise.resolve(PROJECT.repositoryRoot)),
   };
 
   await stubModule(import.meta.resolve("./git.ts"), () => ({
-    mainCheckoutPath: mock(() => Promise.resolve(PROJECT.repositoryRoot)),
+    mainCheckoutPath: mocks.mainCheckoutPath,
     removeWorktree: mocks.removeWorktree,
   }));
   await stubModule(import.meta.resolve("./herdr.ts"), () => ({
@@ -422,6 +469,28 @@ async function mockCloseModules(
 }
 
 describe("closeProjectMain", () => {
+  describe("when the project is outside any repository", () => {
+    it("closes the workspace open on its directory", async () => {
+      const mocks = await mockCloseModules([], { "/tmp/orc": "w1" }, true);
+      mocks.mainCheckoutPath.mockResolvedValue(null);
+
+      await closeProjectMain(PROJECT);
+
+      expect(mocks.runHerdr).toHaveBeenCalledWith(["workspace", "close", "w1"]);
+    });
+
+    describe("when its directory has no open workspace", () => {
+      it("throws", async () => {
+        const mocks = await mockCloseModules([]);
+        mocks.mainCheckoutPath.mockResolvedValue(null);
+
+        const thrown = await closeProjectMain(PROJECT).catch((error: Error) => error);
+
+        expect((thrown as Error).message).toContain("no open workspace");
+      });
+    });
+  });
+
   describe("when the main worktree has an open workspace", () => {
     it("closes it", async () => {
       const mocks = await mockCloseModules([{ branch: "main", path: "/tmp/orc", isMain: true }], {

@@ -189,6 +189,11 @@ Only `path` is required: `name` defaults to the directory's name, and `tabs` and
 default to the `default` project's. A declared project replaces a discovered one at the same path,
 which is how an override takes effect without having to list every other repository.
 
+A declared project's `path` doesn't have to be inside a Git repository. Such a project has no worktrees,
+so it always opens as a plain workspace on its directory, which suits a session that works across
+repositories rather than in one. Discovery never finds one: `projectPaths` only turns up
+repositories.
+
 ### Prompts
 
 A project's `prompt` is sent to the agent in its workspace once that agent has started, using
