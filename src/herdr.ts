@@ -55,18 +55,65 @@ async function readAll(reader: {
   return text + decoder.decode();
 }
 
+/** How many times to check whether a server just started is ready, a tenth of a second apart. */
+const SERVER_READY_ATTEMPTS = 100;
+
 /**
  * Runs a `herdr` CLI command and returns its raw output. Not every command prints something — `pane
- * run`, for one, prints nothing — so callers that need a response use {@link runHerdrJson}.
+ * run`, for one, prints nothing — so callers that need a response use {@link runHerdrJson}. When no
+ * Herdr server is running, a headless one is started and the command retried, so a script launched
+ * with no Herdr open still works.
  *
  * @param args The arguments to pass to the `herdr` binary.
  * @param timeout How long the command is given, in milliseconds. Omit to leave it unbounded, which
  *   is what a command that does real work needs.
  * @returns Whatever the command wrote to stdout.
  * @throws {HerdrTimeoutError} When the command outlives `timeout`.
- * @throws When the command exits non-zero.
+ * @throws When the command exits non-zero, or no server is running and one cannot be started.
  */
 export async function runHerdr(args: string[], timeout?: number): Promise<string> {
+  try {
+    return await runHerdrOnce(args, timeout);
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("server_not_running")) throw error;
+
+    await startServer();
+
+    return await runHerdrOnce(args, timeout);
+  }
+}
+
+/**
+ * Starts a headless Herdr server that outlives this process, and waits for it to accept commands.
+ *
+ * @throws When the server is not ready within ten seconds.
+ */
+async function startServer(): Promise<void> {
+  Bun.spawn(["herdr", "server"], { stdio: ["ignore", "ignore", "ignore"], detached: true }).unref();
+
+  for (let attempt = 0; attempt < SERVER_READY_ATTEMPTS; attempt++) {
+    const status = JSON.parse(await runHerdrOnce(["status", "server", "--json"])) as {
+      running?: unknown;
+    };
+
+    if (status.running === true) return;
+
+    await Bun.sleep(100);
+  }
+
+  throw new Error("herdr server did not start within ten seconds");
+}
+
+/**
+ * Runs a `herdr` CLI command once and returns its raw output, as in {@link runHerdr}.
+ *
+ * @param args The arguments to pass to the `herdr` binary.
+ * @param timeout How long the command is given, in milliseconds, as in {@link runHerdr}.
+ * @returns Whatever the command wrote to stdout.
+ * @throws {HerdrTimeoutError} When the command outlives `timeout`.
+ * @throws When the command exits non-zero.
+ */
+async function runHerdrOnce(args: string[], timeout?: number): Promise<string> {
   const process = Bun.spawn(["herdr", ...args], { stdout: "pipe", stderr: "pipe" });
 
   // Read the output through readers we hold, so abandoning a command releases its streams. A read

@@ -28,15 +28,34 @@ const WORKSPACE_RESPONSE = {
  * @returns The spy standing in for `Bun.spawn`.
  */
 export function mockSpawn(stdout: string, options: { exitCode?: number; stderr?: string } = {}) {
+  return spyOn(Bun, "spawn").mockReturnValue(fakeProcess(stdout, options));
+}
+
+/**
+ * Builds a stand-in for a finished process, for queuing one `Bun.spawn` result at a time.
+ *
+ * @param stdout The text the fake process writes to stdout.
+ * @param options The exit code and stderr text the fake process reports.
+ * @param options.exitCode The code the fake process exits with.
+ * @param options.stderr The text the fake process writes to stderr.
+ * @returns The fake process.
+ */
+function fakeProcess(stdout: string, options: { exitCode?: number; stderr?: string } = {}) {
   const { exitCode = 0, stderr = "" } = options;
 
-  return spyOn(Bun, "spawn").mockReturnValue({
+  return {
     stdout: new Response(stdout).body,
     stderr: new Response(stderr).body,
     exited: Promise.resolve(exitCode),
     kill: () => {},
-  } as unknown as ReturnType<typeof Bun.spawn>);
+    unref: () => {},
+  } as unknown as ReturnType<typeof Bun.spawn>;
 }
+
+const SERVER_NOT_RUNNING = {
+  exitCode: 1,
+  stderr: '{"error":{"code":"server_not_running","message":"no herdr server is running"}}',
+};
 
 /**
  * Mocks `Bun.spawn` as a command that never finishes and never closes its output, which is what a
@@ -82,6 +101,49 @@ describe("runHerdr", () => {
 
       expect(thrown).toBeInstanceOf(Error);
       expect((thrown as Error).message).toContain("not a repository");
+    });
+  });
+
+  describe("when no server is running", () => {
+    it("starts a detached headless server", async () => {
+      const spawn = spyOn(Bun, "spawn")
+        .mockReturnValueOnce(fakeProcess("", SERVER_NOT_RUNNING))
+        .mockReturnValueOnce(fakeProcess(""))
+        .mockReturnValueOnce(fakeProcess('{"running":true}'))
+        .mockReturnValueOnce(fakeProcess("[]"));
+
+      await runHerdr(["workspace", "list"]);
+
+      expect(spawn).toHaveBeenCalledWith(
+        ["herdr", "server"],
+        expect.objectContaining({ detached: true }),
+      );
+    });
+
+    it("retries the command once the server is ready", async () => {
+      spyOn(Bun, "spawn")
+        .mockReturnValueOnce(fakeProcess("", SERVER_NOT_RUNNING))
+        .mockReturnValueOnce(fakeProcess(""))
+        .mockReturnValueOnce(fakeProcess('{"running":false}'))
+        .mockReturnValueOnce(fakeProcess('{"running":true}'))
+        .mockReturnValueOnce(fakeProcess("[]"));
+      spyOn(Bun, "sleep").mockResolvedValue();
+
+      expect(await runHerdr(["workspace", "list"])).toEqual("[]");
+    });
+
+    describe("when the server never becomes ready", () => {
+      it("throws", async () => {
+        spyOn(Bun, "spawn").mockImplementation(((command: string[]) =>
+          command[1] === "status"
+            ? fakeProcess('{"running":false}')
+            : fakeProcess("", SERVER_NOT_RUNNING)) as unknown as typeof Bun.spawn);
+        spyOn(Bun, "sleep").mockResolvedValue();
+
+        const thrown = await runHerdr(["workspace", "list"]).catch((error: Error) => error);
+
+        expect((thrown as Error).message).toContain("did not start");
+      });
     });
   });
 

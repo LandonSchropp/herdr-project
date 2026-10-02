@@ -51,7 +51,8 @@ the same from anywhere. The project's tabs are laid into the workspace afterward
 ## CLI
 
 Every step the picker takes is also available non-interactively, so agents and scripts can drive
-it.
+it. When no Herdr server is running, it starts a headless one first, so it works from a scheduled
+job with no terminal open.
 
 ```sh
 herdr-project list [--json]
