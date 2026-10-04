@@ -68,8 +68,10 @@ worktrees are actually open.
 **`open`** opens the project's main worktree; with `--worktree`, it creates a worktree on that
 branch instead (or opens it, if one already exists). Either way the project's tabs are laid into
 the workspace and the new workspace is focused. `--name` labels the workspace, independent of
-`--worktree`. `--no-focus` opens it in the background instead, leaving you in the tab you were
-already in. A background workspace opens on its first tab rather than its `focusedTab`, since
+`--worktree`. The main worktree can have several workspaces open at once, told apart by their
+labels: opening it again under a new `--name` opens another workspace beside the first, and only a
+label already open on it is refused. A linked worktree gets one workspace. `--no-focus` opens the
+workspace in the background instead, leaving you in the tab you were already in. A background workspace opens on its first tab rather than its `focusedTab`, since
 focusing a tab is what pulls the session over to it. `--prompt` sends the text to the workspace's
 agent once it starts, in place of the project's own prompt; see [Prompts](#prompts).
 

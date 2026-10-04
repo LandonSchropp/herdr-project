@@ -43,13 +43,14 @@ function mockRunHerdrJson(workspaces: unknown[], panes: unknown[] = []) {
  * without a running Herdr session.
  *
  * @param worktrees The worktrees `listWorktrees` reports.
- * @param openPaths The checkout paths that already have a workspace open.
+ * @param openPaths The checkout paths that already have a workspace open, each optionally paired
+ *   with the workspace's label.
  * @param flat Whether the settings ask for flat workspaces.
  * @returns The mocks standing in for each replaced function.
  */
 async function mockHerdrModules(
   worktrees: { branch: string; path: string; isMain: boolean; isBare?: boolean }[],
-  openPaths: string[] = [],
+  openPaths: (string | { path: string; label: string })[] = [],
   flat = false,
 ) {
   const mocks = {
@@ -64,10 +65,15 @@ async function mockHerdrModules(
     loadSettings: mock(() => Promise.resolve({ flat })),
     mainCheckoutPath: mock((): Promise<string | null> => Promise.resolve(PROJECT.repositoryRoot)),
     runHerdrJson: mockRunHerdrJson(
-      openPaths.map((path, index) => ({
-        workspace_id: `w${index}`,
-        worktree: { checkout_path: path, repo_root: PROJECT.repositoryRoot },
-      })),
+      openPaths.map((entry, index) => {
+        const { path, label } = typeof entry === "string" ? { path: entry, label: null } : entry;
+
+        return {
+          workspace_id: `w${index}`,
+          label,
+          worktree: { checkout_path: path, repo_root: PROJECT.repositoryRoot },
+        };
+      }),
     ),
   };
 
@@ -330,6 +336,59 @@ describe("openProjectMain", () => {
         expect(mocks.openWorktree).toHaveBeenCalledWith("/tmp/orc", "/tmp/orc", "fix-sync", true);
       });
     });
+
+    describe("when a workspace with the same label is already open on it", () => {
+      it("refuses rather than opening a second one", async () => {
+        const mocks = await mockHerdrModules(
+          [{ branch: "main", path: "/tmp/orc", isMain: true }],
+          [{ path: "/tmp/orc", label: "orc" }],
+        );
+
+        const thrown = await openProjectMain(PROJECT).catch((error: Error) => error);
+
+        expect((thrown as Error).message).toContain("already open");
+        expect(mocks.openFlatWorkspace).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("when the settings ask for flat workspaces", () => {
+      it("opens it as a plain workspace", async () => {
+        const mocks = await mockHerdrModules(
+          [{ branch: "main", path: "/tmp/orc", isMain: true }],
+          [],
+          true,
+        );
+
+        await openProjectMain(PROJECT);
+
+        expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "orc", true);
+      });
+    });
+
+    describe("when a workspace with another label is already open on it", () => {
+      it("opens another one as a plain workspace", async () => {
+        const mocks = await mockHerdrModules(
+          [{ branch: "main", path: "/tmp/orc", isMain: true }],
+          [{ path: "/tmp/orc", label: "orc" }],
+        );
+
+        await openProjectMain(PROJECT, "plan-day");
+
+        expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "plan-day", true);
+        expect(mocks.openWorktree).not.toHaveBeenCalled();
+      });
+
+      it("prompts the new workspace's agent", async () => {
+        const mocks = await mockHerdrModules(
+          [{ branch: "main", path: "/tmp/orc", isMain: true }],
+          [{ path: "/tmp/orc", label: "orc" }],
+        );
+
+        await openProjectMain({ ...PROJECT, prompt: "/plan-day" }, "plan-day");
+
+        expect(mocks.promptWorkspaceAgent).toHaveBeenCalledWith("wG", "/plan-day");
+      });
+    });
   });
 
   describe("when the repository has no main worktree", () => {
@@ -364,15 +423,26 @@ describe("openProjectMain", () => {
       });
     });
 
-    describe("when the directory already has a workspace open", () => {
+    describe("when a workspace with the same label is already open on the directory", () => {
       it("refuses rather than laying a second set of tabs into it", async () => {
-        const mocks = await mockHerdrModules([], ["/tmp/orc"]);
+        const mocks = await mockHerdrModules([], [{ path: "/tmp/orc", label: "orc" }]);
         mocks.mainCheckoutPath.mockResolvedValue(null);
 
         const thrown = await openProjectMain(PROJECT).catch((error: Error) => error);
 
         expect((thrown as Error).message).toContain("already open");
         expect(mocks.openFlatWorkspace).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("when a workspace with another label is already open on the directory", () => {
+      it("opens another one", async () => {
+        const mocks = await mockHerdrModules([], [{ path: "/tmp/orc", label: "orc" }]);
+        mocks.mainCheckoutPath.mockResolvedValue(null);
+
+        await openProjectMain(PROJECT, "plan-day");
+
+        expect(mocks.openFlatWorkspace).toHaveBeenCalledWith("/tmp/orc", "plan-day", true);
       });
     });
   });
@@ -401,11 +471,11 @@ describe("openProjectMain", () => {
       });
     });
 
-    describe("when the path already has a workspace open", () => {
+    describe("when a workspace with the same label is already open on it", () => {
       it("refuses rather than laying a second set of tabs into it", async () => {
         const mocks = await mockHerdrModules(
           [{ branch: "", path: "/tmp/orc", isMain: true, isBare: true }],
-          ["/tmp/orc"],
+          [{ path: "/tmp/orc", label: "orc" }],
         );
 
         const thrown = await openProjectMain(PROJECT).catch((error: Error) => error);
