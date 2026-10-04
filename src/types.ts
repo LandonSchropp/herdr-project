@@ -62,6 +62,8 @@ export type Workspace = {
 export type ReportedWorkspace = {
   /** The workspace's id. */
   workspaceId: string;
+  /** The workspace's label, or `null` when Herdr reported none. */
+  label: string | null;
   /** The worktree Herdr manages for the workspace, or `null` when it manages none. */
   worktree: { checkoutPath: string; repositoryRoot: string } | null;
   /** The directory the workspace's first pane is in, or `null` when it reported no pane. */
@@ -72,6 +74,8 @@ export type ReportedWorkspace = {
 export type OpenWorkspace = {
   /** The workspace's id. */
   workspaceId: string;
+  /** The workspace's label, or `null` when Herdr reported none. */
+  label: string | null;
   /** The absolute path to the checkout the workspace is showing. */
   checkoutPath: string;
   /**

@@ -3,9 +3,9 @@ import { runHerdrJson } from "./herdr.ts";
 import type { OpenWorkspace, ReportedWorkspace } from "./types.ts";
 
 /**
- * Extracts what Herdr reports about each open workspace: the worktree it manages for the workspace,
- * if any, and the directory the workspace's first pane is in, which is the only thing left to go on
- * when it manages none. A workspace Herdr reports without an id contributes nothing.
+ * Extracts what Herdr reports about each open workspace: its label, the worktree it manages for the
+ * workspace, if any, and the directory the workspace's first pane is in, which is the only thing
+ * left to go on when it manages none. A workspace Herdr reports without an id contributes nothing.
  *
  * @param workspaceResponse The parsed JSON response from a workspace listing.
  * @param paneResponse The parsed JSON response from a pane listing.
@@ -33,6 +33,7 @@ export function parseReportedWorkspaces(
   return workspaces.flatMap((entry: unknown) => {
     const workspace = entry as {
       workspace_id?: unknown;
+      label?: unknown;
       worktree?: { checkout_path?: unknown; repo_root?: unknown };
     };
 
@@ -44,6 +45,7 @@ export function parseReportedWorkspaces(
     return [
       {
         workspaceId: workspace.workspace_id,
+        label: typeof workspace.label === "string" ? workspace.label : null,
         worktree:
           typeof checkoutPath === "string" && typeof repositoryRoot === "string"
             ? { checkoutPath, repositoryRoot }
@@ -72,12 +74,13 @@ export async function listOpenWorkspaces(): Promise<OpenWorkspace[]> {
 
   const resolved = await Promise.all(
     parseReportedWorkspaces(workspaceResponse, paneResponse).map(
-      async ({ workspaceId, worktree, paneDirectory }): Promise<OpenWorkspace | null> => {
-        if (worktree !== null) return { workspaceId, ...worktree, isManagedWorktree: true };
+      async ({ workspaceId, label, worktree, paneDirectory }): Promise<OpenWorkspace | null> => {
+        if (worktree !== null) return { workspaceId, label, ...worktree, isManagedWorktree: true };
         if (paneDirectory === null) return null;
 
         return {
           workspaceId,
+          label,
           checkoutPath: paneDirectory,
           repositoryRoot: (await mainCheckoutPath(paneDirectory)) ?? paneDirectory,
           isManagedWorktree: false,

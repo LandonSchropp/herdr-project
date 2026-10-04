@@ -83,6 +83,22 @@ describe("parseReportedWorkspaces", () => {
     });
   });
 
+  describe("when the workspace has a label", () => {
+    it("reports the label", () => {
+      const workspaces = { result: { workspaces: [{ workspace_id: "w1", label: "notes" }] } };
+
+      expect(parseReportedWorkspaces(workspaces, {})[0]?.label).toEqual("notes");
+    });
+  });
+
+  describe("when the workspace has no label", () => {
+    it("reports no label", () => {
+      const workspaces = { result: { workspaces: [{ workspace_id: "w1" }] } };
+
+      expect(parseReportedWorkspaces(workspaces, {})[0]?.label).toBeNull();
+    });
+  });
+
   describe("when a workspace entry has no id", () => {
     it("leaves it out", () => {
       const workspaces = { result: { workspaces: [{ label: "plain" }] } };
@@ -125,6 +141,7 @@ describe("listOpenWorkspaces", () => {
       await mockListModules([
         {
           workspace_id: "w1",
+          label: "feature",
           worktree: { checkout_path: "/tmp/feature", repo_root: "/tmp/orc" },
         },
       ]);
@@ -132,6 +149,7 @@ describe("listOpenWorkspaces", () => {
       expect(await listOpenWorkspaces()).toEqual([
         {
           workspaceId: "w1",
+          label: "feature",
           checkoutPath: "/tmp/feature",
           repositoryRoot: "/tmp/orc",
           isManagedWorktree: true,
@@ -143,7 +161,7 @@ describe("listOpenWorkspaces", () => {
   describe("when Herdr manages no worktree for the workspace", () => {
     it("resolves the repository from the pane's directory", async () => {
       await mockListModules(
-        [{ workspace_id: "w1" }],
+        [{ workspace_id: "w1", label: "feature" }],
         [{ workspace_id: "w1", cwd: "/tmp/feature" }],
         "/tmp/orc",
       );
@@ -151,6 +169,7 @@ describe("listOpenWorkspaces", () => {
       expect(await listOpenWorkspaces()).toEqual([
         {
           workspaceId: "w1",
+          label: "feature",
           checkoutPath: "/tmp/feature",
           repositoryRoot: "/tmp/orc",
           isManagedWorktree: false,
@@ -166,6 +185,7 @@ describe("listOpenWorkspaces", () => {
       expect(await listOpenWorkspaces()).toEqual([
         {
           workspaceId: "w1",
+          label: null,
           checkoutPath: "/tmp",
           repositoryRoot: "/tmp",
           isManagedWorktree: false,

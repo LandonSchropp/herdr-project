@@ -16,7 +16,13 @@ function openWorkspace(
   repositoryRoot: string,
   isManagedWorktree = true,
 ): OpenWorkspace {
-  return { workspaceId, checkoutPath: repositoryRoot, repositoryRoot, isManagedWorktree };
+  return {
+    workspaceId,
+    label: null,
+    checkoutPath: repositoryRoot,
+    repositoryRoot,
+    isManagedWorktree,
+  };
 }
 
 // `wI` is flat rather than a worktree Herdr manages, and is the workspace the assertions below
