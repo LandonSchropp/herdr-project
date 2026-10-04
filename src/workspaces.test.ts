@@ -493,16 +493,21 @@ describe("openProjectMain", () => {
  * {@link closeProjectWorktree} can be exercised without a running Herdr session.
  *
  * @param worktrees The worktrees `listWorktrees` reports.
- * @param openWorkspaces The workspace ids open for a checkout path, keyed by path.
+ * @param openWorkspaces The checkout path each open workspace is showing, optionally paired with
+ *   the workspace's label, keyed by workspace id.
  * @param flat Whether the open workspaces are flat rather than worktrees Herdr manages.
  * @returns The mocks standing in for each replaced function.
  */
 async function mockCloseModules(
   worktrees: { branch: string; path: string; isMain: boolean }[],
-  openWorkspaces: Record<string, string> = {},
+  openWorkspaces: Record<string, string | { path: string; label: string }> = {},
   flat = false,
 ) {
-  const entries = Object.entries(openWorkspaces);
+  const entries = Object.entries(openWorkspaces).map(([workspaceId, entry]) =>
+    typeof entry === "string"
+      ? { workspaceId, path: entry, label: null }
+      : { workspaceId, ...entry },
+  );
 
   const mocks = {
     runHerdr: mock(() => Promise.resolve("")),
@@ -510,12 +515,13 @@ async function mockCloseModules(
     // A flat workspace carries no worktree, so Herdr reports only its pane's directory.
     runHerdrJson: flat
       ? mockRunHerdrJson(
-          entries.map(([, workspaceId]) => ({ workspace_id: workspaceId })),
-          entries.map(([path, workspaceId]) => ({ workspace_id: workspaceId, cwd: path })),
+          entries.map(({ workspaceId, label }) => ({ workspace_id: workspaceId, label })),
+          entries.map(({ workspaceId, path }) => ({ workspace_id: workspaceId, cwd: path })),
         )
       : mockRunHerdrJson(
-          entries.map(([path, workspaceId]) => ({
+          entries.map(({ workspaceId, path, label }) => ({
             workspace_id: workspaceId,
+            label,
             worktree: { checkout_path: path, repo_root: PROJECT.repositoryRoot },
           })),
         ),
@@ -541,7 +547,7 @@ async function mockCloseModules(
 describe("closeProjectMain", () => {
   describe("when the project is outside any repository", () => {
     it("closes the workspace open on its directory", async () => {
-      const mocks = await mockCloseModules([], { "/tmp/orc": "w1" }, true);
+      const mocks = await mockCloseModules([], { w1: "/tmp/orc" }, true);
       mocks.mainCheckoutPath.mockResolvedValue(null);
 
       await closeProjectMain(PROJECT);
@@ -564,12 +570,64 @@ describe("closeProjectMain", () => {
   describe("when the main worktree has an open workspace", () => {
     it("closes it", async () => {
       const mocks = await mockCloseModules([{ branch: "main", path: "/tmp/orc", isMain: true }], {
-        "/tmp/orc": "w1",
+        w1: "/tmp/orc",
       });
 
       await closeProjectMain(PROJECT);
 
       expect(mocks.runHerdr).toHaveBeenCalledWith(["workspace", "close", "w1"]);
+    });
+  });
+
+  describe("when the main worktree has several open workspaces", () => {
+    const worktrees = [{ branch: "main", path: "/tmp/orc", isMain: true }];
+    const openWorkspaces = {
+      w1: { path: "/tmp/orc", label: "orc" },
+      w2: { path: "/tmp/orc", label: "plan-day" },
+    };
+
+    describe("when a label is given", () => {
+      it("closes the workspace with that label", async () => {
+        const mocks = await mockCloseModules(worktrees, openWorkspaces);
+
+        await closeProjectMain(PROJECT, "plan-day");
+
+        expect(mocks.runHerdr).toHaveBeenCalledWith(["workspace", "close", "w2"]);
+      });
+    });
+
+    describe("when the label matches none of them", () => {
+      it("throws", async () => {
+        await mockCloseModules(worktrees, openWorkspaces);
+
+        const thrown = await closeProjectMain(PROJECT, "other").catch((error: Error) => error);
+
+        expect((thrown as Error).message).toContain("no open workspace");
+      });
+    });
+
+    describe("when no label is given", () => {
+      it("closes the one named after the project", async () => {
+        const mocks = await mockCloseModules(worktrees, openWorkspaces);
+
+        await closeProjectMain(PROJECT);
+
+        expect(mocks.runHerdr).toHaveBeenCalledWith(["workspace", "close", "w1"]);
+      });
+
+      describe("when none of them is named after the project", () => {
+        it("throws without closing any of them", async () => {
+          const mocks = await mockCloseModules(worktrees, {
+            w1: { path: "/tmp/orc", label: "review" },
+            w2: { path: "/tmp/orc", label: "plan-day" },
+          });
+
+          const thrown = await closeProjectMain(PROJECT).catch((error: Error) => error);
+
+          expect((thrown as Error).message).toContain("several open workspaces");
+          expect(mocks.runHerdr).not.toHaveBeenCalled();
+        });
+      });
     });
   });
 
@@ -601,7 +659,7 @@ describe("closeProjectWorktree", () => {
     it("removes it", async () => {
       const mocks = await mockCloseModules(
         [{ branch: "feature", path: "/tmp/worktrees/feature", isMain: false }],
-        { "/tmp/worktrees/feature": "w2" },
+        { w2: "/tmp/worktrees/feature" },
       );
 
       await closeProjectWorktree(PROJECT, "feature");
@@ -638,7 +696,7 @@ describe("closeProjectWorktree", () => {
     it("removes the checkout with Git, which Herdr will not do for it", async () => {
       const mocks = await mockCloseModules(
         [{ branch: "feature", path: "/tmp/worktrees/feature", isMain: false }],
-        { "/tmp/worktrees/feature": "w2" },
+        { w2: "/tmp/worktrees/feature" },
         true,
       );
 
@@ -650,7 +708,7 @@ describe("closeProjectWorktree", () => {
     it("closes the workspace", async () => {
       const mocks = await mockCloseModules(
         [{ branch: "feature", path: "/tmp/worktrees/feature", isMain: false }],
-        { "/tmp/worktrees/feature": "w2" },
+        { w2: "/tmp/worktrees/feature" },
         true,
       );
 
@@ -663,7 +721,7 @@ describe("closeProjectWorktree", () => {
       it("leaves the workspace open", async () => {
         const mocks = await mockCloseModules(
           [{ branch: "feature", path: "/tmp/worktrees/feature", isMain: false }],
-          { "/tmp/worktrees/feature": "w2" },
+          { w2: "/tmp/worktrees/feature" },
           true,
         );
         mocks.removeWorktree.mockRejectedValue(new Error("contains modified files"));

@@ -408,7 +408,10 @@ describe("runCli", () => {
 
         const result = await runCli(["close", "--project", "orc"]);
 
-        expect(closeProjectMain).toHaveBeenCalledWith(expect.objectContaining({ name: "orc" }));
+        expect(closeProjectMain).toHaveBeenCalledWith(
+          expect.objectContaining({ name: "orc" }),
+          undefined,
+        );
         expect(result.exitCode).toEqual(0);
       });
     });
@@ -432,6 +435,43 @@ describe("runCli", () => {
         expect(closeProjectMain).not.toHaveBeenCalled();
         expect(result.stdout).toContain("Cancelled");
         expect(result.exitCode).toEqual(0);
+      });
+    });
+
+    describe("when --name is passed", () => {
+      it("closes the workspace with that label", async () => {
+        await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+        const closeProjectMain = mock(() => Promise.resolve());
+        await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+          closeProjectMain,
+          closeProjectWorktree: mock(() => Promise.resolve()),
+        }));
+
+        await runCli(["close", "--project", "orc", "--name", "plan-day", "--yes"]);
+
+        expect(closeProjectMain).toHaveBeenCalledWith(
+          expect.objectContaining({ name: "orc" }),
+          "plan-day",
+        );
+      });
+
+      it("names the workspace in the confirmation", async () => {
+        await stubProjects([{ name: "orc", path: "/tmp/orc" }]);
+
+        const confirm = mock(() => Promise.resolve(false));
+        await stubModule(import.meta.resolve("./workspaces.ts"), () => ({
+          closeProjectMain: mock(() => Promise.resolve()),
+          closeProjectWorktree: mock(() => Promise.resolve()),
+        }));
+        await stubModule(import.meta.resolve("./confirm.tsx"), () => ({
+          confirm,
+          isInteractive: mock(() => true),
+        }));
+
+        await runCli(["close", "--project", "orc", "--name", "plan-day"]);
+
+        expect(confirm).toHaveBeenCalledWith("Close Workspace", "Close plan-day?");
       });
     });
 

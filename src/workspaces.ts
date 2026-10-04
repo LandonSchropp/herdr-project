@@ -25,28 +25,32 @@ export async function isInRepository(project: Project): Promise<boolean> {
 }
 
 /**
- * Closes a project's main workspace, which for a project outside any repository is the workspace
- * open on its directory.
+ * Closes one of a project's main workspaces, which for a project outside any repository are the
+ * workspaces open on its directory.
  *
  * @param project The project whose main workspace to close.
- * @throws When the repository has no main worktree, or no workspace is open for it.
+ * @param label The label of the workspace to close. Omit to close the only one open, or when
+ *   several are, the one named after the project.
+ * @throws When the repository has no main worktree, or no single open workspace matches.
  */
-export async function closeProjectMain(project: Project): Promise<void> {
-  let path = project.repositoryRoot;
+export async function closeProjectMain(project: Project, label?: string): Promise<void> {
+  const { path } = await findMainCheckout(project);
+  const open = (await listOpenWorkspaces()).filter((workspace) => workspace.checkoutPath === path);
+  const named = (name: string) => open.filter((workspace) => workspace.label === name);
+  const workspaces =
+    label !== undefined ? named(label) : open.length > 1 ? named(project.name) : open;
 
-  if (await isInRepository(project)) {
-    const main = (await listWorktrees(project.repositoryRoot)).find((worktree) => worktree.isMain);
-
-    if (main === undefined) throw new Error(`${project.name} has no main worktree.`);
-
-    path = main.path;
+  if (workspaces.length === 1) {
+    await runHerdr(["workspace", "close", workspaces[0].workspaceId]);
+    return;
   }
 
-  const workspace = await findOpenWorkspace(path);
+  if (workspaces.length > 1 || (label === undefined && open.length > 1)) {
+    throw new Error(`${project.name} has several open workspaces; name the one to close.`);
+  }
 
-  if (workspace === null) throw new Error(`${project.name} has no open workspace.`);
-
-  await runHerdr(["workspace", "close", workspace.workspaceId]);
+  const suffix = label === undefined ? "" : ` named "${label}"`;
+  throw new Error(`${project.name} has no open workspace${suffix}.`);
 }
 
 /**

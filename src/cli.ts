@@ -191,7 +191,9 @@ async function runClose(args: string[]): Promise<CliResult> {
     return { stdout: "", stderr: "Error: --worktree requires a branch name.\n", exitCode: 1 };
   }
 
-  if (args.includes("--name") && flagValue(args, "--name") === null) {
+  const label = flagValue(args, "--name");
+
+  if (args.includes("--name") && label === null) {
     return { stdout: "", stderr: "Error: --name requires a value.\n", exitCode: 1 };
   }
 
@@ -207,13 +209,13 @@ async function runClose(args: string[]): Promise<CliResult> {
 
   const title = branch === null ? "Close Workspace" : "Delete Worktree";
   const description =
-    branch === null ? `Close ${project.name}?` : `Delete the "${branch}" worktree?`;
+    branch === null ? `Close ${label ?? project.name}?` : `Delete the "${branch}" worktree?`;
 
   if (!skipConfirmation && !(await confirm(title, description))) {
     return { stdout: "Cancelled.\n", stderr: "", exitCode: 0 };
   }
 
-  if (branch === null) await closeProjectMain(project);
+  if (branch === null) await closeProjectMain(project, label ?? undefined);
   else await closeProjectWorktree(project, branch);
 
   return { stdout: "", stderr: "", exitCode: 0 };
