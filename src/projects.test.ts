@@ -85,6 +85,14 @@ describe("scanRepositories", () => {
     });
   });
 
+  describe("when the glob's directory does not exist", () => {
+    it("returns an empty list", async () => {
+      const root = await stubRepositories([]);
+
+      expect(await scanRepositories(join(root, "missing", "*"))).toEqual([]);
+    });
+  });
+
   describe("when the path has no wildcards and is a repository", () => {
     it("returns that repository", async () => {
       const root = await stubRepositories(["alpha"]);

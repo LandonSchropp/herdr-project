@@ -31,22 +31,28 @@ async function isRepository(path: string): Promise<boolean> {
  * Finds the Git repositories a project path refers to. The path is treated both as a directory and
  * as a glob, so a plain path resolves to itself and a pattern resolves to everything it matches.
  * Doing both avoids guessing which was meant: `Bun.Glob` matches nothing for a path with no
- * wildcards, and a directory's name is allowed to contain wildcard characters.
+ * wildcards, and a directory's name is allowed to contain wildcard characters. A glob whose
+ * directory does not exist matches nothing.
  *
  * @param pattern The absolute path or glob to scan.
  * @returns The absolute paths of the matching repositories, without duplicates.
+ * @throws If the scan fails for any reason other than a missing directory.
  */
 export async function scanRepositories(pattern: string): Promise<string[]> {
   const matches = new Set<string>();
 
   if (await isRepository(pattern)) matches.add(pattern);
 
-  for await (const match of new Bun.Glob(pattern).scan({
-    onlyFiles: false,
-    absolute: true,
-    followSymlinks: true,
-  })) {
-    if (await isRepository(match)) matches.add(match);
+  try {
+    for await (const match of new Bun.Glob(pattern).scan({
+      onlyFiles: false,
+      absolute: true,
+      followSymlinks: true,
+    })) {
+      if (await isRepository(match)) matches.add(match);
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
 
   return [...matches];
