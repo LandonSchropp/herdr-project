@@ -1,3 +1,6 @@
+> [!WARNING]
+> **This repository is 100% vibe coded.** The author did not read any of the code. Use it at your own risk.
+
 # Herdr Project
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
