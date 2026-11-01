@@ -160,6 +160,35 @@ describe("openProjectWorktree", () => {
       );
     });
   });
+
+  describe("when the settings ask for flat workspaces", () => {
+    it("opens the checkout as its own workspace named after its directory", async () => {
+      const mocks = await mockHerdrModules([], [], true);
+
+      await openProjectWorktree(PROJECT, "/tmp/worktrees/feature");
+
+      expect(mocks.openFlatWorkspace).toHaveBeenCalledWith(
+        "/tmp/worktrees/feature",
+        "feature",
+        true,
+      );
+      expect(mocks.openWorktree).not.toHaveBeenCalled();
+    });
+
+    describe("when a label is given", () => {
+      it("names the workspace after the label", async () => {
+        const mocks = await mockHerdrModules([], [], true);
+
+        await openProjectWorktree(PROJECT, "/tmp/worktrees/feature", "fix-sync");
+
+        expect(mocks.openFlatWorkspace).toHaveBeenCalledWith(
+          "/tmp/worktrees/feature",
+          "fix-sync",
+          true,
+        );
+      });
+    });
+  });
 });
 
 describe("openProjectWorktree when the worktree already has a workspace", () => {
@@ -234,6 +263,17 @@ describe("createProjectWorktree", () => {
       await createProjectWorktree(PROJECT, "feature", "fix-sync");
 
       expect(mocks.createWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", "fix-sync", true);
+    });
+  });
+
+  describe("when the settings ask for flat workspaces", () => {
+    it("creates the worktree with Git rather than with Herdr", async () => {
+      const mocks = await mockHerdrModules([], [], true);
+
+      await createProjectWorktree(PROJECT, "feature");
+
+      expect(mocks.createFlatWorktree).toHaveBeenCalledWith("/tmp/orc", "feature", undefined, true);
+      expect(mocks.createWorktree).not.toHaveBeenCalled();
     });
   });
 
