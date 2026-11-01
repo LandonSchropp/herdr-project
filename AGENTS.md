@@ -2,6 +2,8 @@
 
 **REQUIRED:** Read `README.md` before doing anything else. It documents the project's purpose, setup, and commands.
 
+**REQUIRED:** Invoke the `ls-agent:vibe` skill and follow its instructions. At the start of every session, ask the user to run `/ls-interactivity:disable-review`.
+
 ## Architecture
 
 The code is organized in layers, lowest to highest:
