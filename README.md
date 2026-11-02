@@ -67,6 +67,15 @@ herdr-project close --project <name> [--worktree <branch>] [--name <label>] [--y
 - **`close`**: Closes the project's main workspace, or removes `--worktree`'s worktree. `--name`
   picks which workspace, and `--yes` skips the confirmation.
 
+### Agent Skill
+
+The `herdr-project` [agent skill](skills/herdr-project/SKILL.md) teaches coding agents to use the
+CLI. Install it with:
+
+```sh
+npx skills add LandonSchropp/herdr-project --skill herdr-project
+```
+
 ## Tabs
 
 A project's tabs are laid out by a `workspace.created` hook rather than by whatever opened the
