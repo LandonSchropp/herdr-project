@@ -10,24 +10,23 @@ from a picker.
 
 ## Why?
 
-When working in Herdr, it's common to create many workspaces and worktrees, each with the same
-standard set of tabs and commands. Recreating that layout by hand every time is a pain, so this
-plugin automates it: spin up a workspace or worktree and its tabs come preconfigured, the way
-[tmuxinator](https://github.com/tmuxinator/tmuxinator) does for tmux. A `default` project, plus a
-glob of the directories your repositories live in, means most projects don't even need a separate
-[configuration](#configuration).
+Herdr workspaces and worktrees tend to need the same tabs and commands every time, and recreating
+them by hand is a pain. This plugin opens them with their tabs preconfigured, the way
+[tmuxinator](https://github.com/tmuxinator/tmuxinator) does for tmux. With a `default` project and a
+glob of where your repositories live, most projects need no [configuration](#configuration) of
+their own.
 
 ## How It Works
 
-One action, two questions:
+The picker asks two questions:
 
-1. **Which project?** Fuzzy-search the projects you've defined and pick one. Escape cancels.
-2. **Which worktree?** Type a branch name and it creates that worktree — or opens it, if it already
-   exists. Leave it empty for the project's main checkout. Escape goes back to the project.
+1. **Which project?** Fuzzy-search your projects and pick one. Escape cancels.
+2. **Which worktree?** Type a branch name to create that worktree, or open it if it already exists.
+   Leave it empty for the main checkout. Escape goes back to the project.
 
-Neither answer is inferred from the workspace you were in when you opened the picker, so it works
-the same from anywhere. The project's tabs are laid into the workspace afterward; see
-[Tabs](#tabs).
+![The project picker listing projects](images/project-picker.png)
+
+![The worktree prompt asking for a branch](images/worktree-prompt.png)
 
 ## Installation
 
@@ -53,9 +52,8 @@ the same from anywhere. The project's tabs are laid into the workspace afterward
 
 ## CLI
 
-Every step the picker takes is also available non-interactively, so agents and scripts can drive
-it. When no Herdr server is running, it starts a headless one first, so it works from a scheduled
-job with no terminal open.
+Everything the picker does is also available non-interactively, for agents and scripts. If no Herdr
+server is running, it starts a headless one, so it works from a scheduled job.
 
 ```sh
 herdr-project list [--json]
@@ -63,27 +61,12 @@ herdr-project open --project <name> [--worktree <branch>] [--name <label>] [--pr
 herdr-project close --project <name> [--worktree <branch>] [--name <label>] [--yes]
 ```
 
-**`list`** prints each configured project's name and path — an aligned table at a terminal, plain
-tab-separated lines when piped. Pass `--json` for the same projects, including their tabs, as a
-JSON array instead. Herdr's own `workspace list`/`worktree list` already cover which workspaces and
-worktrees are actually open.
-
-**`open`** opens the project's main worktree; with `--worktree`, it creates a worktree on that
-branch instead (or opens it, if one already exists). Either way the project's tabs are laid into
-the workspace and the new workspace is focused. `--name` labels the workspace, independent of
-`--worktree`. The main worktree can have several workspaces open at once, told apart by their
-labels: opening it again under a new `--name` opens another workspace beside the first, and only a
-label already open on it is refused. A linked worktree gets one workspace. `--no-focus` opens the
-workspace in the background instead, leaving you in the tab you were already in. A background workspace opens on its first tab rather than its `focusedTab`, since
-focusing a tab is what pulls the session over to it. `--prompt` sends the text to the workspace's
-agent once it starts, in place of the project's own prompt; see [Prompts](#prompts).
-
-**`close`** closes the project's main workspace; with `--worktree`, it removes that branch's
-worktree instead. Either way it asks for confirmation first, as an Ink modal — closing a worktree
-deletes its checkout, not just the workspace. `--name` picks which main workspace to close; without
-it, `close` closes the only one open, or when several are, the one named after the project. It has
-no effect with `--worktree`. `--yes` skips the confirmation, for running from a script; without it,
-`close` requires an interactive terminal and errors immediately otherwise, rather than hanging.
+- **`list`**: Prints the configured projects. `--json` prints them as JSON.
+- **`open`**: Opens the project's main checkout, or a worktree on `--worktree`'s branch, creating it
+  if needed. `--name` labels the workspace, `--prompt` overrides the project's
+  [prompt](#prompts), and `--no-focus` opens it in the background.
+- **`close`**: Closes the project's main workspace, or removes `--worktree`'s worktree. `--name`
+  picks which workspace, and `--yes` skips the confirmation.
 
 ## Tabs
 
@@ -95,53 +78,38 @@ left alone.
 
 ## Project Name
 
-Herdr's sidebar shows a workspace's label, which for a linked worktree is its branch name — useful
-for telling worktrees apart, useless for telling which project one belongs to. The plugin reports
-each workspace's project name to Herdr as display-only workspace metadata, under a token named
-`project`, so a sidebar row can show it as `$project`:
+Herdr's sidebar labels a linked worktree with its branch, which doesn't say which project it
+belongs to. The plugin reports each workspace's project name as a `project` token, so a sidebar row
+can show it:
 
 ```toml
 [ui.sidebar.spaces]
 rows = [["state_icon", "workspace"], ["$project"]]
 ```
 
-The name is the one the picker uses, so a project that declares a name gets that name rather than
-its directory's: a repository at `~/.dotfiles` declared as `dotfiles` shows `dotfiles`. A workspace
-whose repository isn't a configured project has no project name, so it gets no token and the row is
-blank.
-
-The name is reported when the plugin opens a workspace, by the `workspace.created` hook for
-workspaces Herdr creates on its own, and again for every open workspace when Herdr starts. The last
-of those is what keeps the row filled in across a restart: workspace metadata is display-only, so
-Herdr doesn't persist it with the rest of the session.
+The name is the project's `name` from the configuration, falling back to its directory's name.
 
 ## Untracked Files
 
-Git leaves untracked files behind when it creates a worktree, so a fresh checkout has no `.env` and
-nothing else Git was told to ignore. A `worktree.created` hook copies them in, from the
-repository's main checkout into the new worktree, for any repository — configured project or not.
-
-Which files come along is decided by two include files, both optional and both written in
-`.gitignore` syntax:
+A new Git worktree has none of the main checkout's untracked files, such as `.env`. The plugin
+copies them in for any repository, configured or not, choosing them with two optional include files
+in `.gitignore` syntax:
 
 - **`~/.config/git/worktreeinclude`** (or `$XDG_CONFIG_HOME/git/worktreeinclude`): the patterns
   every repository gets, which is where something like `.env*` belongs.
 - **`.worktreeinclude`** in a repository's main checkout: that repository's own patterns.
 
-The two are layered the way Git layers its own ignore files: the global patterns apply first and the
-repository's apply over them, so a repository wins where the two disagree and can cancel a global
-pattern by negating it (`!.env`). The file lives in the main checkout and is read from there — it
-isn't committed, so a new worktree never has one of its own.
+The repository's patterns apply over the global ones, so a repository can cancel a global pattern by
+negating it (`!.env`). Its `.worktreeinclude` isn't committed, so it's always read from the main
+checkout.
 
-Only untracked files are copied, since a tracked one is already in the worktree, and a path the
-worktree already has is left alone rather than overwritten. A matched directory is copied whole,
-which is worth remembering before matching something like `node_modules`: the copy happens while
-the workspace is opening.
+A path the worktree already has is never overwritten. A matched directory is copied whole when the
+workspace opens, so think twice before adding a large directory.
 
 ## Configuration
 
-Settings live in a single file at `~/.config/herdr-project/settings.json`. Point
-`HERDR_PROJECT_SETTINGS` elsewhere to override the location. Every field is optional.
+Settings live in `~/.config/herdr-project/settings.json`, or wherever `HERDR_PROJECT_SETTINGS`
+points. Every field is optional.
 
 ```json
 {
@@ -163,66 +131,52 @@ Settings live in a single file at `~/.config/herdr-project/settings.json`. Point
 }
 ```
 
-- **`projectPaths`**: Where to find projects. A path with wildcards is scanned as a glob and every
-  Git repository it matches becomes a project named after its directory; a path without wildcards
-  is taken as a single repository. This is why most projects need no entry of their own.
-- **`flat`**: Whether to open each workspace as its own top-level row rather than as a
-  worktree grouped under its repository. Defaults to `false`. (See [Flat
-  Workspaces](#flat-workspaces).)
+- **`projectPaths`**: Where to find projects. Every Git repository a glob matches becomes a project
+  named after its directory, and a path without wildcards is a single repository.
+- **`flat`**: Whether to open each workspace as its own top-level row instead of grouped under its
+  repository. Defaults to `false`. See [Flat Workspaces](#flat-workspaces).
 - **`projects`**: Project definitions, each merged over the `default` project below.
 
 ### The `default` project
 
-The project named `default` is a layout rather than somewhere to open. It has no `path`, never
-appears in the picker, and supplies the tabs every other project inherits. A tab with no `command`
-is left as a plain shell. Without a `default` project, projects get a single shell.
+The project named `default` is a layout, not somewhere to open. It has no `path`, never appears in
+the picker, and supplies the tabs every other project inherits. A tab with no `command` is a plain
+shell. Without a `default` project, projects get a single shell.
 
-Its `focusedTab` names the tab to focus when a workspace opens. A name that matches none of a
-project's tabs is ignored, so pointing it at a tab like `claude` that most but not all projects
-declare is safe: the projects that have it open focused there, and the rest open on their first
-tab.
+Its `focusedTab` names the tab to focus when a workspace opens. A project without that tab opens on
+its first tab instead.
 
 ### Declaring a project
 
-Discovery already covers most repositories, so declare a project only when you want to override
-something. The reasons that come up:
+Declare a project only to override what discovery found:
 
-- **A different name**, when the directory's name isn't what you want to see in the picker (say
-  `landonschropp.com` shown as `landonschropp`, or `.dotfiles` as `dotfiles`).
-- **A different layout**, when the project wants tabs other than the default's.
-- **A prompt**, when the project's agent should always start on the same instructions.
+- **A different name**: Such as `.dotfiles` shown as `dotfiles`.
+- **A different layout**: Tabs other than the default's.
+- **A prompt**: Instructions the project's agent always starts on.
 
-Only `path` is required: `name` defaults to the directory's name, and `tabs` and `focusedTab`
-default to the `default` project's. A declared project replaces a discovered one at the same path,
-which is how an override takes effect without having to list every other repository.
+Only `path` is required; everything else defaults to the directory's name and the `default`
+project's tabs. A declared project replaces the discovered one at the same path.
 
-A declared project's `path` doesn't have to be inside a Git repository. Such a project has no worktrees,
-so it always opens as a plain workspace on its directory, which suits a session that works across
-repositories rather than in one. Discovery never finds one: `projectPaths` only turns up
-repositories.
+A declared project doesn't have to be a Git repository. It then has no worktrees and always opens as
+a plain workspace on its directory, which suits work that spans repositories.
 
 ### Prompts
 
-A project's `prompt` is sent to the agent in its workspace once that agent has started, using
-Herdr's own `agent prompt`. It goes to the workspace's first idle agent, whichever tab that is, and
-waits for that agent to start on it, so a prompt Herdr never delivered is reported rather than
-dropped silently. The agent is idle by construction here, having just started; prompting an agent
-that is already working is Herdr's job, not this plugin's.
+A project's `prompt` is sent to the workspace's first idle agent once it starts. A prompt Herdr
+doesn't deliver is reported as an error rather than dropped silently.
 
-Unlike tabs, prompts belong to whoever opened the workspace rather than to the `workspace.created`
-hook, so a workspace opened from Herdr's own UI gets the project's tabs but not its prompt. That
-also keeps `--prompt` and a project's own prompt from both landing in the same agent: the flag
-replaces the project's prompt rather than queuing behind it.
+Only the picker and the CLI send prompts, so a workspace opened from Herdr's own UI gets the
+project's tabs but not its prompt. `--prompt` replaces the project's prompt rather than queuing
+behind it.
 
 ### Flat Workspaces
 
-Herdr groups a workspace under its repository, and opening a linked worktree opens that
-repository's main workspace alongside it. With `flat`, every workspace the plugin opens
-is its own top-level workspace instead.
+Herdr groups a worktree under its repository and opens the repository's main workspace beside it.
+With `flat`, every workspace the plugin opens is its own top-level row instead.
 
-Herdr doesn't know a flat workspace is a worktree, so the built-in `branch` and `git_status`
-sidebar tokens are empty and `herdr worktree remove` refuses it. The workspace's label still
-carries the branch, and `herdr-project close` removes the checkout with Git instead.
+Herdr doesn't know a flat workspace is a worktree, so the `branch` and `git_status` sidebar tokens
+are empty and `herdr worktree remove` refuses it. The label still shows the branch, and
+`herdr-project close` removes the checkout with Git.
 
 ## Development
 
