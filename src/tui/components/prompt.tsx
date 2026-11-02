@@ -90,11 +90,11 @@ export function Prompt({
           <Text key={index}>{line}</Text>
         ))}
         <Box width={INPUT_WIDTH} flexDirection="column">
-          <Text color="black">{"\u{2582}".repeat(INPUT_WIDTH)}</Text>
+          <Text color="black">{"\u{2581}".repeat(INPUT_WIDTH)}</Text>
           <Box backgroundColor="black" paddingX={1} width="100%">
             <TextInput value={value} onChange={handleChange} onSubmit={handleSubmit} />
           </Box>
-          <Text color="black">{"\u{1FB82}".repeat(INPUT_WIDTH)}</Text>
+          <Text color="black">{"\u{2594}".repeat(INPUT_WIDTH)}</Text>
         </Box>
         {error?.split("\n").map((line, index) => (
           <Text key={index} color="red">

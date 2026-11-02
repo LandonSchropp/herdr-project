@@ -29,6 +29,17 @@ describe("Prompt", () => {
     expect(lastFrame()).toContain("Session name?");
   });
 
+  it("draws the input bar's edges with block elements terminals render themselves", () => {
+    const { lastFrame } = renderInViewport(
+      <Prompt message="x" onValidate={() => null} onSubmit={noop} onCancel={noop} />,
+    );
+
+    // Herdr UI draws U+2580–259F itself but falls back to a font for the Legacy Computing block,
+    // which leaves a gap below the bar.
+    expect(lastFrame()).toContain("\u{2581}".repeat(36));
+    expect(lastFrame()).toContain("\u{2594}".repeat(36));
+  });
+
   describe("when a default value is provided", () => {
     it("renders the default value", () => {
       const { lastFrame } = renderInViewport(
