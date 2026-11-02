@@ -86,7 +86,8 @@ Use `process.stdout.write` for command output, not `console.log`. CLI output is 
 
 - REQUIRED: invoke the `ls-git:git-atomic-commit` skill at the start of every session.
 - Each commit captures one logical change. Before presenting work, evaluate whether the diff could be split into atomic commits and propose the split.
-- This project is vibe coded and its changes are never reviewed. Skip the review process in `references/reviews.md` — do not invoke the `ls-interactivity:interactive-review` skill or present changes for sign-off. Commit once the tests, types, and lint pass.
+- This project is vibe coded and its code changes are never reviewed. Skip the review process in `references/reviews.md` — do not invoke the `ls-interactivity:interactive-review` skill or present code changes for sign-off. Commit once the tests, types, and lint pass.
+- `README.md` and the agent skill under `skills/` are the exceptions, because the user reads them. Every change to either goes through `ls-interactivity:interactive-review` in `staged` mode, with only that file staged, and is committed on its own.
 - If a commit is blocked by the review-enforcement guardrail, ask the user to run the `ls-interactivity:disable-review` skill rather than invoking `ls-interactivity:interactive-review`.
 
 ## Naming
