@@ -5,8 +5,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A [Herdr](https://herdr.dev) plugin that opens a predefined project and one of its Git worktrees
-from a picker.
+Open [Herdr](https://herdr.dev) workspaces with preconfigured layouts.
 
 ## Why?
 
