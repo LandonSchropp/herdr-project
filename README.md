@@ -192,11 +192,6 @@ Run the picker outside Herdr to iterate on the UI:
 bun run src/index.tsx
 ```
 
-## Acknowledgements
-
-The picker UI is adapted from [Orc](https://github.com/LandonSchropp/orc), which this repository
-was forked from.
-
 ## License
 
 [MIT](LICENSE).
