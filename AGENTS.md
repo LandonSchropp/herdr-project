@@ -82,6 +82,10 @@ Not every command prints JSON. `pane run` prints nothing at all, so passing it t
 
 Use `process.stdout.write` for command output, not `console.log`. CLI output is program data that should pipe cleanly to other tools. Remember to include the trailing `\n` since `process.stdout.write` does not append one. `runCli` returns the text and exit code rather than writing them, so keep the writing in `src/index.tsx`.
 
+## Testing
+
+Verify everything you can yourself, such as reading workspaces and their tabs with `herdr workspace list` and `herdr tab list`, and only ask the user to check what you can't. Create temporary Herdr workspaces and projects for testing as needed, and close them when done. Test only on those temporary workspaces: never change or close a workspace you didn't create, since the user's real work lives in them.
+
 ## Git Workflow
 
 - REQUIRED: invoke the `ls-git:git-atomic-commit` skill at the start of every session.
